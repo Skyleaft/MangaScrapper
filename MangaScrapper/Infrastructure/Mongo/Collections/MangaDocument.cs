@@ -23,6 +23,7 @@ public class MangaDocument
     
     [BsonIgnoreIfNull]
     public string? ImageUrl { get; set; }
+    public string? LocalImageUrl { get; set; }
     
     [BsonIgnoreIfNull]
     public string? Status { get; set; }

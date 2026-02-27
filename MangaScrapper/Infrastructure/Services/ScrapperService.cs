@@ -119,11 +119,39 @@ public class ScrapperService
         return $"/{cleanTitle}/{chapterNumber}/{fileName}";
     }
 
+    private async Task<string> DownloadThumbnailAndConvertToWebP(string mangaTitle, string imageUrl)
+    {
+        try
+        {
+            using var response = await _httpClient.GetAsync(imageUrl, HttpCompletionOption.ResponseHeadersRead);
+            response.EnsureSuccessStatusCode();
+
+            await using var imageStream = await response.Content.ReadAsStreamAsync();
+            
+            var cleanTitle = string.Concat(mangaTitle.Split(Path.GetInvalidFileNameChars()));
+            var subDir = Path.Combine(_imageStoragePath, cleanTitle);
+            Directory.CreateDirectory(subDir);
+
+            var fileName = "thumbnail.webp";
+            var filePath = Path.Combine(subDir, fileName);
+
+            using var image = await Image.LoadAsync(imageStream);
+            await image.SaveAsync(filePath, new WebpEncoder());
+
+            return $"/{cleanTitle}/{fileName}";
+        }
+        catch
+        {
+            return string.Empty;
+        }
+    }
+
     public async Task<MangaDocument> ExtractMangaMetadata(string url, CancellationToken ct, bool scrapChapters = true)
     {
         var doc = await GetHtml(url);
         
         var title = doc.DocumentNode.SelectSingleNode("//td[text()='Judul Komik']/following-sibling::td")?.InnerText.Trim() ?? string.Empty;
+        var cleanTitle = string.Concat(title.Split(Path.GetInvalidFileNameChars()));
         
         var chapters = new List<ChapterDocument>();
         var chapterRows = doc.DocumentNode.SelectNodes("//table[@id='Daftar_Chapter']//tr[position()>1]");
@@ -156,6 +184,13 @@ public class ScrapperService
         
         if (existingManga != null)
         {
+            if (string.IsNullOrEmpty(existingManga.LocalImageUrl) && !string.IsNullOrEmpty(existingManga.ImageUrl))
+            {
+                existingManga.LocalImageUrl = await DownloadThumbnailAndConvertToWebP(existingManga.Title, existingManga.ImageUrl);
+                existingManga.UpdatedAt = DateTime.UtcNow;
+                await _mangaRepository.UpdateAsync(existingManga, ct);
+            }
+
             var maxExistingChapter = existingManga.Chapters.MaxBy(c => c.Number)?.Number ?? 0;
             var newChapters = chapters.Where(c => c.Number > maxExistingChapter).ToList();
             
@@ -177,13 +212,26 @@ public class ScrapperService
             return existingManga;
         }
 
+        var thumbnail = doc.DocumentNode.SelectSingleNode("//div[@class='ims']/img")?.GetAttributeValue("src", null);
+        if (!string.IsNullOrEmpty(thumbnail))
+        {
+            thumbnail = thumbnail.Replace("?w=500", "");
+        }
+
+        var localThumbnail = string.Empty;
+        if (!string.IsNullOrEmpty(thumbnail))
+        {
+            localThumbnail = await DownloadThumbnailAndConvertToWebP(title, thumbnail);
+        }
+
         var manga = new MangaDocument()
         {
             Title = title,
             Author = doc.DocumentNode.SelectSingleNode("//td[text()='Pengarang']/following-sibling::td")?.InnerText.Trim() ?? string.Empty,
             Description = doc.DocumentNode.SelectSingleNode("//p[@class='desc']")?.InnerText.Trim(),
             Type = doc.DocumentNode.SelectSingleNode("//td[text()='Jenis Komik']/following-sibling::td")?.InnerText.Trim() ?? string.Empty,
-            ImageUrl = doc.DocumentNode.SelectSingleNode("//div[@class='ims']/img")?.GetAttributeValue("src", null),
+            ImageUrl = thumbnail,
+            LocalImageUrl = localThumbnail,
             Status = doc.DocumentNode.SelectSingleNode("//td[text()='Status']/following-sibling::td")?.InnerText.Trim(),
             Genres = doc.DocumentNode.SelectNodes("//ul[@class='genre']/li/a/span")?.Select(n => n.InnerText.Trim()).ToList(),
             Url = url,

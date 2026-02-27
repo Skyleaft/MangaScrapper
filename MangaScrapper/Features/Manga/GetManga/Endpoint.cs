@@ -30,6 +30,7 @@ public class Endpoint(IMangaRepository mangaRepository) : Endpoint<Request, Resp
             Genres = manga.Genres,
             Description = manga.Description,
             ImageUrl = manga.ImageUrl,
+            LocalImageUrl = manga.LocalImageUrl,
             Status = manga.Status,
             CreatedAt = manga.CreatedAt,
             UpdatedAt = manga.UpdatedAt,

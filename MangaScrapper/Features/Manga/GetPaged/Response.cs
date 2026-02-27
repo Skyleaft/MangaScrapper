@@ -9,6 +9,7 @@ public class MangaSummary
     public List<string>? Genres { get; set; }
     public string? Description { get; set; }
     public string? ImageUrl { get; set; }
+    public string? LocalImageUrl { get; set; }
     public string? Status { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
