@@ -41,7 +41,8 @@ public class Endpoint(IMangaRepository mangaRepository) : Endpoint<Request, Resp
                 Number = c.Number,
                 Link = c.Link,
                 TotalView = c.TotalView,
-                UploadDate = c.UploadDate
+                UploadDate = c.UploadDate,
+                IsChapterAvailable = c.Pages.Any()
             }).ToList()
         };
 

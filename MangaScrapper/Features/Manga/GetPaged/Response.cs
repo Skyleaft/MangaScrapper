@@ -15,6 +15,7 @@ public class MangaSummary
     public DateTime UpdatedAt { get; set; }
     public string? Url { get; set; }
     public int TotalView { get; set; }
+    public LatestChapterSummary LatestChapter { get; set; } = new();
 }
 
 public class Response 
@@ -23,4 +24,11 @@ public class Response
     public long TotalCount { get; set; }
     public int Page { get; set; }
     public int PageSize { get; set; }
+}
+
+public class LatestChapterSummary{
+    public Guid Id{get;set;}
+    public double Number { get; set; }
+    public int TotalView { get; set; }
+    public DateTime UploadDate { get; set; }
 }

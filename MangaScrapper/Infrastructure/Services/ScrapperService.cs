@@ -251,7 +251,7 @@ public class ScrapperService
         return manga;
     }
 
-    private async Task QueueChapterScraping(Guid mangaId, string mangaTitle, ChapterDocument chapter)
+    public async Task QueueChapterScraping(Guid mangaId, string mangaTitle, ChapterDocument chapter)
     {
         await _taskQueue.QueueBackgroundWorkItemAsync(mangaTitle, chapter.Number, async token =>
         {

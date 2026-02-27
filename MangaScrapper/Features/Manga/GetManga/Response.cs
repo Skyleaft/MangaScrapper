@@ -14,5 +14,6 @@ public class ChapterResponse
     public string? Link { get; set; }
     public int TotalView { get; set; }
     public DateTime UploadDate { get; set; }
+    public bool IsChapterAvailable { get; set; }
     // Pages are excluded here to optimize the response
 }
