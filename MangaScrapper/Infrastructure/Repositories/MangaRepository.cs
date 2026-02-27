@@ -28,6 +28,49 @@ public class MangaRepository : IMangaRepository
         return await _collection.Find(_ => true).ToListAsync(ct);
     }
 
+    public async Task<(List<MangaDocument> Items, long TotalCount)> GetPagedAsync(
+        string? search,
+        List<string>? genres,
+        string? status,
+        string? type,
+        int page,
+        int pageSize,
+        CancellationToken ct)
+    {
+        var builder = Builders<MangaDocument>.Filter;
+        var filter = builder.Empty;
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            filter &= builder.Regex(m => m.Title, new MongoDB.Bson.BsonRegularExpression(search, "i"));
+        }
+
+        if (genres != null && genres.Any())
+        {
+            filter &= builder.All(m => m.Genres, genres);
+        }
+
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            filter &= builder.Eq(m => m.Status, status);
+        }
+
+        if (!string.IsNullOrWhiteSpace(type))
+        {
+            filter &= builder.Eq(m => m.Type, type);
+        }
+
+        var totalCount = await _collection.CountDocumentsAsync(filter, cancellationToken: ct);
+        var items = await _collection.Find(filter)
+            .SortByDescending(m => m.UpdatedAt)
+            .Skip((page - 1) * pageSize)
+            .Limit(pageSize)
+            .Project<MangaDocument>(Builders<MangaDocument>.Projection.Exclude("chapters.pages"))
+            .ToListAsync(ct);
+
+        return (items, totalCount);
+    }
+
     public async Task<Guid> CreateAsync(MangaDocument manga, CancellationToken ct)
     {
         manga.Id = Guid.NewGuid();
@@ -40,6 +83,20 @@ public class MangaRepository : IMangaRepository
     {
         manga.UpdatedAt = DateTime.UtcNow;
         await _collection.ReplaceOneAsync(m => m.Id == manga.Id, manga, cancellationToken: ct);
+    }
+
+    public async Task UpdateChapterPagesAsync(Guid mangaId, Guid chapterId, List<PageDocument> pages, CancellationToken ct)
+    {
+        var filter = Builders<MangaDocument>.Filter.And(
+            Builders<MangaDocument>.Filter.Eq(m => m.Id, mangaId),
+            Builders<MangaDocument>.Filter.ElemMatch(m => m.Chapters, c => c.Id == chapterId)
+        );
+
+        var update = Builders<MangaDocument>.Update
+            .Set("chapters.$.pages", pages)
+            .Set(m => m.UpdatedAt, DateTime.UtcNow);
+
+        await _collection.UpdateOneAsync(filter, update, cancellationToken: ct);
     }
 
     public async Task DeleteAsync(Guid id, CancellationToken ct)

@@ -4,11 +4,14 @@ using MangaScrapper.Infrastructure.Mongo;
 using MangaScrapper.Infrastructure.Mongo.Collections;
 using MangaScrapper.Infrastructure.Repositories;
 using MangaScrapper.Infrastructure.Services;
+using MangaScrapper.Infrastructure.BackgroundJobs;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Conventions;
 using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Driver;
+using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddFastEndpoints()
@@ -20,8 +23,17 @@ ConventionRegistry.Register("camelCase", conventionPack, t => true);
 BsonSerializer.RegisterSerializer(new GuidSerializer(GuidRepresentation.Standard));
 
 builder.Services.Configure<MongoSettings>(builder.Configuration.GetSection("MongoSettings"));
+builder.Services.Configure<ScrapperSettings>(builder.Configuration.GetSection("ScrapperSettings"));
 builder.Services.AddSingleton<MongoContext>();
+builder.Services.AddSingleton(sp => 
+{
+    var settings = sp.GetRequiredService<IOptions<ScrapperSettings>>().Value;
+    return new SemaphoreSlim(settings.MaxParallelDownloads);
+});
 builder.Services.AddScoped<IMangaRepository, MangaRepository>();
+
+builder.Services.AddSingleton<IBackgroundTaskQueue>(_ => new BackgroundTaskQueue(100));
+builder.Services.AddHostedService<BackgroundWorker>();
 
 builder.Services.AddHttpClient<ScrapperService>();
 
@@ -52,5 +64,14 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(
+        Path.IsPathRooted(builder.Configuration["ScrapperSettings:ImageStoragePath"]) 
+            ? builder.Configuration["ScrapperSettings:ImageStoragePath"]! 
+            : Path.Combine(builder.Environment.ContentRootPath, builder.Configuration["ScrapperSettings:ImageStoragePath"] ?? "images")),
+    RequestPath = "/images"
+});
 
 app.Run();

@@ -25,7 +25,6 @@
 
     <ItemGroup>
       <Folder Include="Features\Chapter\" />
-      <Folder Include="Features\Manga\" />
       <Folder Include="images\" />
     </ItemGroup>
 

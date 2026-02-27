@@ -1,7 +1,28 @@
-﻿services:
-  mangascrapper:
-    image: mangascrapper
+services:
+  api:
     build:
       context: .
       dockerfile: MangaScrapper/Dockerfile
+    ports:
+      - "5000:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - MongoSettings__ConnectionString=mongodb://mongodb:27017
+      - MongoSettings__DatabaseName=manga-scrap
+      - ScrapperSettings__ImageStoragePath=/app/images
+    volumes:
+      - ./images:/app/images
+    depends_on:
+      - mongodb
 
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    environment:
+      - MONGO_INITDB_DATABASE=manga-scrap
+
+volumes:
+  mongo-data:
