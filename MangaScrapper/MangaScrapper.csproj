@@ -24,7 +24,6 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="Features\Chapter\" />
       <Folder Include="images\" />
     </ItemGroup>
 

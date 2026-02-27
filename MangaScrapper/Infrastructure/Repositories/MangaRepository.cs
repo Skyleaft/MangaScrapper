@@ -99,6 +99,18 @@ public class MangaRepository : IMangaRepository
         await _collection.UpdateOneAsync(filter, update, cancellationToken: ct);
     }
 
+    public async Task<List<string>> GetAllGenresAsync(CancellationToken ct)
+    {
+        var result = await _collection.Distinct<string>("Genres", Builders<MangaDocument>.Filter.Empty).ToListAsync(ct);
+        return result.OrderBy(g => g).ToList();
+    }
+
+    public async Task<List<string>> GetAllTypesAsync(CancellationToken ct)
+    {
+        var result = await _collection.Distinct<string>("Type", Builders<MangaDocument>.Filter.Empty).ToListAsync(ct);
+        return result.OrderBy(t => t).ToList();
+    }
+
     public async Task DeleteAsync(Guid id, CancellationToken ct)
     {
         await _collection.DeleteOneAsync(m => m.Id == id, ct);
