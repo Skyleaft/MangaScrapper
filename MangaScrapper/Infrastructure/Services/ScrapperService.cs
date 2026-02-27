@@ -119,7 +119,7 @@ public class ScrapperService
         return $"/{cleanTitle}/{chapterNumber}/{fileName}";
     }
 
-    public async Task<MangaDocument> ExtractMangaMetadata(string url,CancellationToken ct)
+    public async Task<MangaDocument> ExtractMangaMetadata(string url, CancellationToken ct, bool scrapChapters = true)
     {
         var doc = await GetHtml(url);
         
@@ -165,9 +165,12 @@ public class ScrapperService
                 existingManga.UpdatedAt = DateTime.UtcNow;
                 await _mangaRepository.UpdateAsync(existingManga, ct);
 
-                foreach (var chapter in newChapters)
+                if (scrapChapters)
                 {
-                    await QueueChapterScraping(existingManga.Id, existingManga.Title, chapter);
+                    foreach (var chapter in newChapters)
+                    {
+                        await QueueChapterScraping(existingManga.Id, existingManga.Title, chapter);
+                    }
                 }
             }
             
@@ -189,9 +192,12 @@ public class ScrapperService
         };
         await _mangaRepository.CreateAsync(manga, ct);
 
-        foreach (var chapter in chapters)
+        if (scrapChapters)
         {
-            await QueueChapterScraping(manga.Id, manga.Title, chapter);
+            foreach (var chapter in chapters)
+            {
+                await QueueChapterScraping(manga.Id, manga.Title, chapter);
+            }
         }
         
         return manga;

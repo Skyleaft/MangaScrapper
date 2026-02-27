@@ -15,7 +15,7 @@ public class Endpoint(ScrapperService scrapperService, IMangaRepository mangaRep
 
     public override async Task HandleAsync(Request r,CancellationToken ct)
     {
-        var manga = await scrapperService.ExtractMangaMetadata(r.MangaUrl, ct);
+        var manga = await scrapperService.ExtractMangaMetadata(r.MangaUrl, ct, r.ScrapChapters);
         
         await Send.OkAsync(manga, ct);
     }
