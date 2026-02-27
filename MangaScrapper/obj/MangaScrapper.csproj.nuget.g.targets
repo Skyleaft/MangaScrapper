@@ -1,0 +1,8 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<Project ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ImportGroup Condition=" '$(ExcludeRestorePackageImports)' != 'true' ">
+    <Import Project="$(NuGetPackageRoot)microsoft.playwright\1.58.0\buildTransitive\Microsoft.Playwright.targets" Condition="Exists('$(NuGetPackageRoot)microsoft.playwright\1.58.0\buildTransitive\Microsoft.Playwright.targets')" />
+    <Import Project="$(NuGetPackageRoot)microsoft.aspnetcore.openapi\10.0.3\build\Microsoft.AspNetCore.OpenApi.targets" Condition="Exists('$(NuGetPackageRoot)microsoft.aspnetcore.openapi\10.0.3\build\Microsoft.AspNetCore.OpenApi.targets')" />
+    <Import Project="$(NuGetPackageRoot)fastendpoints.swagger\8.0.1\build\FastEndpoints.Swagger.targets" Condition="Exists('$(NuGetPackageRoot)fastendpoints.swagger\8.0.1\build\FastEndpoints.Swagger.targets')" />
+  </ImportGroup>
+</Project>

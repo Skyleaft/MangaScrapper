@@ -1,0 +1,7 @@
+﻿services:
+  mangascrapper:
+    image: mangascrapper
+    build:
+      context: .
+      dockerfile: MangaScrapper/Dockerfile
+
