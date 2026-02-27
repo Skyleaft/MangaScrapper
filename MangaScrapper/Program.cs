@@ -57,11 +57,12 @@ using (var scope = app.Services.CreateScope())
 app.UseFastEndpoints();
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-    app.UseSwaggerGen();
-}
+// if (app.Environment.IsDevelopment())
+// {
+    
+// }
+app.MapOpenApi();
+app.UseSwaggerGen();
 
 app.UseHttpsRedirection();
 
