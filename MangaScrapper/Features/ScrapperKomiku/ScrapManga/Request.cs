@@ -1,4 +1,4 @@
-﻿namespace MangaScrapper.Features.Scrapper.ScrapManga;
+﻿namespace MangaScrapper.Features.ScrapperKomiku.ScrapManga;
 
 public class Request
 {

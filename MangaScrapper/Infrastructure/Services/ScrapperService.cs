@@ -19,6 +19,7 @@ public class ScrapperService
     private readonly ScrapperSettings _settings;
     private readonly SemaphoreSlim _semaphore;
     private readonly string _imageStoragePath;
+    private ScrapperProvider? _provider;
 
     public ScrapperService(
         HttpClient httpClient, 
@@ -42,6 +43,17 @@ public class ScrapperService
         Directory.CreateDirectory(_imageStoragePath);
     }
 
+    private async Task LoadProvider()
+    {
+        if (_provider != null) return;
+        var path = Path.Combine(Directory.GetCurrentDirectory(), "provider", "komiku-provider.json");
+        if (File.Exists(path))
+        {
+            var json = await File.ReadAllTextAsync(path);
+            _provider = System.Text.Json.JsonSerializer.Deserialize<ScrapperProvider>(json);
+        }
+    }
+
     public async Task<HtmlDocument> GetHtml(string url)
     {
         var response = await _httpClient.GetAsync(url);
@@ -54,10 +66,13 @@ public class ScrapperService
 
     public async Task<ChapterDocument> GetChapterPage(string mangaTitle, ChapterDocument chapter)
     {
-        var url = "https://komiku.org" + chapter.Link;
+        await LoadProvider();
+        if (_provider == null) return chapter;
+
+        var url = _provider.BaseUrl + chapter.Link;
         var doc = await GetHtml(url);
 
-        var imageNodes = doc.DocumentNode.SelectNodes("//div[@id='Baca_Komik']//img[@src]");
+        var imageNodes = doc.DocumentNode.SelectNodes(_provider.PageSelectors.Images);
         if (imageNodes == null) return chapter;
 
         var downloadTasks = imageNodes.Select(async (imgNode, index) =>
@@ -68,7 +83,7 @@ public class ScrapperService
             await _semaphore.WaitAsync();
             try
             {
-                var localPath = await DownloadAndConvertToWebP(mangaTitle, chapter.Number.ToString(CultureInfo.InvariantCulture), imageUrl);
+                var localPath = await DownloadAndConvertToWebP(mangaTitle, chapter.Number.ToString(CultureInfo.InvariantCulture), imageUrl, index + 1);
                 return (Index: index, Page: new PageDocument
                 {
                     ImageUrl = imageUrl,
@@ -98,47 +113,24 @@ public class ScrapperService
         return chapter;
     }
 
-    private async Task<string> DownloadAndConvertToWebP(string mangaTitle, string chapterNumber, string imageUrl)
+    private async Task<string> DownloadAndConvertToWebP(string mangaTitle, string chapterNumber, string imageUrl, int index)
     {
-        using var response = await _httpClient.GetAsync(imageUrl, HttpCompletionOption.ResponseHeadersRead);
-        response.EnsureSuccessStatusCode();
-
-        await using var imageStream = await response.Content.ReadAsStreamAsync();
-        
-        // Clean paths to avoid illegal characters
-        var cleanTitle = string.Concat(mangaTitle.Split(Path.GetInvalidFileNameChars()));
+        var cleanTitle = GetCleanTitle(mangaTitle);
         var subDir = Path.Combine(_imageStoragePath, cleanTitle, chapterNumber);
-        Directory.CreateDirectory(subDir);
-
-        var fileName = $"{Guid.NewGuid()}.webp";
-        var filePath = Path.Combine(subDir, fileName);
-
-        using var image = await Image.LoadAsync(imageStream);
-        await image.SaveAsync(filePath, new WebpEncoder());
-
-        return $"/{cleanTitle}/{chapterNumber}/{fileName}";
+        var fileName = $"{index}.webp";
+        
+        return await SaveImageAsync(imageUrl, subDir, fileName, $"{cleanTitle}/{chapterNumber}/{fileName}");
     }
 
     private async Task<string> DownloadThumbnailAndConvertToWebP(string mangaTitle, string imageUrl)
     {
         try
         {
-            using var response = await _httpClient.GetAsync(imageUrl, HttpCompletionOption.ResponseHeadersRead);
-            response.EnsureSuccessStatusCode();
-
-            await using var imageStream = await response.Content.ReadAsStreamAsync();
-            
-            var cleanTitle = string.Concat(mangaTitle.Split(Path.GetInvalidFileNameChars()));
+            var cleanTitle = GetCleanTitle(mangaTitle);
             var subDir = Path.Combine(_imageStoragePath, cleanTitle);
-            Directory.CreateDirectory(subDir);
-
             var fileName = "thumbnail.webp";
-            var filePath = Path.Combine(subDir, fileName);
 
-            using var image = await Image.LoadAsync(imageStream);
-            await image.SaveAsync(filePath, new WebpEncoder());
-
-            return $"/{cleanTitle}/{fileName}";
+            return await SaveImageAsync(imageUrl, subDir, fileName, $"{cleanTitle}/{fileName}");
         }
         catch
         {
@@ -146,35 +138,62 @@ public class ScrapperService
         }
     }
 
+    private string GetCleanTitle(string title)
+    {
+        return string.Concat(title.Split(Path.GetInvalidFileNameChars()));
+    }
+
+    private async Task<string> SaveImageAsync(string imageUrl, string subDir, string fileName, string relativePath)
+    {
+        using var response = await _httpClient.GetAsync(imageUrl, HttpCompletionOption.ResponseHeadersRead);
+        response.EnsureSuccessStatusCode();
+
+        await using var imageStream = await response.Content.ReadAsStreamAsync();
+        
+        Directory.CreateDirectory(subDir);
+        var filePath = Path.Combine(subDir, fileName);
+
+        using var image = await Image.LoadAsync(imageStream);
+        await image.SaveAsync(filePath, new WebpEncoder());
+
+        return relativePath.Replace("\\", "/");
+    }
+
     public async Task<MangaDocument> ExtractMangaMetadata(string url, CancellationToken ct, bool scrapChapters = true)
     {
+        await LoadProvider();
+        if (_provider == null) throw new Exception("Provider not found");
+
         var doc = await GetHtml(url);
         
-        var title = doc.DocumentNode.SelectSingleNode("//td[text()='Judul Komik']/following-sibling::td")?.InnerText.Trim() ?? string.Empty;
-        var cleanTitle = string.Concat(title.Split(Path.GetInvalidFileNameChars()));
+        var title = doc.DocumentNode.SelectSingleNode(_provider.MangaSelectors.Title)?.InnerText.Trim() ?? string.Empty;
+        var cleanTitle = GetCleanTitle(title);
         
         var chapters = new List<ChapterDocument>();
-        var chapterRows = doc.DocumentNode.SelectNodes("//table[@id='Daftar_Chapter']//tr[position()>1]");
-        foreach (var row in chapterRows)
+        var chapterRows = doc.DocumentNode.SelectNodes(_provider.ChapterSelectors.Rows);
+        if (chapterRows != null)
         {
-            var link = row.SelectSingleNode(".//td[@class='judulseries']/a")?.GetAttributeValue("href", null);
-            var chapterText = row.SelectSingleNode(".//td[@class='judulseries']/a/span")?.InnerText.Trim();
-            var viewText = row.SelectSingleNode(".//td[@class='pembaca']/i")?.InnerText.Trim();
-            var dateText = row.SelectSingleNode(".//td[@class='tanggalseries']")?.InnerText.Trim();
-                
-            if (link != null && chapterText != null)
+            foreach (var row in chapterRows)
             {
-                var chapterNumber = double.TryParse(chapterText.Replace("Chapter ", ""), out var num) ? num : 0;
-                var totalView = int.TryParse(viewText, out var view) ? view : 0;
-                var uploadDate = DateTime.TryParseExact(dateText, "dd/MM/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date) ? date : DateTime.MinValue;
+                var link = row.SelectSingleNode(_provider.ChapterSelectors.Link)?.GetAttributeValue("href", null);
+                var chapterText = row.SelectSingleNode(_provider.ChapterSelectors.ChapterText)?.InnerText.Trim();
+                var viewText = row.SelectSingleNode(_provider.ChapterSelectors.Views)?.InnerText.Trim();
+                var dateText = row.SelectSingleNode(_provider.ChapterSelectors.UploadDate)?.InnerText.Trim();
                     
-                chapters.Add(new ChapterDocument
+                if (link != null && chapterText != null)
                 {
-                    Number = chapterNumber,
-                    Link = link,
-                    TotalView = totalView,
-                    UploadDate = uploadDate
-                });
+                    var chapterNumber = double.TryParse(chapterText.Replace("Chapter ", ""), out var num) ? num : 0;
+                    var totalView = int.TryParse(viewText, out var view) ? view : 0;
+                    var uploadDate = DateTime.TryParseExact(dateText, "dd/MM/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date) ? date : DateTime.MinValue;
+                        
+                    chapters.Add(new ChapterDocument
+                    {
+                        Number = chapterNumber,
+                        Link = link,
+                        TotalView = totalView,
+                        UploadDate = uploadDate
+                    });
+                }
             }
         }
         
@@ -212,7 +231,7 @@ public class ScrapperService
             return existingManga;
         }
 
-        var thumbnail = doc.DocumentNode.SelectSingleNode("//div[@class='ims']/img")?.GetAttributeValue("src", null);
+        var thumbnail = doc.DocumentNode.SelectSingleNode(_provider.MangaSelectors.Thumbnail)?.GetAttributeValue("src", null);
         if (!string.IsNullOrEmpty(thumbnail))
         {
             thumbnail = thumbnail.Replace("?w=500", "");
@@ -227,13 +246,13 @@ public class ScrapperService
         var manga = new MangaDocument()
         {
             Title = title,
-            Author = doc.DocumentNode.SelectSingleNode("//td[text()='Pengarang']/following-sibling::td")?.InnerText.Trim() ?? string.Empty,
-            Description = doc.DocumentNode.SelectSingleNode("//p[@class='desc']")?.InnerText.Trim(),
-            Type = doc.DocumentNode.SelectSingleNode("//td[text()='Jenis Komik']/following-sibling::td")?.InnerText.Trim() ?? string.Empty,
+            Author = doc.DocumentNode.SelectSingleNode(_provider.MangaSelectors.Author)?.InnerText.Trim() ?? string.Empty,
+            Description = doc.DocumentNode.SelectSingleNode(_provider.MangaSelectors.Description)?.InnerText.Trim(),
+            Type = doc.DocumentNode.SelectSingleNode(_provider.MangaSelectors.Type)?.InnerText.Trim() ?? string.Empty,
             ImageUrl = thumbnail,
             LocalImageUrl = localThumbnail,
-            Status = doc.DocumentNode.SelectSingleNode("//td[text()='Status']/following-sibling::td")?.InnerText.Trim(),
-            Genres = doc.DocumentNode.SelectNodes("//ul[@class='genre']/li/a/span")?.Select(n => n.InnerText.Trim()).ToList(),
+            Status = doc.DocumentNode.SelectSingleNode(_provider.MangaSelectors.Status)?.InnerText.Trim(),
+            Genres = doc.DocumentNode.SelectNodes(_provider.MangaSelectors.Genres)?.Select(n => n.InnerText.Trim()).ToList(),
             Url = url,
             CreatedAt = chapters.OrderBy(x=>x.UploadDate).FirstOrDefault()?.UploadDate ?? DateTime.MinValue,
             Chapters = chapters

@@ -1,15 +1,14 @@
 ﻿using FastEndpoints;
-using MangaScrapper.Infrastructure.Mongo.Collections;
 using MangaScrapper.Infrastructure.Repositories;
 using MangaScrapper.Infrastructure.Services;
 
-namespace MangaScrapper.Features.Scrapper.ScrapChapterPages;
+namespace MangaScrapper.Features.ScrapperKomiku.ScrapChapterPages;
 
 public class Endpoint(ScrapperService scrapperService, IMangaRepository mangaRepository) : Endpoint<Request>
 {
     public override void Configure()
     {
-        Get("/api/scrapper/manga/{MangaId}/chapter-pages");
+        Get("/api/scrapper/komiku/manga/{MangaId}/chapter-pages");
         AllowAnonymous();
     }
 

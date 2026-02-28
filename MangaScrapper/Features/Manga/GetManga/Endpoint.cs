@@ -35,15 +35,6 @@ public class Endpoint(IMangaRepository mangaRepository) : Endpoint<Request, Resp
             CreatedAt = manga.CreatedAt,
             UpdatedAt = manga.UpdatedAt,
             Url = manga.Url,
-            Chapters = manga.Chapters.Select(c => new ChapterResponse
-            {
-                Id = c.Id,
-                Number = c.Number,
-                Link = c.Link,
-                TotalView = c.TotalView,
-                UploadDate = c.UploadDate,
-                IsChapterAvailable = c.Pages.Any()
-            }).ToList()
         };
 
         await Send.OkAsync(response, ct);

@@ -3,13 +3,13 @@ using MangaScrapper.Infrastructure.Mongo.Collections;
 using MangaScrapper.Infrastructure.Repositories;
 using MangaScrapper.Infrastructure.Services;
 
-namespace MangaScrapper.Features.Scrapper.ScrapManga;
+namespace MangaScrapper.Features.ScrapperKomiku.ScrapManga;
 
 public class Endpoint(ScrapperService scrapperService, IMangaRepository mangaRepository) : Endpoint<Request,MangaDocument>
 {
     public override void Configure()
     {
-        Post("/api/scrapper/manga");
+        Post("/api/scrapper/komiku/manga");
         AllowAnonymous();
     }
 
