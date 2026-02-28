@@ -42,6 +42,10 @@ public class Endpoint(ScrapperService scrapperService, IMangaRepository mangaRep
             item.Thumbnail = node
                 .SelectSingleNode(".//img")
                 ?.GetAttributeValue("src", "");
+            if (!string.IsNullOrEmpty(item.Thumbnail))
+            {
+                item.Thumbnail = item.Thumbnail.Split('?')[0]+"?quality=60;";
+            }
 
             // type
             var typeNode = node.SelectSingleNode(".//div[contains(@class,'tpe1_inf')]/b");
