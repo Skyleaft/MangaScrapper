@@ -1,5 +1,6 @@
 ﻿using MangaScrapper.Infrastructure.Mongo;
 using MangaScrapper.Infrastructure.Mongo.Collections;
+using MongoDB.Bson;
 using MongoDB.Driver;
 
 namespace MangaScrapper.Infrastructure.Repositories;
@@ -33,6 +34,8 @@ public class MangaRepository : IMangaRepository
         List<string>? genres,
         string? status,
         string? type,
+        string sortBy,
+        string orderBy,
         int page,
         int pageSize,
         CancellationToken ct)
@@ -42,7 +45,7 @@ public class MangaRepository : IMangaRepository
 
         if (!string.IsNullOrWhiteSpace(search))
         {
-            filter &= builder.Regex(m => m.Title, new MongoDB.Bson.BsonRegularExpression(search, "i"));
+            filter &= builder.Regex(m => m.Title, new BsonRegularExpression(search, "i"));
         }
 
         if (genres != null && genres.Any())
@@ -61,8 +64,30 @@ public class MangaRepository : IMangaRepository
         }
 
         var totalCount = await _collection.CountDocumentsAsync(filter, cancellationToken: ct);
-        var items = await _collection.Find(filter)
-            .SortByDescending(m => m.UpdatedAt)
+
+        List<MangaDocument> items;
+
+        var sortBuilder = Builders<MangaDocument>.Sort;
+        SortDefinition<MangaDocument> sortDefinition = sortBy.ToLowerInvariant() switch
+        {
+            "title" => orderBy == "asc"
+                ? sortBuilder.Ascending(m => m.Title)
+                : sortBuilder.Descending(m => m.Title),
+            "createdat" => orderBy == "asc"
+                ? sortBuilder.Ascending(m => m.CreatedAt)
+                : sortBuilder.Descending(m => m.CreatedAt),
+            "latestchapter" => orderBy == "asc"
+                ? sortBuilder.Ascending("Chapters.UploadDate")
+                : sortBuilder.Descending("Chapters.UploadDate"),
+            "totalview"=> orderBy == "asc"
+                ? sortBuilder.Ascending("Chapters.TotalView")
+                : sortBuilder.Descending("Chapters.TotalView"),
+            _ => orderBy == "asc"
+                ? sortBuilder.Ascending(m => m.UpdatedAt)
+                : sortBuilder.Descending(m => m.UpdatedAt),
+        };
+        items = await _collection.Find(filter)
+            .Sort(sortDefinition)
             .Skip((page - 1) * pageSize)
             .Limit(pageSize)
             .Project<MangaDocument>(Builders<MangaDocument>.Projection.Exclude("chapters.pages"))
@@ -85,7 +110,8 @@ public class MangaRepository : IMangaRepository
         await _collection.ReplaceOneAsync(m => m.Id == manga.Id, manga, cancellationToken: ct);
     }
 
-    public async Task UpdateChapterPagesAsync(Guid mangaId, Guid chapterId, List<PageDocument> pages, CancellationToken ct)
+    public async Task UpdateChapterPagesAsync(Guid mangaId, Guid chapterId, List<PageDocument> pages,
+        CancellationToken ct)
     {
         var filter = Builders<MangaDocument>.Filter.And(
             Builders<MangaDocument>.Filter.Eq(m => m.Id, mangaId),

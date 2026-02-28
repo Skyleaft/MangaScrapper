@@ -12,6 +12,8 @@ public interface IMangaRepository
         List<string>? genres, 
         string? status, 
         string? type,
+        string sortBy,
+        string orderBy,
         int page, 
         int pageSize, 
         CancellationToken ct);

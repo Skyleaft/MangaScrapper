@@ -18,6 +18,8 @@ public class Endpoint(IMangaRepository mangaRepository) : Endpoint<Request, Resp
             r.Genres,
             r.Status,
             r.Type,
+            r.SortBy,
+            r.OrderBy,
             r.Page,
             r.PageSize,
             ct);
