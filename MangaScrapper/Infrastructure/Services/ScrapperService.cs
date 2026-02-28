@@ -138,9 +138,14 @@ public class ScrapperService
         }
     }
 
-    private string GetCleanTitle(string title)
+    public string GetCleanTitle(string title)
     {
-        return string.Concat(title.Split(Path.GetInvalidFileNameChars()));
+        // Remove invalid filename characters for both Windows and Linux filesystems
+        var invalidChars = Path.GetInvalidFileNameChars()
+            .Union(new[] { '?', '*', ':', '|', '<', '>', '"' })
+            .ToArray();
+        
+        return string.Concat(title.Split(invalidChars));
     }
 
     private async Task<string> SaveImageAsync(string imageUrl, string subDir, string fileName, string relativePath)

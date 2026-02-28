@@ -24,7 +24,8 @@ public class Endpoint(IMangaRepository mangaRepository, ScrapperService scrapper
         // Delete all chapter images from storage
         foreach (var chapter in manga.Chapters)
         {
-            var chapterDir = Path.Combine(scrapperService.ImageStoragePath, manga.Title, chapter.Number.ToString());
+            var cleanTitle = scrapperService.GetCleanTitle(manga.Title);
+            var chapterDir = Path.Combine(scrapperService.ImageStoragePath, cleanTitle, chapter.Number.ToString());
             if (Directory.Exists(chapterDir))
             {
                 Directory.Delete(chapterDir, true);
@@ -34,6 +35,7 @@ public class Endpoint(IMangaRepository mangaRepository, ScrapperService scrapper
         // Delete thumbnail if exists
         if (!string.IsNullOrEmpty(manga.LocalImageUrl))
         {
+            var cleanTitle = scrapperService.GetCleanTitle(manga.Title);
             var thumbnailPath = Path.Combine(scrapperService.ImageStoragePath, manga.LocalImageUrl);
             if (File.Exists(thumbnailPath))
             {
