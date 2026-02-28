@@ -24,4 +24,6 @@ EXPOSE 8081
 RUN mkdir -p /app/images
 
 COPY --from=build /app/publish .
+COPY --from=build /src/MangaScrapper/provider ./provider
+
 ENTRYPOINT ["dotnet", "MangaScrapper.dll"]
