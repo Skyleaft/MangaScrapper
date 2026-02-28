@@ -18,7 +18,7 @@ public class ScrapperService
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ScrapperSettings _settings;
     private readonly SemaphoreSlim _semaphore;
-    private readonly string _imageStoragePath;
+    public readonly string ImageStoragePath;
     private ScrapperProvider? _provider;
 
     public ScrapperService(
@@ -35,12 +35,12 @@ public class ScrapperService
         _scopeFactory = scopeFactory;
         _settings = settings.Value;
         _semaphore = semaphore;
-        _imageStoragePath = Path.IsPathRooted(_settings.ImageStoragePath) 
+        ImageStoragePath = Path.IsPathRooted(_settings.ImageStoragePath) 
             ? _settings.ImageStoragePath 
             : Path.Combine(Directory.GetCurrentDirectory(), _settings.ImageStoragePath);
             
         _httpClient.DefaultRequestHeaders.Add("User-Agent", "minimal-api-httpclient-sample");
-        Directory.CreateDirectory(_imageStoragePath);
+        Directory.CreateDirectory(ImageStoragePath);
     }
 
     private async Task LoadProvider()
@@ -116,7 +116,7 @@ public class ScrapperService
     private async Task<string> DownloadAndConvertToWebP(string mangaTitle, string chapterNumber, string imageUrl, int index)
     {
         var cleanTitle = GetCleanTitle(mangaTitle);
-        var subDir = Path.Combine(_imageStoragePath, cleanTitle, chapterNumber);
+        var subDir = Path.Combine(ImageStoragePath, cleanTitle, chapterNumber);
         var fileName = $"{index}.webp";
         
         return await SaveImageAsync(imageUrl, subDir, fileName, $"{cleanTitle}/{chapterNumber}/{fileName}");
@@ -127,7 +127,7 @@ public class ScrapperService
         try
         {
             var cleanTitle = GetCleanTitle(mangaTitle);
-            var subDir = Path.Combine(_imageStoragePath, cleanTitle);
+            var subDir = Path.Combine(ImageStoragePath, cleanTitle);
             var fileName = "thumbnail.webp";
 
             return await SaveImageAsync(imageUrl, subDir, fileName, $"{cleanTitle}/{fileName}");
