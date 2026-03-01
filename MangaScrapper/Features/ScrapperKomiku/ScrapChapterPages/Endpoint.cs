@@ -1,10 +1,10 @@
-﻿using FastEndpoints;
+using FastEndpoints;
+using MangaScrapper.Features.ScrapperKomiku.Services;
 using MangaScrapper.Infrastructure.Repositories;
-using MangaScrapper.Infrastructure.Services;
 
 namespace MangaScrapper.Features.ScrapperKomiku.ScrapChapterPages;
 
-public class Endpoint(ScrapperService scrapperService, IMangaRepository mangaRepository) : Endpoint<Request>
+public class Endpoint(KomikuService komikuService, IMangaRepository mangaRepository) : Endpoint<Request>
 {
     public override void Configure()
     {
@@ -23,9 +23,9 @@ public class Endpoint(ScrapperService scrapperService, IMangaRepository mangaRep
 
         foreach (var chapter in manga.Chapters)
         {
-            if (chapter.Pages == null || chapter.Pages.Count == 0)
+            if (chapter.Pages.Count == 0)
             {
-                await scrapperService.QueueChapterScraping(manga.Id, manga.Title, chapter);
+                await komikuService.QueueChapterScraping(manga.Id, manga.Title, chapter);
             }
         }
 

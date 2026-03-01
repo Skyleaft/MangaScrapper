@@ -24,7 +24,6 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="Features\ScrapperKomiku\" />
       <Folder Include="images\" />
     </ItemGroup>
 

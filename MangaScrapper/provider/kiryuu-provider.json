@@ -1,0 +1,23 @@
+{
+  "ProviderName": "Kiryuu",
+  "BaseUrl": "https://kiryuu03.com/",
+  "MangaSelectors": {
+    "Title": "//td[text()='Judul Komik']/following-sibling::td",
+    "Author": "//td[text()='Pengarang']/following-sibling::td",
+    "Description": "//p[@class='desc']",
+    "Type": "//td[text()='Jenis Komik']/following-sibling::td",
+    "Status": "//td[text()='Status']/following-sibling::td",
+    "Genres": "//ul[@class='genre']/li/a/span",
+    "Thumbnail": "//div[@class='ims']/img"
+  },
+  "ChapterSelectors": {
+    "Rows": "//div[@id='chapter-list']/div[@data-chapter-number]",
+    "Link": ".//td[@class='judulseries']/a",
+    "ChapterText": ".//td[@class='judulseries']/a/span",
+    "Views": ".//svg[@data-lucide='eye']/following-sibling::p[1]",
+    "UploadDate": ".//td[@class='tanggalseries']"
+  },
+  "PageSelectors": {
+    "Images": "//section[@data-image-data='1']//img"
+  }
+}

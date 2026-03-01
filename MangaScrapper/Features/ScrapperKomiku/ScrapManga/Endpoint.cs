@@ -1,11 +1,10 @@
-﻿using FastEndpoints;
+using FastEndpoints;
+using MangaScrapper.Features.ScrapperKomiku.Services;
 using MangaScrapper.Infrastructure.Mongo.Collections;
-using MangaScrapper.Infrastructure.Repositories;
-using MangaScrapper.Infrastructure.Services;
 
 namespace MangaScrapper.Features.ScrapperKomiku.ScrapManga;
 
-public class Endpoint(ScrapperService scrapperService, IMangaRepository mangaRepository) : Endpoint<Request,MangaDocument>
+public class Endpoint(KomikuService komikuService) : Endpoint<Request, MangaDocument>
 {
     public override void Configure()
     {
@@ -13,10 +12,9 @@ public class Endpoint(ScrapperService scrapperService, IMangaRepository mangaRep
         AllowAnonymous();
     }
 
-    public override async Task HandleAsync(Request r,CancellationToken ct)
+    public override async Task HandleAsync(Request r, CancellationToken ct)
     {
-        var manga = await scrapperService.ExtractMangaMetadata(r.MangaUrl, ct, r.ScrapChapters);
-        
+        var manga = await komikuService.ExtractMangaMetadata(r.MangaUrl, ct, r.ScrapChapters);
         await Send.OkAsync(manga, ct);
     }
 }

@@ -1,5 +1,8 @@
 using FastEndpoints;
 using FastEndpoints.Swagger;
+using MangaScrapper.Features.ScrapperKomiku.Services;
+using MangaScrapper.Features.ScrapperKiryuu;
+using MangaScrapper.Features.ScrapperKiryuu.Services;
 using MangaScrapper.Infrastructure.Mongo;
 using MangaScrapper.Infrastructure.Mongo.Collections;
 using MangaScrapper.Infrastructure.Repositories;
@@ -35,7 +38,9 @@ builder.Services.AddScoped<IMangaRepository, MangaRepository>();
 builder.Services.AddSingleton<IBackgroundTaskQueue>(_ => new BackgroundTaskQueue(100));
 builder.Services.AddHostedService<BackgroundWorker>();
 
-builder.Services.AddHttpClient<ScrapperService>();
+builder.Services.AddHttpClient<KomikuService>();
+builder.Services.AddHttpClient<KiryuuService>();
+
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi

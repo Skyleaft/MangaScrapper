@@ -1,11 +1,16 @@
-﻿using FastEndpoints;
+using FastEndpoints;
 using MangaScrapper.Infrastructure.Repositories;
 using MangaScrapper.Infrastructure.Services;
+using Microsoft.Extensions.Options;
 
 namespace MangaScrapper.Features.Manga.DeleteManga;
 
-public class Endpoint(IMangaRepository mangaRepository, ScrapperService scrapperService) : Endpoint<Request>
+public class Endpoint(IMangaRepository mangaRepository, IOptions<ScrapperSettings> settings) : Endpoint<Request>
 {
+    private readonly string _imageStoragePath = Path.IsPathRooted(settings.Value.ImageStoragePath)
+        ? settings.Value.ImageStoragePath
+        : Path.Combine(Directory.GetCurrentDirectory(), settings.Value.ImageStoragePath);
+
     public override void Configure()
     {
         Delete("/api/manga/{MangaId}");
@@ -21,31 +26,36 @@ public class Endpoint(IMangaRepository mangaRepository, ScrapperService scrapper
             return;
         }
 
-        // Delete all chapter images from storage
+        var cleanTitle = GetCleanTitle(manga.Title);
+
         foreach (var chapter in manga.Chapters)
         {
-            var cleanTitle = scrapperService.GetCleanTitle(manga.Title);
-            var chapterDir = Path.Combine(scrapperService.ImageStoragePath, cleanTitle, chapter.Number.ToString());
+            var chapterDir = Path.Combine(_imageStoragePath, cleanTitle, chapter.Number.ToString());
             if (Directory.Exists(chapterDir))
             {
                 Directory.Delete(chapterDir, true);
             }
         }
 
-        // Delete thumbnail if exists
         if (!string.IsNullOrEmpty(manga.LocalImageUrl))
         {
-            var cleanTitle = scrapperService.GetCleanTitle(manga.Title);
-            var thumbnailPath = Path.Combine(scrapperService.ImageStoragePath, manga.LocalImageUrl);
+            var thumbnailPath = Path.Combine(_imageStoragePath, manga.LocalImageUrl);
             if (File.Exists(thumbnailPath))
             {
                 File.Delete(thumbnailPath);
             }
         }
 
-        // Delete manga from database
         await mangaRepository.DeleteAsync(r.MangaId, ct);
-        
-        await Send.OkAsync(cancellation:ct);
+        await Send.OkAsync(cancellation: ct);
+    }
+
+    private static string GetCleanTitle(string title)
+    {
+        var invalidChars = Path.GetInvalidFileNameChars()
+            .Union(new[] { '?', '*', ':', '|', '<', '>', '"' })
+            .ToArray();
+
+        return string.Concat(title.Split(invalidChars));
     }
 }
