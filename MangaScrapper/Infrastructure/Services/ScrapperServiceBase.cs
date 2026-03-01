@@ -52,14 +52,27 @@ public abstract class ScrapperServiceBase
         }
     }
     
-    public async Task<HtmlDocument> GetHtml(string url)
+    public async Task<HtmlDocument> GetHtml(string url,string? query=null,MultipartFormDataContent? formData = null)
     {
-        var response = await HttpClient.GetAsync(url);
-        response.EnsureSuccessStatusCode();
-        var str = await response.Content.ReadAsStringAsync();
-        var doc = new HtmlDocument();
-        doc.LoadHtml(str);
-        return doc;
+        if (formData != null)
+        {
+            var responseForm = await HttpClient.PostAsync(url,formData);
+            responseForm.EnsureSuccessStatusCode();
+            var str1 = await responseForm.Content.ReadAsStringAsync();
+            var doc1 = new HtmlDocument();
+            doc1.LoadHtml(str1);
+            return doc1;
+        }
+        else
+        {
+            var response = await HttpClient.GetAsync(url);
+            response.EnsureSuccessStatusCode();
+            var str = await response.Content.ReadAsStringAsync();
+            var doc = new HtmlDocument();
+            doc.LoadHtml(str);
+            return doc; 
+        }
+        
     }
     
     public async Task<string> DownloadAndConvertToWebP(string mangaTitle, string chapterNumber, string imageUrl, int index)
@@ -107,9 +120,26 @@ public abstract class ScrapperServiceBase
         Directory.CreateDirectory(subDir);
         var filePath = Path.Combine(subDir, fileName);
 
+        if (IsWebpUrl(imageUrl))
+        {
+            await using var output = File.Create(filePath);
+            await imageStream.CopyToAsync(output);
+            return relativePath.Replace("\\", "/");
+        }
+
         using var image = await Image.LoadAsync(imageStream);
         await image.SaveAsync(filePath, new WebpEncoder());
 
         return relativePath.Replace("\\", "/");
+    }
+
+    private static bool IsWebpUrl(string imageUrl)
+    {
+        if (!Uri.TryCreate(imageUrl, UriKind.Absolute, out var uri))
+        {
+            return imageUrl.Contains(".webp", StringComparison.OrdinalIgnoreCase);
+        }
+
+        return string.Equals(Path.GetExtension(uri.AbsolutePath), ".webp", StringComparison.OrdinalIgnoreCase);
     }
 }

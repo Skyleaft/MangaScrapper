@@ -8,12 +8,14 @@ public class MangaDocument
     [BsonId]
     [BsonRepresentation(BsonType.String)]
     public Guid Id { get; set; }
+    public int MalID { get; set; }
     
     public string Title { get; set; } = string.Empty;
     
     public string Author { get; set; } = string.Empty;
     
     public string Type { get; set; } = string.Empty;
+    public double Rating { get; set; }
     
     [BsonIgnoreIfNull]
     public List<string>? Genres { get; set; }
@@ -27,6 +29,7 @@ public class MangaDocument
     
     [BsonIgnoreIfNull]
     public string? Status { get; set; }
+    public DateTime ReleaseDate { get; set; }
     
     [BsonDateTimeOptions(Kind = DateTimeKind.Utc)]
     public DateTime CreatedAt { get; set; }
@@ -44,17 +47,13 @@ public class ChapterDocument
 {
     [BsonRepresentation(BsonType.String)]
     public Guid Id { get; set; } = Guid.CreateVersion7();
-    
     public double Number { get; set; }
-    
     [BsonIgnoreIfNull]
     public string? Link { get; set; }
-    
+    public string? ChapterProvider { get; set; }
     public int TotalView { get; set; }
-    
     [BsonDateTimeOptions(Kind = DateTimeKind.Utc)]
     public DateTime UploadDate { get; set; }
-    
     public List<PageDocument> Pages { get; set; } = new();
 }
 
