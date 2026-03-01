@@ -9,4 +9,5 @@ public class SearchItem
     public string Genre { get; set; } = string.Empty;
     public string LastUpdate { get; set; } = string.Empty;
     public double LatestChapterNumber { get; set; }
+    public DateTime? LatestScrapped { get; set; }
 }
