@@ -125,6 +125,17 @@ public class MangaRepository : IMangaRepository
         await _collection.UpdateOneAsync(filter, update, cancellationToken: ct);
     }
 
+    public async Task<bool> DeleteChapterAsync(Guid mangaId, Guid chapterId, CancellationToken ct)
+    {
+        var filter = Builders<MangaDocument>.Filter.Eq(m => m.Id, mangaId);
+        var update = Builders<MangaDocument>.Update
+            .PullFilter(m => m.Chapters, c => c.Id == chapterId)
+            .Set(m => m.UpdatedAt, DateTime.UtcNow);
+
+        var result = await _collection.UpdateOneAsync(filter, update, cancellationToken: ct);
+        return result.ModifiedCount > 0;
+    }
+
     public async Task<List<string>> GetAllGenresAsync(CancellationToken ct)
     {
         var result = await _collection.Distinct<string>("Genres", Builders<MangaDocument>.Filter.Empty).ToListAsync(ct);

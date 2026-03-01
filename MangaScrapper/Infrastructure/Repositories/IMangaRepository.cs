@@ -20,6 +20,7 @@ public interface IMangaRepository
     Task<Guid> CreateAsync(MangaDocument manga, CancellationToken ct);
     Task UpdateAsync(MangaDocument manga, CancellationToken ct);
     Task UpdateChapterPagesAsync(Guid mangaId, Guid chapterId, List<PageDocument> pages, CancellationToken ct);
+    Task<bool> DeleteChapterAsync(Guid mangaId, Guid chapterId, CancellationToken ct);
     Task<List<string>> GetAllGenresAsync(CancellationToken ct);
     Task<List<string>> GetAllTypesAsync(CancellationToken ct);
     Task DeleteAsync(Guid id, CancellationToken ct);
