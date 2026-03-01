@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using MangaScrapper.Infrastructure.BackgroundJobs;
+using MangaScrapper.Infrastructure.Models;
 using MangaScrapper.Infrastructure.Repositories;
 using MangaScrapper.Infrastructure.Services;
 using MangaScrapper.Infrastructure.Utils;
@@ -71,13 +72,13 @@ public class KiryuuService : ScrapperServiceBase
         return data;
     }
     
-    public async Task<List<KiryuuManga>>SearchManga(string keyword)
+    public async Task<List<SearchItem>>SearchManga(string keyword)
     {
         var url = $"{Provider.BaseUrl}/wp-admin/admin-ajax.php?action=advanced_search";
         var formData = new MultipartFormDataContent();
         formData.Add(new StringContent(keyword), "query");
         var doc = await GetHtml(url,null,formData);
-        var data = new List<KiryuuManga>();
+        var data = new List<SearchItem>();
 
         var cards = doc.DocumentNode.SelectNodes(
             "//div[contains(@class,'rounded-lg') and .//a[contains(@href,'/manga/')]]"
@@ -107,13 +108,16 @@ public class KiryuuService : ScrapperServiceBase
                 var viewsRaw = card
                     .SelectSingleNode(".//svg[contains(@class,'text-gray-400')]/following-sibling::span[1]")
                     ?.InnerText.Trim();
+
+                var currentManga = await MangaRepository.GetByTitleAsync(title, default);
                 
-                data.Add(new KiryuuManga()
+                data.Add(new SearchItem()
                 {
                     Title = title,
-                    Link = link,
+                    DetailUrl = link,
                     Thumbnail = thumb,
-                    Rating = Convert.ToDouble(rating),
+                    LatestScrapped = currentManga?.UpdatedAt
+                    
                 });
             }
         }

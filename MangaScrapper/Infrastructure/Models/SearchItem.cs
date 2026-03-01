@@ -1,4 +1,4 @@
-﻿namespace MangaScrapper.Features.ScrapperKomiku.Search;
+﻿namespace MangaScrapper.Infrastructure.Models;
 
 public class SearchItem
 {

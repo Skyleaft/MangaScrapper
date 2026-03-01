@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.RegularExpressions;
 using HtmlAgilityPack;
 using MangaScrapper.Infrastructure.BackgroundJobs;
 using MangaScrapper.Infrastructure.Mongo.Collections;
@@ -178,7 +179,8 @@ public class KomikuService : ScrapperServiceBase
 
             if (string.IsNullOrWhiteSpace(link) || chapterText == null) continue;
 
-            var chapterNumber = double.TryParse(chapterText.Replace("Chapter ", ""), out var num) ? num : 0;
+            var chapterNumberText = Regex.Match(chapterText.Replace("Chapter ", "", StringComparison.OrdinalIgnoreCase), @"\d+(\.\d+)?").Value;
+            var chapterNumber = double.TryParse(chapterNumberText, NumberStyles.Float, CultureInfo.InvariantCulture, out var num) ? num : 0;
             var totalView = int.TryParse(viewText, out var view) ? view : 0;
             var uploadDate = DateTime.TryParseExact(dateText, "dd/MM/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date)
                 ? date

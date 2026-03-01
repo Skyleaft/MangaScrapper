@@ -18,7 +18,7 @@ using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddFastEndpoints()
-    .SwaggerDocument();
+    .SwaggerDocument(o => o.AutoTagPathSegmentIndex = 2);
 
 var conventionPack = new ConventionPack { new CamelCaseElementNameConvention() };
 ConventionRegistry.Register("camelCase", conventionPack, t => true);

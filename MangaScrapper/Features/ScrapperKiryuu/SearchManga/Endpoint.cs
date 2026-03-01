@@ -1,9 +1,10 @@
 using FastEndpoints;
 using MangaScrapper.Features.ScrapperKiryuu.Services;
+using MangaScrapper.Infrastructure.Models;
 
 namespace MangaScrapper.Features.ScrapperKiryuu.SearchManga;
 
-public class Endpoint(KiryuuService kiryuuService) : Endpoint<Request, List<KiryuuManga>>
+public class Endpoint(KiryuuService kiryuuService) : Endpoint<Request, List<SearchItem>>
 {
     public override void Configure()
     {

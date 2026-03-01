@@ -1,9 +1,11 @@
 using FastEndpoints;
 using MangaScrapper.Features.ScrapperKomiku.Services;
+using MangaScrapper.Infrastructure.Models;
+using MangaScrapper.Infrastructure.Repositories;
 
 namespace MangaScrapper.Features.ScrapperKomiku.Search;
 
-public class Endpoint(KomikuService komikuService) : Endpoint<Request, List<SearchItem>>
+public class Endpoint(KomikuService komikuService, IMangaRepository mangaRepository) : Endpoint<Request, List<SearchItem>>
 {
     public override void Configure()
     {
@@ -34,6 +36,9 @@ public class Endpoint(KomikuService komikuService) : Endpoint<Request, List<Sear
                     ?.GetAttributeValue("href", ""),
                 Thumbnail = node.SelectSingleNode(".//img")?.GetAttributeValue("src", "")
             };
+            
+            var currentManga = await mangaRepository.GetByTitleAsync(item.Title,ct);
+            item.LatestScrapped = currentManga?.UpdatedAt ?? null;
 
             if (!string.IsNullOrEmpty(item.Thumbnail))
             {
