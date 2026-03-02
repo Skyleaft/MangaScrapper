@@ -18,6 +18,7 @@ using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddFastEndpoints()
+    .AddResponseCaching()
     .SwaggerDocument(o => o.AutoTagPathSegmentIndex = 2);
 
 var conventionPack = new ConventionPack { new CamelCaseElementNameConvention() };
@@ -59,7 +60,7 @@ using (var scope = app.Services.CreateScope())
     );
 }
 
-app.UseFastEndpoints();
+app.UseResponseCaching().UseFastEndpoints();
 
 // Configure the HTTP request pipeline.
 // if (app.Environment.IsDevelopment())

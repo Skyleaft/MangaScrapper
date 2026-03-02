@@ -14,7 +14,7 @@ public class Endpoint(KiryuuService kiryuuService) : Endpoint<SearchRequest, Lis
 
     public override async Task HandleAsync(SearchRequest r, CancellationToken ct)
     {
-        var data = await kiryuuService.SearchManga(r);
+        var data = await kiryuuService.SearchManga(r, ct);
         await Send.OkAsync(data, ct);
     }
 }

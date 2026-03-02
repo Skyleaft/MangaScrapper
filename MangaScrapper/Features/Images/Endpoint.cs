@@ -14,6 +14,7 @@ public class Endpoint(IOptions<ScrapperSettings> settings) : Endpoint<Request>
     public override void Configure()
     {
         Get("/api/images/{*FilePath}");
+        ResponseCache(60 * 60 * 24*3);
         AllowAnonymous();
     }
 

@@ -14,7 +14,7 @@ public class Endpoint(KomikuService komikuService) : Endpoint<Request, MangaDocu
 
     public override async Task HandleAsync(Request r, CancellationToken ct)
     {
-        var manga = await komikuService.ExtractMangaMetadata(r.MangaUrl, ct, r.ScrapChapters);
+        var manga = await komikuService.ExtractManga(r.MangaUrl, ct, r.ScrapChapterPages);
         await Send.OkAsync(manga, ct);
     }
 }

@@ -15,7 +15,7 @@ public class Endpoint(KomikuService komikuService, IMangaRepository mangaReposit
 
     public override async Task HandleAsync(SearchRequest r, CancellationToken ct)
     {
-        var data = await komikuService.SearchPaged(r,ct);
+        var data = await komikuService.SearchManga(r, ct);
         await Send.OkAsync(data, ct);
     }
 }

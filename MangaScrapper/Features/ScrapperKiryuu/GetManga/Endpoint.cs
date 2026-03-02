@@ -14,30 +14,13 @@ public class Endpoint(KiryuuService kiryuuService) : Endpoint<Request, MangaDocu
 
     public override async Task HandleAsync(Request r, CancellationToken ct)
     {
-        var data = await kiryuuService.GetManga(r.Url);
+        var data = await kiryuuService.ExtractManga(r.Url, ct, r.ScraptChapterPages);
         if (data == null)
         {
             await Send.NotFoundAsync(ct);
             return;
         }
 
-        if (r.ScraptChapterPages && data.Chapters != null)
-        {
-            var chapterPageTasks = data.Chapters.Select(async (chapter, index) =>
-            {
-                var pages = string.IsNullOrWhiteSpace(chapter.Link)
-                    ? new List<PageDocument>()
-                    : await kiryuuService.GetAllPages(chapter.Link);
-                return (Index: index, Pages: pages);
-            });
-
-            var pagesByChapter = await Task.WhenAll(chapterPageTasks);
-
-            foreach (var item in pagesByChapter.OrderBy(x => x.Index))
-            {
-                data.Chapters[item.Index].Pages = item.Pages;
-            }
-        }
         await Send.OkAsync(data, cancellation: ct);
     }
 }

@@ -14,7 +14,7 @@ public class Endpoint(KiryuuService kiryuuService) : Endpoint<Request, List<Chap
 
     public override async Task HandleAsync(Request r, CancellationToken ct)
     {
-        var chapters = await kiryuuService.GetAllChapter(r.MangaId);
+        var chapters = await kiryuuService.GetAllChaptersById(r.MangaId);
         await Send.OkAsync(chapters, ct);
     }
 }
