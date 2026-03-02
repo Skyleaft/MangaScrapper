@@ -1,6 +1,10 @@
-﻿using HtmlAgilityPack;
+﻿using System.Web;
+using HtmlAgilityPack;
 using MangaScrapper.Infrastructure.BackgroundJobs;
+using MangaScrapper.Infrastructure.Models;
+using MangaScrapper.Infrastructure.Mongo.Collections;
 using MangaScrapper.Infrastructure.Repositories;
+using MangaScrapper.Infrastructure.Utils;
 using Microsoft.Extensions.Options;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Webp;
@@ -57,6 +61,19 @@ public abstract class ScrapperServiceBase
         if (formData != null)
         {
             var responseForm = await HttpClient.PostAsync(url,formData);
+            if (responseForm.StatusCode == System.Net.HttpStatusCode.MovedPermanently || 
+                responseForm.StatusCode == System.Net.HttpStatusCode.Found)
+            {
+                var newUrl = responseForm.Headers.Location;
+                if (newUrl != null)
+                {
+                    if (!newUrl.IsAbsoluteUri)
+                    {
+                        newUrl = new Uri(new Uri(url), newUrl);
+                    }
+                    responseForm = await HttpClient.PostAsync(newUrl, formData);
+                }
+            }
             responseForm.EnsureSuccessStatusCode();
             var str1 = await responseForm.Content.ReadAsStringAsync();
             var doc1 = new HtmlDocument();
@@ -141,5 +158,51 @@ public abstract class ScrapperServiceBase
         }
 
         return string.Equals(Path.GetExtension(uri.AbsolutePath), ".webp", StringComparison.OrdinalIgnoreCase);
+    }
+
+    public async Task<JikanMangaItem> GetMangaInfo(string title)
+    {
+        var query = HttpUtility.ParseQueryString(string.Empty);
+        query["q"] = title;
+        query["type"] = "manga";
+        query["limit"] = "1";
+        
+        var url = $"https://api.jikan.moe/v4/manga?{query}";
+        var response = await HttpClient.GetFromJsonAsync<JikanMangaResponse>(url);
+        return response?.Data?.FirstOrDefault() ?? new JikanMangaItem();
+    }
+    
+    public async Task<MangaDocument> UpdateMangaDocument(MangaDocument manga)
+    {
+        var mangaInfo = await GetMangaInfo(manga.Title);
+        if (mangaInfo != null)
+        {
+            var combinedTittleSynonym = string.Join(" ", mangaInfo.TitleSynonyms);
+            if (StringHelper.IsSimilar(mangaInfo.Title,manga.Title)||
+                StringHelper.IsSimilar(mangaInfo.TitleEnglish,manga.Title)||
+                StringHelper.IsSimilar(combinedTittleSynonym,manga.Title)||
+                StringHelper.IsSimilar(mangaInfo.TitleJapanese,manga.Title)
+                )
+            {
+                manga.MalID = mangaInfo.MalId;
+                manga.Rating = mangaInfo.Score;
+                manga.Popularity = mangaInfo.Popularity;
+                manga.Members = mangaInfo.Members;
+                manga.ReleaseDate = mangaInfo?.Published?.From;
+                manga.Status = mangaInfo.Status switch
+                {
+                    "Complete" => "Completed",
+                    "Finished"=> "Completed",
+                    "Publishing" => "Ongoing",
+                    "Hiatus"=> "On Hiatus",
+                    "Discontinued"=>"Discontinued",
+                    "Upcoming" => "Upcoming",
+                    _ => "Unknown"
+                };
+            }
+            
+        }
+
+        return manga;
     }
 }

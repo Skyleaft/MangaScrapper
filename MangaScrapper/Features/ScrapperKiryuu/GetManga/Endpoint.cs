@@ -1,9 +1,10 @@
 using FastEndpoints;
 using MangaScrapper.Features.ScrapperKiryuu.Services;
+using MangaScrapper.Infrastructure.Mongo.Collections;
 
 namespace MangaScrapper.Features.ScrapperKiryuu.GetManga;
 
-public class Endpoint(KiryuuService kiryuuService) : Endpoint<Request, KiryuuManga>
+public class Endpoint(KiryuuService kiryuuService) : Endpoint<Request, MangaDocument>
 {
     public override void Configure()
     {
@@ -24,9 +25,9 @@ public class Endpoint(KiryuuService kiryuuService) : Endpoint<Request, KiryuuMan
         {
             var chapterPageTasks = data.Chapters.Select(async (chapter, index) =>
             {
-                var pages = string.IsNullOrWhiteSpace(chapter.Url)
-                    ? new List<KiryuuPage>()
-                    : await kiryuuService.GetAllPages(chapter.Url);
+                var pages = string.IsNullOrWhiteSpace(chapter.Link)
+                    ? new List<PageDocument>()
+                    : await kiryuuService.GetAllPages(chapter.Link);
                 return (Index: index, Pages: pages);
             });
 

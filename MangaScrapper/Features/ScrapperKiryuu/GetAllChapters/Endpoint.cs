@@ -1,9 +1,10 @@
 using FastEndpoints;
 using MangaScrapper.Features.ScrapperKiryuu.Services;
+using MangaScrapper.Infrastructure.Mongo.Collections;
 
 namespace MangaScrapper.Features.ScrapperKiryuu.GetAllChapters;
 
-public class Endpoint(KiryuuService kiryuuService) : Endpoint<Request, List<KiryuuChapter>>
+public class Endpoint(KiryuuService kiryuuService) : Endpoint<Request, List<ChapterDocument>>
 {
     public override void Configure()
     {

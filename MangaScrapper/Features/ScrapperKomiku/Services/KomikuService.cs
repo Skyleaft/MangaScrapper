@@ -1,10 +1,13 @@
+using System.Web;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using HtmlAgilityPack;
 using MangaScrapper.Infrastructure.BackgroundJobs;
+using MangaScrapper.Infrastructure.Models;
 using MangaScrapper.Infrastructure.Mongo.Collections;
 using MangaScrapper.Infrastructure.Repositories;
 using MangaScrapper.Infrastructure.Services;
+using MangaScrapper.Infrastructure.Utils;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
@@ -31,16 +34,24 @@ public class KomikuService : ScrapperServiceBase
         var title = doc.DocumentNode.SelectSingleNode(Provider.MangaSelectors.Title)?.InnerText.Trim() ?? string.Empty;
         var chapters = ExtractChapters(doc);
         var existingManga = await MangaRepository.GetByTitleAsync(title, ct);
+        
+        var thumbnail = doc.DocumentNode.SelectSingleNode(Provider.MangaSelectors.Thumbnail)?.GetAttributeValue("src", string.Empty);
+        if (!string.IsNullOrWhiteSpace(thumbnail))
+        {
+            thumbnail = ThumbnailHelper.RemoveResizeParams(thumbnail);
+        }
+
+        var localThumbnail = string.Empty;
+        if (!string.IsNullOrWhiteSpace(thumbnail))
+        {
+            localThumbnail = await DownloadThumbnailAndConvertToWebP(title, thumbnail);
+        }
 
         if (existingManga != null)
         {
-            if (string.IsNullOrEmpty(existingManga.LocalImageUrl) && !string.IsNullOrEmpty(existingManga.ImageUrl))
-            {
-                existingManga.LocalImageUrl = await DownloadThumbnailAndConvertToWebP(existingManga.Title, existingManga.ImageUrl);
-                existingManga.UpdatedAt = DateTime.UtcNow;
-                await MangaRepository.UpdateAsync(existingManga, ct);
-            }
-
+            existingManga.ImageUrl = thumbnail;
+            existingManga.LocalImageUrl = localThumbnail;
+            
             var maxExistingChapter = existingManga.Chapters.MaxBy(c => c.Number)?.Number ?? 0;
             var newChapters = chapters.Where(c => c.Number > maxExistingChapter).ToList();
 
@@ -48,7 +59,6 @@ public class KomikuService : ScrapperServiceBase
             {
                 existingManga.Chapters.AddRange(newChapters);
                 existingManga.UpdatedAt = DateTime.UtcNow;
-                await MangaRepository.UpdateAsync(existingManga, ct);
 
                 if (scrapChapters)
                 {
@@ -59,20 +69,12 @@ public class KomikuService : ScrapperServiceBase
                 }
             }
 
+            existingManga = await UpdateMangaDocument(existingManga);
+            await MangaRepository.UpdateAsync(existingManga, ct);
+
             return existingManga;
         }
-
-        var thumbnail = doc.DocumentNode.SelectSingleNode(Provider.MangaSelectors.Thumbnail)?.GetAttributeValue("src", string.Empty);
-        if (!string.IsNullOrWhiteSpace(thumbnail))
-        {
-            thumbnail = thumbnail.Replace("?w=500", "");
-        }
-
-        var localThumbnail = string.Empty;
-        if (!string.IsNullOrWhiteSpace(thumbnail))
-        {
-            localThumbnail = await DownloadThumbnailAndConvertToWebP(title, thumbnail);
-        }
+        
 
         var manga = new MangaDocument
         {
@@ -82,12 +84,13 @@ public class KomikuService : ScrapperServiceBase
             Type = doc.DocumentNode.SelectSingleNode(Provider.MangaSelectors.Type)?.InnerText.Trim() ?? string.Empty,
             ImageUrl = thumbnail,
             LocalImageUrl = localThumbnail,
-            Status = doc.DocumentNode.SelectSingleNode(Provider.MangaSelectors.Status)?.InnerText.Trim(),
             Genres = doc.DocumentNode.SelectNodes(Provider.MangaSelectors.Genres)?.Select(n => n.InnerText.Trim()).ToList(),
             Url = url,
             CreatedAt = chapters.OrderBy(x => x.UploadDate).FirstOrDefault()?.UploadDate ?? DateTime.MinValue,
             Chapters = chapters
         };
+
+        manga = await UpdateMangaDocument(manga);
 
         await MangaRepository.CreateAsync(manga, ct);
 
@@ -190,6 +193,8 @@ public class KomikuService : ScrapperServiceBase
             {
                 Number = chapterNumber,
                 Link = link,
+                ChapterProvider = Provider.ProviderName,
+                ChapterProviderIcon = Provider.ProviderIcon,
                 TotalView = totalView,
                 UploadDate = uploadDate
             });
@@ -197,4 +202,105 @@ public class KomikuService : ScrapperServiceBase
 
         return chapters;
     }
+
+    public async Task<List<SearchItem>> SearchPaged(SearchRequest request,CancellationToken ct)
+    {
+        var url = $"https://api.komiku.org/manga/page/{request.Page}/?orderby=modified&tipe={request.Type ?? ""}&genre={request.Genres?.FirstOrDefault() ?? ""}&genre2&status={request.Status ?? ""}";
+        if (!string.IsNullOrEmpty(request.Keyword))
+        {
+            url = $"https://api.komiku.org/?post_type=manga&s={HttpUtility.UrlEncode(request.Keyword)}";
+        }
+        var doc = await GetHtml(url);
+
+        var results = new List<SearchItem>();
+
+        var nodes = doc.DocumentNode.SelectNodes("//div[@class='bge']");
+        if (nodes == null) return results;
+
+        foreach (var node in nodes)
+        {
+            try
+            {
+                var item = new SearchItem();
+
+                // ========================
+                // Title + Detail URL
+                // ========================
+                var titleNode = node.SelectSingleNode(".//div[@class='kan']//h3");
+                var linkNode = node.SelectSingleNode(".//div[@class='kan']//a[1]");
+
+                item.Title = titleNode?.InnerText.Trim();
+                item.DetailUrl = linkNode?.GetAttributeValue("href", "") ?? "";
+
+                // ========================
+                // Thumbnail
+                // ========================
+                var imgNode = node.SelectSingleNode(".//div[@class='bgei']//img");
+                item.Thumbnail = imgNode?.GetAttributeValue("src", "") ?? "";
+
+                // ========================
+                // Type & Genre
+                // ========================
+                var typeNode = node.SelectSingleNode(".//div[contains(@class,'tpe1_inf')]/b");
+                var genreNode = node.SelectSingleNode(".//div[contains(@class,'tpe1_inf')]");
+
+                item.Type = typeNode?.InnerText.Trim() ?? "";
+
+                if (genreNode != null)
+                {
+                    var genreText = HtmlEntity.DeEntitize(genreNode.InnerText)
+                        .Replace(item.Type, "")
+                        .Trim();
+                    item.Genre = genreText;
+                }
+
+                // ========================
+                // Last Update Text
+                // ========================
+                var infoNode = node.SelectSingleNode(".//div[@class='kan']//span[contains(@class,'judul2')]");
+                if (infoNode != null)
+                {
+                    var text = HtmlEntity.DeEntitize(infoNode.InnerText);
+                    // contoh: "8.5jt pembaca | 6 menit lalu | Berwarna"
+                    var parts = text.Split('|', StringSplitOptions.TrimEntries);
+                    if (parts.Length >= 2)
+                    {
+                        item.LastUpdateText = parts[1];
+                    }
+                }
+                else
+                {
+                    item.LastUpdateText = node.SelectSingleNode(".//div[@class='kan']/p")?.InnerText.Trim();
+                }
+
+                // ========================
+                // Latest Chapter
+                // ========================
+                var latestNode = node.SelectSingleNode(".//div[@class='new1'][2]//span[last()]");
+                if (latestNode != null)
+                {
+                    var match = Regex.Match(latestNode.InnerText, @"([\d\.]+)");
+                    if (match.Success &&
+                        double.TryParse(match.Value, NumberStyles.Any, CultureInfo.InvariantCulture, out var chap))
+                    {
+                        item.LatestChapterNumber = chap;
+                    }
+                }
+
+                // ========================
+                // Scraped time
+                // ========================
+                var currentManga = await MangaRepository.GetByTitleAsync(item.Title,ct);
+                item.LatestScrapped = currentManga?.UpdatedAt ?? null;
+
+                results.Add(item);
+            }
+            catch
+            {
+                // skip item error biar tidak crash
+            }
+        }
+
+        return results;
+        }
 }

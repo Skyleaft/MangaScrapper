@@ -1,6 +1,7 @@
 {
   "ProviderName": "Komiku",
   "BaseUrl": "https://komiku.org",
+  "ProviderIcon": "https://komiku.org/asset/img/ico.ico",
   "MangaSelectors": {
     "Title": "//td[text()='Judul Komik']/following-sibling::td",
     "Author": "//td[text()='Pengarang']/following-sibling::td",

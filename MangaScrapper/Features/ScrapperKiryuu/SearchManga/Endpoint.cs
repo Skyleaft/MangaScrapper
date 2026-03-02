@@ -4,17 +4,17 @@ using MangaScrapper.Infrastructure.Models;
 
 namespace MangaScrapper.Features.ScrapperKiryuu.SearchManga;
 
-public class Endpoint(KiryuuService kiryuuService) : Endpoint<Request, List<SearchItem>>
+public class Endpoint(KiryuuService kiryuuService) : Endpoint<SearchRequest, List<SearchItem>>
 {
     public override void Configure()
     {
-        Post("/api/scrapper/kiryuu/manga/search");
+        Get("/api/scrapper/kiryuu/manga/search");
         AllowAnonymous();
     }
 
-    public override async Task HandleAsync(Request r, CancellationToken ct)
+    public override async Task HandleAsync(SearchRequest r, CancellationToken ct)
     {
-        var data = await kiryuuService.SearchManga(r.Keyword);
+        var data = await kiryuuService.SearchManga(r);
         await Send.OkAsync(data, ct);
     }
 }

@@ -15,7 +15,9 @@ public class MangaDocument
     public string Author { get; set; } = string.Empty;
     
     public string Type { get; set; } = string.Empty;
-    public double Rating { get; set; }
+    public double? Rating { get; set; }
+    public int Popularity { get; set; }
+    public int Members { get; set; }
     
     [BsonIgnoreIfNull]
     public List<string>? Genres { get; set; }
@@ -29,7 +31,7 @@ public class MangaDocument
     
     [BsonIgnoreIfNull]
     public string? Status { get; set; }
-    public DateTime ReleaseDate { get; set; }
+    public DateTime? ReleaseDate { get; set; }
     
     [BsonDateTimeOptions(Kind = DateTimeKind.Utc)]
     public DateTime CreatedAt { get; set; }
@@ -51,6 +53,7 @@ public class ChapterDocument
     [BsonIgnoreIfNull]
     public string? Link { get; set; }
     public string? ChapterProvider { get; set; }
+    public string? ChapterProviderIcon { get; set; }
     public int TotalView { get; set; }
     [BsonDateTimeOptions(Kind = DateTimeKind.Utc)]
     public DateTime UploadDate { get; set; }

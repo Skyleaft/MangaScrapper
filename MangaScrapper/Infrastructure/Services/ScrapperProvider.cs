@@ -4,6 +4,7 @@ public class ScrapperProvider
 {
     public string ProviderName { get; set; } = string.Empty;
     public string BaseUrl { get; set; } = string.Empty;
+    public string ProviderIcon { get; set; } = string.Empty;
     public MangaSelectorConfig MangaSelectors { get; set; } = new();
     public ChapterSelectorConfig ChapterSelectors { get; set; } = new();
     public PageSelectorConfig PageSelectors { get; set; } = new();
