@@ -39,6 +39,7 @@ builder.Services.AddScoped<IMangaRepository, MangaRepository>();
 builder.Services.AddSingleton<IBackgroundTaskQueue>(_ => new BackgroundTaskQueue(100));
 builder.Services.AddHostedService<BackgroundWorker>();
 
+builder.Services.AddHttpClient<ScrapperService>();
 builder.Services.AddHttpClient<KomikuService>();
 builder.Services.AddHttpClient<KiryuuService>();
 

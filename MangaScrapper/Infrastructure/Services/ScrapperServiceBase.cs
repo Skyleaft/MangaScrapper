@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using System.Text.Json;
 using System.Web;
 using HtmlAgilityPack;
 using MangaScrapper.Infrastructure.BackgroundJobs;
@@ -173,36 +174,53 @@ public abstract class ScrapperServiceBase
         var response = await HttpClient.GetFromJsonAsync<JikanMangaResponse>(url);
         return response?.Data?.FirstOrDefault() ?? new JikanMangaItem();
     }
+    public async Task<JikanMangaItem> GetMangaInfoById(int malId)
+    {
+        var url = $"https://api.jikan.moe/v4/manga/{malId}";
+        var response = await HttpClient.GetFromJsonAsync<JikanMangaSingleResponse>(url);
+        return response?.Data ?? new JikanMangaItem();
+    }
     
     public async Task<MangaDocument> UpdateMangaDocument(MangaDocument manga)
     {
-        var mangaInfo = await GetMangaInfo(manga.Title);
-        if (mangaInfo != null)
+        JikanMangaItem? mangaInfo;
+        if (manga.MalID != null && manga.MalID != 0)
         {
-            var combinedTittleSynonym = string.Join(" ", mangaInfo.TitleSynonyms);
-            if (StringHelper.IsSimilar(mangaInfo.Title,manga.Title)||
-                StringHelper.IsSimilar(mangaInfo.TitleEnglish,manga.Title)||
-                StringHelper.IsSimilar(combinedTittleSynonym,manga.Title)||
-                StringHelper.IsSimilar(mangaInfo.TitleJapanese,manga.Title)
-                )
+            mangaInfo = await GetMangaInfoById(manga.MalID);
+        }
+        else
+        {
+            mangaInfo = await GetMangaInfo(manga.Title);
+        }
+        
+        if (mangaInfo!=null)
+        {
+            if (mangaInfo.TitleSynonyms != null)
             {
-                manga.MalID = mangaInfo.MalId;
-                manga.Rating = mangaInfo.Score;
-                manga.Popularity = mangaInfo.Popularity;
-                manga.Members = mangaInfo.Members;
-                manga.ReleaseDate = mangaInfo?.Published?.From;
-                manga.Status = mangaInfo.Status switch
+                var combinedTittleSynonym = string.Join(" ", mangaInfo.TitleSynonyms);
+                if (StringHelper.IsSimilar(mangaInfo.Title,manga.Title)||
+                    StringHelper.IsSimilar(mangaInfo.TitleEnglish,manga.Title)||
+                    StringHelper.IsSimilar(combinedTittleSynonym,manga.Title)||
+                    StringHelper.IsSimilar(mangaInfo.TitleJapanese,manga.Title)
+                   )
                 {
-                    "Complete" => "Completed",
-                    "Finished"=> "Completed",
-                    "Publishing" => "Ongoing",
-                    "Hiatus"=> "On Hiatus",
-                    "Discontinued"=>"Discontinued",
-                    "Upcoming" => "Upcoming",
-                    _ => "Unknown"
-                };
+                    manga.MalID = mangaInfo.MalId;
+                    manga.Rating = mangaInfo.Score;
+                    manga.Popularity = mangaInfo.Popularity;
+                    manga.Members = mangaInfo.Members;
+                    manga.ReleaseDate = mangaInfo?.Published?.From;
+                    manga.Status = mangaInfo.Status switch
+                    {
+                        "Complete" => "Completed",
+                        "Finished"=> "Completed",
+                        "Publishing" => "Ongoing",
+                        "Hiatus"=> "On Hiatus",
+                        "Discontinued"=>"Discontinued",
+                        "Upcoming" => "Upcoming",
+                        _ => "Unknown"
+                    };
+                }
             }
-            
         }
 
         return manga;
@@ -355,5 +373,38 @@ public abstract class ScrapperServiceBase
         var chapter = new ChapterDocument { Link = url };
         var processedChapter = await GetChapterPage("temp", chapter);
         return processedChapter.Pages;
+    }
+    
+    public async Task<List<ScrapperProvider>> GetAllProvider()
+    {
+        var providers = new List<ScrapperProvider>();
+        var providerFolder = Path.Combine(Directory.GetCurrentDirectory(), "provider");
+        
+        if (!Directory.Exists(providerFolder))
+        {
+            return providers;
+        }
+
+        var jsonFiles = Directory.GetFiles(providerFolder, "*.json");
+        
+        foreach (var file in jsonFiles)
+        {
+            try
+            {
+                var jsonContent = await File.ReadAllTextAsync(file);
+                var provider = JsonSerializer.Deserialize<ScrapperProvider>(jsonContent);
+                
+                if (provider != null)
+                {
+                    providers.Add(provider);
+                }
+            }
+            catch (Exception)
+            {
+                // Skip invalid JSON files
+            }
+        }
+
+        return providers;
     }
 }

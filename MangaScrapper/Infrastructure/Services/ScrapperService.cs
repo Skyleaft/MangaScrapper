@@ -1,0 +1,38 @@
+﻿using System.Text.Json;
+using HtmlAgilityPack;
+using MangaScrapper.Infrastructure.BackgroundJobs;
+using MangaScrapper.Infrastructure.Models;
+using MangaScrapper.Infrastructure.Mongo.Collections;
+using MangaScrapper.Infrastructure.Repositories;
+using Microsoft.Extensions.Options;
+
+namespace MangaScrapper.Infrastructure.Services;
+
+public class ScrapperService : ScrapperServiceBase
+{
+    public ScrapperService(
+        HttpClient httpClient, 
+        IMangaRepository mangaRepository, 
+        IBackgroundTaskQueue taskQueue, 
+        IServiceScopeFactory scopeFactory, 
+        IOptions<ScrapperSettings> settings, 
+        SemaphoreSlim semaphore) 
+        : base(httpClient, mangaRepository, taskQueue, scopeFactory, settings, semaphore)
+    {
+    }
+
+    protected override MangaDocument ExtractMangaMetadata(HtmlDocument doc)
+    {
+        throw new NotImplementedException();
+    }
+
+    protected override Task<List<ChapterDocument>> ExtractChapters(HtmlDocument doc)
+    {
+        throw new NotImplementedException();
+    }
+
+    public override Task<List<SearchItem>> SearchManga(SearchRequest request, CancellationToken ct)
+    {
+        throw new NotImplementedException();
+    }
+}

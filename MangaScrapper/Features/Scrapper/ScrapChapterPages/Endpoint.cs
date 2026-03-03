@@ -1,14 +1,15 @@
 using FastEndpoints;
+using MangaScrapper.Features.ScrapperKiryuu.Services;
 using MangaScrapper.Features.ScrapperKomiku.Services;
 using MangaScrapper.Infrastructure.Repositories;
 
-namespace MangaScrapper.Features.ScrapperKomiku.ScrapChapterPages;
+namespace MangaScrapper.Features.Scrapper.ScrapChapterPages;
 
-public class Endpoint(KomikuService komikuService, IMangaRepository mangaRepository) : Endpoint<Request>
+public class Endpoint(KomikuService komikuService,KiryuuService kiryuuService, IMangaRepository mangaRepository) : Endpoint<Request>
 {
     public override void Configure()
     {
-        Get("/api/scrapper/komiku/manga/{MangaId}/chapter-pages");
+        Get("/api/scrapper/manga/{MangaId}/chapter-pages");
         AllowAnonymous();
     }
 
@@ -23,9 +24,13 @@ public class Endpoint(KomikuService komikuService, IMangaRepository mangaReposit
 
         foreach (var chapter in manga.Chapters)
         {
-            if (chapter.Pages.Count == 0)
+            if (chapter.ChapterProvider == "Komiku" && chapter.Pages.Count ==0)
             {
                 await komikuService.QueueChapterScraping(manga.Id, manga.Title, chapter);
+            }
+            else if (chapter.ChapterProvider == "Kiryuu" && chapter.Pages.Count ==0)
+            {
+                await kiryuuService.QueueChapterScraping(manga.Id, manga.Title, chapter);
             }
         }
 

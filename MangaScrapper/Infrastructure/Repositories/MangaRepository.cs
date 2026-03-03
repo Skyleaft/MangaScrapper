@@ -99,14 +99,12 @@ public class MangaRepository : IMangaRepository
     public async Task<Guid> CreateAsync(MangaDocument manga, CancellationToken ct)
     {
         manga.Id = Guid.NewGuid();
-        manga.UpdatedAt = DateTime.UtcNow;
         await _collection.InsertOneAsync(manga, cancellationToken: ct);
         return manga.Id;
     }
 
     public async Task UpdateAsync(MangaDocument manga, CancellationToken ct)
     {
-        manga.UpdatedAt = DateTime.UtcNow;
         await _collection.ReplaceOneAsync(m => m.Id == manga.Id, manga, cancellationToken: ct);
     }
 

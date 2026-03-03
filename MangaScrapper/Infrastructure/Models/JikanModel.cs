@@ -24,6 +24,12 @@ public class JikanMangaResponse
     public JikanPagination? Pagination { get; set; }
 }
 
+public class JikanMangaSingleResponse
+{
+    [JsonPropertyName("data")]
+    public JikanMangaItem? Data { get; set; }
+}
+
 public class JikanMangaItem
 {
     [JsonPropertyName("mal_id")]
