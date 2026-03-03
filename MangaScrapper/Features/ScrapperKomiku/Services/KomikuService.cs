@@ -101,6 +101,10 @@ public class KomikuService : ScrapperServiceBase
 
                 item.Title = titleNode?.InnerText.Trim();
                 item.DetailUrl = linkNode?.GetAttributeValue("href", "") ?? "";
+                if (!string.IsNullOrEmpty(request.Keyword))
+                {
+                    item.DetailUrl = Provider.BaseUrl+item.DetailUrl;
+                }
 
                 var imgNode = node.SelectSingleNode(".//div[@class='bgei']//img");
                 item.Thumbnail = imgNode?.GetAttributeValue("src", "") ?? "";
