@@ -40,13 +40,20 @@ public class Endpoint(IMangaRepository mangaRepository) : Endpoint<Request, Resp
                 CreatedAt = m.CreatedAt,
                 UpdatedAt = m.UpdatedAt,
                 Url = m.Url,
+                MalId = m.MalID,
+                Members = m.Members,
+                Popularity = m.Popularity,
+                Rating = m.Rating,
+                ReleaseDate = m.ReleaseDate,
                 TotalView = m.Chapters.Sum(c => c.TotalView),
                 LatestChapter = m.Chapters.OrderByDescending(c => c.Number).Select(c => new LatestChapterSummary
                 {
                     Id = c.Id,
                     Number = c.Number,
                     TotalView = c.TotalView,
-                    UploadDate = c.UploadDate
+                    UploadDate = c.UploadDate,
+                    ChapterProvider = c.ChapterProvider,
+                    ChapterProviderIcon = c.ChapterProviderIcon
                 }).FirstOrDefault() ?? new()
             }).ToList(),
             TotalCount = totalCount,

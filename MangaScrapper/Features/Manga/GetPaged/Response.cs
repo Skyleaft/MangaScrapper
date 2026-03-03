@@ -3,6 +3,7 @@ namespace MangaScrapper.Features.Manga.GetPaged;
 public class MangaSummary
 {
     public Guid Id { get; set; }
+    public int MalId { get; set; }
     public string Title { get; set; } = string.Empty;
     public string Author { get; set; } = string.Empty;
     public string Type { get; set; } = string.Empty;
@@ -10,6 +11,10 @@ public class MangaSummary
     public string? Description { get; set; }
     public string? ImageUrl { get; set; }
     public string? LocalImageUrl { get; set; }
+    public double? Rating { get; set; }
+    public int Popularity { get; set; }
+    public int Members { get; set; }
+    public DateTime? ReleaseDate { get; set; }
     public string? Status { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
@@ -30,5 +35,7 @@ public class LatestChapterSummary{
     public Guid Id{get;set;}
     public double Number { get; set; }
     public int TotalView { get; set; }
+    public string? ChapterProvider { get; set; }
+    public string? ChapterProviderIcon { get; set; }
     public DateTime UploadDate { get; set; }
 }

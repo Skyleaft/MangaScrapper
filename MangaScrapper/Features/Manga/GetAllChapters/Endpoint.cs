@@ -35,6 +35,8 @@ public class Endpoint(IMangaRepository repo) : Endpoint<Request, List<Response>>
                 Number = c.Number,
                 TotalView = c.TotalView,
                 UploadDate = c.UploadDate,
+                ChapterProvider = c.ChapterProvider,
+                ChapterProviderIcon = c.ChapterProviderIcon,
                 PageCount = c.Pages?.Count ?? 0,
                 IsChapterAvailable = c.Pages?.Any() ?? false
             })

@@ -36,6 +36,11 @@ public class Endpoint(IMangaRepository mangaRepository) : Endpoint<Request, Resp
             CreatedAt = manga.CreatedAt,
             UpdatedAt = manga.UpdatedAt,
             Url = manga.Url,
+            MalId = manga.MalID,
+            Members = manga.Members,
+            Popularity = manga.Popularity,
+            Rating = manga.Rating,
+            ReleaseDate = manga.ReleaseDate
         };
 
         await Send.OkAsync(response, ct);
