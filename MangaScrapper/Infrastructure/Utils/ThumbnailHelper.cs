@@ -11,7 +11,7 @@ public static class ThumbnailHelper
         var segments = uri.Segments;
 
         // Jika segment terakhir mengandung '=' biasanya itu resize params
-        if (segments.Length > 0 && segments.Last().Contains("="))
+        if (segments.Length > 0 && segments.Last().Contains('=') && !segments.Last().Contains("format=auto"))
         {
             var newPath = string.Concat(segments.Take(segments.Length - 1));
             return $"{uri.Scheme}://{uri.Host}{newPath}";

@@ -220,6 +220,10 @@ public abstract class ScrapperServiceBase
                         "Upcoming" => "Upcoming",
                         _ => "Unknown"
                     };
+                    if(string.IsNullOrEmpty(manga.Author))
+                    {
+                        manga.Author = mangaInfo.Authors.FirstOrDefault()?.Name ?? manga.Author;
+                    }
                 }
             }
         }

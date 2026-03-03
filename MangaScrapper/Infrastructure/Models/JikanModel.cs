@@ -70,6 +70,9 @@ public class JikanMangaItem
     [JsonPropertyName("images")]
     public JikanImages? Images { get; set; }
 
+    [JsonPropertyName("authors")] 
+    public List<JikanAuthor> Authors { get; set; } = new List<JikanAuthor>();
+
     [JsonPropertyName("genres")]
     public List<JikanGenre>? Genres { get; set; }
 
@@ -104,6 +107,22 @@ public class JikanImageDetail
 
 public class JikanGenre
 {
+    [JsonPropertyName("mal_id")]
+    public int MalId { get; set; }
+
+    [JsonPropertyName("type")]
+    public string? Type { get; set; }
+
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }
+
+    [JsonPropertyName("url")]
+    public string? Url { get; set; }
+}
+
+public class JikanAuthor
+{
+    
     [JsonPropertyName("mal_id")]
     public int MalId { get; set; }
 

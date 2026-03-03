@@ -45,6 +45,17 @@ public class KiryuuService : ScrapperServiceBase
         {
             manga.Genres = genreNodes.Select(g => g.InnerText.Trim()).ToList();
         }
+        
+        var typeNode = doc.DocumentNode.SelectSingleNode(
+            "//h4/span[normalize-space()='Type']/ancestor::div[contains(@class,'flex')][1]//p"
+        );
+
+        if (typeNode != null)
+        {
+            manga.Type = typeNode.InnerText.Trim();
+        }
+
+        manga.Status = "Ongoing";
 
         var infoNodes = doc.DocumentNode.SelectNodes("//div[contains(@class,'grid')]//h4");
         if (infoNodes != null)
@@ -55,7 +66,7 @@ public class KiryuuService : ScrapperServiceBase
                 var value = node.ParentNode.SelectSingleNode(".//p")?.InnerText.Trim();
 
                 if (label.Contains("Author")) manga.Author = value ?? string.Empty;
-                if (label.Contains("Status")) manga.Status = value;
+                if (label.Contains("Status")) manga.Status = value ?? "Ongoing";
             }
         }
 
