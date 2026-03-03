@@ -73,7 +73,7 @@ public class KiryuuService : ScrapperServiceBase
         return manga;
     }
 
-    protected override async Task<List<ChapterDocument>> ExtractChapters(HtmlDocument doc)
+    protected override async Task<List<ChapterDocument>> ExtractChapters(HtmlDocument doc, CancellationToken ct = default)
     {
         var hxNode = doc.DocumentNode.SelectSingleNode("//div[contains(@hx-get,'manga_id=')]");
         var hxGet = hxNode?.GetAttributeValue("hx-get", "");
@@ -84,7 +84,7 @@ public class KiryuuService : ScrapperServiceBase
 
         var data = new List<ChapterDocument>();
         var url = $"{Provider.BaseUrl}/wp-admin/admin-ajax.php?manga_id={mangaId}&page=1&action=chapter_list";
-        var chaptersDoc = await GetHtml(url);
+        var chaptersDoc = await GetHtml(url, ct: ct);
 
         var chapterNodes = chaptersDoc.DocumentNode.SelectNodes(Provider.ChapterSelectors.Rows);
         if (chapterNodes == null) return data;
@@ -145,7 +145,7 @@ public class KiryuuService : ScrapperServiceBase
             formData.Add(new StringContent(genresJson), "genre");
         }
 
-        var doc = await GetHtml(url, null, formData);
+        var doc = await GetHtml(url, null, formData, ct: ct);
         var data = new List<SearchItem>();
 
         var cards = doc.DocumentNode.SelectNodes("//div[div[contains(@class,'rounded-lg')] and div[contains(@class,'group-data-[mode=horizontal]')]]");

@@ -11,18 +11,27 @@ public class BackgroundWorker(IBackgroundTaskQueue taskQueue, ILogger<Background
 
         while (!stoppingToken.IsCancellationRequested)
         {
-            var (workItem, id) = await taskQueue.DequeueAsync(stoppingToken);
-
+            Guid? currentId = null;
             try
             {
+                var (workItem, id) = await taskQueue.DequeueAsync(stoppingToken);
+                currentId = id;
+
                 taskQueue.UpdateStatus(id, "Running");
                 await workItem(stoppingToken);
                 taskQueue.Remove(id);
             }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                break;
+            }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Error occurred executing background work item.");
-                taskQueue.UpdateStatus(id, $"Error: {ex.Message}");
+                if (currentId.HasValue)
+                {
+                    taskQueue.UpdateStatus(currentId.Value, $"Error: {ex.Message}");
+                }
             }
         }
 

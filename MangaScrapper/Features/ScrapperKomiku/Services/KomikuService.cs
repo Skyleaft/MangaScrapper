@@ -40,7 +40,7 @@ public class KomikuService : ScrapperServiceBase
         };
     }
 
-    protected override Task<List<ChapterDocument>> ExtractChapters(HtmlDocument doc)
+    protected override Task<List<ChapterDocument>> ExtractChapters(HtmlDocument doc, CancellationToken ct = default)
     {
         var chapters = new List<ChapterDocument>();
         var chapterRows = doc.DocumentNode.SelectNodes(Provider.ChapterSelectors.Rows);
@@ -83,7 +83,7 @@ public class KomikuService : ScrapperServiceBase
         {
             url = $"https://api.komiku.org/?post_type=manga&s={HttpUtility.UrlEncode(request.Keyword)}";
         }
-        var doc = await GetHtml(url);
+        var doc = await GetHtml(url, ct: ct);
 
         var results = new List<SearchItem>();
 

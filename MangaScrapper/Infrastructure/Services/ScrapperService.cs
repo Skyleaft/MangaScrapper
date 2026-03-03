@@ -26,7 +26,7 @@ public class ScrapperService : ScrapperServiceBase
         throw new NotImplementedException();
     }
 
-    protected override Task<List<ChapterDocument>> ExtractChapters(HtmlDocument doc)
+    protected override Task<List<ChapterDocument>> ExtractChapters(HtmlDocument doc, CancellationToken ct = default)
     {
         throw new NotImplementedException();
     }

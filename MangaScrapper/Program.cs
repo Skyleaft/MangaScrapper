@@ -39,9 +39,9 @@ builder.Services.AddScoped<IMangaRepository, MangaRepository>();
 builder.Services.AddSingleton<IBackgroundTaskQueue>(_ => new BackgroundTaskQueue(100));
 builder.Services.AddHostedService<BackgroundWorker>();
 
-builder.Services.AddHttpClient<ScrapperService>();
-builder.Services.AddHttpClient<KomikuService>();
-builder.Services.AddHttpClient<KiryuuService>();
+builder.Services.AddHttpClient<ScrapperService>(c => c.Timeout = TimeSpan.FromMinutes(5));
+builder.Services.AddHttpClient<KomikuService>(c => c.Timeout = TimeSpan.FromMinutes(5));
+builder.Services.AddHttpClient<KiryuuService>(c => c.Timeout = TimeSpan.FromMinutes(5));
 
 
 // Add services to the container.

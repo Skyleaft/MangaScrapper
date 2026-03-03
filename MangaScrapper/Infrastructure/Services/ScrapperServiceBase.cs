@@ -59,52 +59,78 @@ public abstract class ScrapperServiceBase
         }
     }
     
-    public async Task<HtmlDocument> GetHtml(string url,string? query=null,MultipartFormDataContent? formData = null)
+    public async Task<HtmlDocument> GetHtml(string url, string? query = null, MultipartFormDataContent? formData = null, CancellationToken ct = default)
     {
-        if (formData != null)
+        return await ExecuteWithRetryAsync(async (token) =>
         {
-            var responseForm = await HttpClient.PostAsync(url,formData);
-            if (responseForm.StatusCode == System.Net.HttpStatusCode.MovedPermanently || 
-                responseForm.StatusCode == System.Net.HttpStatusCode.Found)
+            if (formData != null)
             {
-                var newUrl = responseForm.Headers.Location;
-                if (newUrl != null)
+                var responseForm = await HttpClient.PostAsync(url, formData, token);
+                if (responseForm.StatusCode == System.Net.HttpStatusCode.MovedPermanently ||
+                    responseForm.StatusCode == System.Net.HttpStatusCode.Found)
                 {
-                    if (!newUrl.IsAbsoluteUri)
+                    var newUrl = responseForm.Headers.Location;
+                    if (newUrl != null)
                     {
-                        newUrl = new Uri(new Uri(url), newUrl);
+                        if (!newUrl.IsAbsoluteUri)
+                        {
+                            newUrl = new Uri(new Uri(url), newUrl);
+                        }
+
+                        responseForm = await HttpClient.PostAsync(newUrl, formData, token);
                     }
-                    responseForm = await HttpClient.PostAsync(newUrl, formData);
                 }
+
+                responseForm.EnsureSuccessStatusCode();
+                var str1 = await responseForm.Content.ReadAsStringAsync(token);
+                var doc1 = new HtmlDocument();
+                doc1.LoadHtml(str1);
+                return doc1;
             }
-            responseForm.EnsureSuccessStatusCode();
-            var str1 = await responseForm.Content.ReadAsStringAsync();
-            var doc1 = new HtmlDocument();
-            doc1.LoadHtml(str1);
-            return doc1;
-        }
-        else
+            else
+            {
+                var response = await HttpClient.GetAsync(url, token);
+                response.EnsureSuccessStatusCode();
+                var str = await response.Content.ReadAsStringAsync(token);
+                var doc = new HtmlDocument();
+                doc.LoadHtml(str);
+                return doc;
+            }
+        }, ct);
+    }
+
+    protected async Task<T> ExecuteWithRetryAsync<T>(Func<CancellationToken, Task<T>> action, CancellationToken ct, int maxRetries = 3)
+    {
+        for (var i = 0; i < maxRetries; i++)
         {
-            var response = await HttpClient.GetAsync(url);
-            response.EnsureSuccessStatusCode();
-            var str = await response.Content.ReadAsStringAsync();
-            var doc = new HtmlDocument();
-            doc.LoadHtml(str);
-            return doc; 
+            try
+            {
+                return await action(ct);
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                throw; // Stop retrying if cancellation was requested by the caller
+            }
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Net.Sockets.SocketException)
+            {
+                if (i == maxRetries - 1) throw;
+                await Task.Delay(1000 * (i + 1), ct);
+            }
         }
-        
+
+        throw new Exception("Retry failed");
     }
     
-    public async Task<string> DownloadAndConvertToWebP(string mangaTitle, string chapterNumber, string imageUrl, int index)
+    public async Task<string> DownloadAndConvertToWebP(string mangaTitle, string chapterNumber, string imageUrl, int index, CancellationToken ct = default)
     {
         var cleanTitle = GetCleanTitle(mangaTitle);
         var subDir = Path.Combine(ImageStoragePath, cleanTitle, chapterNumber);
         var fileName = $"{index}.webp";
         
-        return await SaveImageAsync(imageUrl, subDir, fileName, $"{cleanTitle}/{chapterNumber}/{fileName}");
+        return await SaveImageAsync(imageUrl, subDir, fileName, $"{cleanTitle}/{chapterNumber}/{fileName}", ct);
     }
 
-    public async Task<string> DownloadThumbnailAndConvertToWebP(string mangaTitle, string imageUrl)
+    public async Task<string> DownloadThumbnailAndConvertToWebP(string mangaTitle, string imageUrl, CancellationToken ct = default)
     {
         try
         {
@@ -112,7 +138,7 @@ public abstract class ScrapperServiceBase
             var subDir = Path.Combine(ImageStoragePath, cleanTitle);
             var fileName = "thumbnail.webp";
 
-            return await SaveImageAsync(imageUrl, subDir, fileName, $"{cleanTitle}/{fileName}");
+            return await SaveImageAsync(imageUrl, subDir, fileName, $"{cleanTitle}/{fileName}", ct);
         }
         catch
         {
@@ -130,27 +156,30 @@ public abstract class ScrapperServiceBase
         return string.Concat(title.Split(invalidChars));
     }
 
-    private async Task<string> SaveImageAsync(string imageUrl, string subDir, string fileName, string relativePath)
+    private async Task<string> SaveImageAsync(string imageUrl, string subDir, string fileName, string relativePath, CancellationToken ct)
     {
-        using var response = await HttpClient.GetAsync(imageUrl, HttpCompletionOption.ResponseHeadersRead);
-        response.EnsureSuccessStatusCode();
-
-        await using var imageStream = await response.Content.ReadAsStreamAsync();
-        
-        Directory.CreateDirectory(subDir);
-        var filePath = Path.Combine(subDir, fileName);
-
-        if (IsWebpUrl(imageUrl))
+        return await ExecuteWithRetryAsync(async (token) =>
         {
-            await using var output = File.Create(filePath);
-            await imageStream.CopyToAsync(output);
+            using var response = await HttpClient.GetAsync(imageUrl, HttpCompletionOption.ResponseHeadersRead, token);
+            response.EnsureSuccessStatusCode();
+
+            await using var imageStream = await response.Content.ReadAsStreamAsync(token);
+
+            Directory.CreateDirectory(subDir);
+            var filePath = Path.Combine(subDir, fileName);
+
+            if (IsWebpUrl(imageUrl))
+            {
+                await using var output = File.Create(filePath);
+                await imageStream.CopyToAsync(output, token);
+                return relativePath.Replace("\\", "/");
+            }
+
+            using var image = await Image.LoadAsync(imageStream, token);
+            await image.SaveAsync(filePath, new WebpEncoder(), token);
+
             return relativePath.Replace("\\", "/");
-        }
-
-        using var image = await Image.LoadAsync(imageStream);
-        await image.SaveAsync(filePath, new WebpEncoder());
-
-        return relativePath.Replace("\\", "/");
+        }, ct);
     }
 
     private static bool IsWebpUrl(string imageUrl)
@@ -163,7 +192,7 @@ public abstract class ScrapperServiceBase
         return string.Equals(Path.GetExtension(uri.AbsolutePath), ".webp", StringComparison.OrdinalIgnoreCase);
     }
 
-    public async Task<JikanMangaItem> GetMangaInfo(string title,string type)
+    public async Task<JikanMangaItem> GetMangaInfo(string title, string type, CancellationToken ct = default)
     {
         var query = HttpUtility.ParseQueryString(string.Empty);
         query["q"] = title;
@@ -171,26 +200,26 @@ public abstract class ScrapperServiceBase
         query["limit"] = "1";
         
         var url = $"https://api.jikan.moe/v4/manga?{query}";
-        var response = await HttpClient.GetFromJsonAsync<JikanMangaResponse>(url);
+        var response = await HttpClient.GetFromJsonAsync<JikanMangaResponse>(url, ct);
         return response?.Data?.FirstOrDefault() ?? new JikanMangaItem();
     }
-    public async Task<JikanMangaItem> GetMangaInfoById(int malId)
+    public async Task<JikanMangaItem> GetMangaInfoById(int malId, CancellationToken ct = default)
     {
         var url = $"https://api.jikan.moe/v4/manga/{malId}";
-        var response = await HttpClient.GetFromJsonAsync<JikanMangaSingleResponse>(url);
+        var response = await HttpClient.GetFromJsonAsync<JikanMangaSingleResponse>(url, ct);
         return response?.Data ?? new JikanMangaItem();
     }
     
-    public async Task<MangaDocument> UpdateMangaDocument(MangaDocument manga)
+    public async Task<MangaDocument> UpdateMangaDocument(MangaDocument manga, CancellationToken ct = default)
     {
         JikanMangaItem? mangaInfo;
         if (manga.MalID != null && manga.MalID != 0)
         {
-            mangaInfo = await GetMangaInfoById(manga.MalID);
+            mangaInfo = await GetMangaInfoById(manga.MalID, ct);
         }
         else
         {
-            mangaInfo = await GetMangaInfo(manga.Title,manga.Type);
+            mangaInfo = await GetMangaInfo(manga.Title, manga.Type, ct);
         }
         
         if (mangaInfo!=null)
@@ -233,7 +262,7 @@ public abstract class ScrapperServiceBase
 
     public async Task<MangaDocument> ExtractManga(string url, CancellationToken ct, bool scrapChapters = true)
     {
-        var doc = await GetHtml(url);
+        var doc = await GetHtml(url, ct: ct);
         var mangaData = ExtractMangaMetadata(doc);
         mangaData.Url = url;
 
@@ -242,10 +271,10 @@ public abstract class ScrapperServiceBase
         if (!string.IsNullOrWhiteSpace(mangaData.ImageUrl))
         {
             mangaData.ImageUrl = ThumbnailHelper.RemoveResizeParams(mangaData.ImageUrl);
-            mangaData.LocalImageUrl = await DownloadThumbnailAndConvertToWebP(mangaData.Title, mangaData.ImageUrl);
+            mangaData.LocalImageUrl = await DownloadThumbnailAndConvertToWebP(mangaData.Title, mangaData.ImageUrl, ct);
         }
 
-        var chapters = await ExtractChapters(doc);
+        var chapters = await ExtractChapters(doc, ct);
 
         if (existingManga != null)
         {
@@ -269,7 +298,7 @@ public abstract class ScrapperServiceBase
                 }
             }
 
-            existingManga = await UpdateMangaDocument(existingManga);
+            existingManga = await UpdateMangaDocument(existingManga, ct);
             await MangaRepository.UpdateAsync(existingManga, ct);
 
             return existingManga;
@@ -279,7 +308,7 @@ public abstract class ScrapperServiceBase
         mangaData.CreatedAt = chapters.OrderBy(x => x.UploadDate).FirstOrDefault()?.UploadDate ?? DateTime.MinValue;
         mangaData.UpdatedAt = DateTime.UtcNow;
 
-        var manga = await UpdateMangaDocument(mangaData);
+        var manga = await UpdateMangaDocument(mangaData, ct);
         await MangaRepository.CreateAsync(manga, ct);
 
         if (scrapChapters)
@@ -294,9 +323,9 @@ public abstract class ScrapperServiceBase
     }
 
     protected abstract MangaDocument ExtractMangaMetadata(HtmlDocument doc);
-    protected abstract Task<List<ChapterDocument>> ExtractChapters(HtmlDocument doc);
+    protected abstract Task<List<ChapterDocument>> ExtractChapters(HtmlDocument doc, CancellationToken ct = default);
 
-    public async Task<ChapterDocument> GetChapterPage(string mangaTitle, ChapterDocument chapter)
+    public async Task<ChapterDocument> GetChapterPage(string mangaTitle, ChapterDocument chapter, CancellationToken ct = default)
     {
         var url = chapter.Link;
         if (string.IsNullOrWhiteSpace(url)) return chapter;
@@ -306,7 +335,7 @@ public abstract class ScrapperServiceBase
             url = Provider.BaseUrl.TrimEnd('/') + "/" + url.TrimStart('/');
         }
 
-        var doc = await GetHtml(url);
+        var doc = await GetHtml(url, ct: ct);
 
         var imageNodes = doc.DocumentNode.SelectNodes(Provider.PageSelectors.Images);
         if (imageNodes == null) return chapter;
@@ -316,14 +345,15 @@ public abstract class ScrapperServiceBase
             var imageUrl = imgNode.GetAttributeValue("src", string.Empty);
             if (string.IsNullOrWhiteSpace(imageUrl)) return (Index: index, Page: null as PageDocument);
 
-            await Semaphore.WaitAsync();
+            await Semaphore.WaitAsync(ct);
             try
             {
                 var localPath = await DownloadAndConvertToWebP(
                     mangaTitle,
                     chapter.Number.ToString(CultureInfo.InvariantCulture),
                     imageUrl,
-                    index + 1);
+                    index + 1,
+                    ct);
                 return (Index: index, Page: new PageDocument
                 {
                     ImageUrl = imageUrl,
@@ -360,23 +390,23 @@ public abstract class ScrapperServiceBase
             var scopedScrapper = (ScrapperServiceBase)scope.ServiceProvider.GetRequiredService(this.GetType());
             var scopedRepo = scope.ServiceProvider.GetRequiredService<IMangaRepository>();
 
-            var processedChapter = await scopedScrapper.GetChapterPage(mangaTitle, chapter);
+            var processedChapter = await scopedScrapper.GetChapterPage(mangaTitle, chapter, token);
             await scopedRepo.UpdateChapterPagesAsync(mangaId, chapter.Id, processedChapter.Pages, token);
         });
     }
 
     public abstract Task<List<SearchItem>> SearchManga(SearchRequest request, CancellationToken ct);
 
-    public async Task<List<ChapterDocument>> GetAllChapters(string url)
+    public async Task<List<ChapterDocument>> GetAllChapters(string url, CancellationToken ct = default)
     {
-        var doc = await GetHtml(url);
-        return await ExtractChapters(doc);
+        var doc = await GetHtml(url, ct: ct);
+        return await ExtractChapters(doc, ct);
     }
 
-    public async Task<List<PageDocument>> GetAllPages(string url)
+    public async Task<List<PageDocument>> GetAllPages(string url, CancellationToken ct = default)
     {
         var chapter = new ChapterDocument { Link = url };
-        var processedChapter = await GetChapterPage("temp", chapter);
+        var processedChapter = await GetChapterPage("temp", chapter, ct);
         return processedChapter.Pages;
     }
     

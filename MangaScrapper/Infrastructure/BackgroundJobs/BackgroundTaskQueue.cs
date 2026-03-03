@@ -15,6 +15,8 @@ public interface IBackgroundTaskQueue
     void UpdateStatus(Guid id, string status);
     
     void Remove(Guid id);
+    
+    void ClearErrorItems();
 }
 
 public class BackgroundTaskQueue : IBackgroundTaskQueue
@@ -63,5 +65,14 @@ public class BackgroundTaskQueue : IBackgroundTaskQueue
     public void Remove(Guid id)
     {
         _items.TryRemove(id, out _);
+    }
+
+    public void ClearErrorItems()
+    {
+        var errorItems = _items.Where(x => x.Value.Status.StartsWith("Error")).ToList();
+        foreach (var item in errorItems)
+        {
+            _items.TryRemove(item.Key, out _);
+        }
     }
 }
