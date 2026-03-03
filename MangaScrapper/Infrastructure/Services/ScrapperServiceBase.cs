@@ -163,11 +163,11 @@ public abstract class ScrapperServiceBase
         return string.Equals(Path.GetExtension(uri.AbsolutePath), ".webp", StringComparison.OrdinalIgnoreCase);
     }
 
-    public async Task<JikanMangaItem> GetMangaInfo(string title)
+    public async Task<JikanMangaItem> GetMangaInfo(string title,string type)
     {
         var query = HttpUtility.ParseQueryString(string.Empty);
         query["q"] = title;
-        query["type"] = "manga";
+        query["type"] = type;
         query["limit"] = "1";
         
         var url = $"https://api.jikan.moe/v4/manga?{query}";
@@ -190,7 +190,7 @@ public abstract class ScrapperServiceBase
         }
         else
         {
-            mangaInfo = await GetMangaInfo(manga.Title);
+            mangaInfo = await GetMangaInfo(manga.Title,manga.Type);
         }
         
         if (mangaInfo!=null)
@@ -201,7 +201,8 @@ public abstract class ScrapperServiceBase
                 if (StringHelper.IsSimilar(mangaInfo.Title,manga.Title)||
                     StringHelper.IsSimilar(mangaInfo.TitleEnglish,manga.Title)||
                     StringHelper.IsSimilar(combinedTittleSynonym,manga.Title)||
-                    StringHelper.IsSimilar(mangaInfo.TitleJapanese,manga.Title)
+                    StringHelper.IsSimilar(mangaInfo.TitleJapanese,manga.Title) ||
+                    mangaInfo.MalId == manga.MalID
                    )
                 {
                     manga.MalID = mangaInfo.MalId;

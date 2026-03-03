@@ -6,17 +6,16 @@ public static class StringHelper
 {
     public static bool IsSimilar(string a, string b)
     {
-        if (string.IsNullOrEmpty(a) || string.IsNullOrEmpty(b)) return false;
+        if (string.IsNullOrWhiteSpace(a) || string.IsNullOrWhiteSpace(b)) return false;
 
-        // 1. Normalize: Lowercase and remove punctuation using Regex
-        string cleanA = Regex.Replace(a.ToLower(), @"[^\w\s]", "");
-        string cleanB = Regex.Replace(b.ToLower(), @"[^\w\s]", "");
+        // Fungsi lokal untuk membersihkan string
+        string Clean(string input) => 
+            Regex.Replace(input.ToLower(), @"[^\w]", ""); 
 
-        // 2. Trim extra spaces
-        cleanA = Regex.Replace(cleanA, @"\s+", " ").Trim();
-        cleanB = Regex.Replace(cleanB, @"\s+", " ").Trim();
+        string cleanA = Clean(a);
+        string cleanB = Clean(b);
 
-        // 3. Check if one is a substring of the other
+        // Cek hubungan timbal balik
         return cleanA.Contains(cleanB) || cleanB.Contains(cleanA);
     }
 }
