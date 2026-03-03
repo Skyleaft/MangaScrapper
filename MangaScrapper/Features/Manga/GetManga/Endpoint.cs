@@ -40,7 +40,8 @@ public class Endpoint(IMangaRepository mangaRepository) : Endpoint<Request, Resp
             Members = manga.Members,
             Popularity = manga.Popularity,
             Rating = manga.Rating,
-            ReleaseDate = manga.ReleaseDate
+            ReleaseDate = manga.ReleaseDate,
+            TotalView = manga.Chapters.Sum(c => c.TotalView),
         };
 
         await Send.OkAsync(response, ct);

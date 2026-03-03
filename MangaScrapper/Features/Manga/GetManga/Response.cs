@@ -21,4 +21,5 @@ public class Response
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public string? Url { get; set; }
+    public int TotalView { get; set; }
 }
