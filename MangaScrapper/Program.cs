@@ -50,20 +50,28 @@ builder.Services.AddHttpClient<KomikuService>(c => c.Timeout = TimeSpan.FromMinu
 builder.Services.AddHttpClient<KiryuuService>(c => c.Timeout = TimeSpan.FromMinutes(5));
 
 builder.Services.AddOpenTelemetry()
+    .ConfigureResource(resource => resource.AddService(
+            serviceName: "Manga-Scrapper",
+            serviceVersion: System.Reflection.Assembly.GetEntryAssembly()?.GetName().Version?.ToString(3) // SemVer
+        )
+        .AddAttributes(new Dictionary<string, object>
+        {
+            { "host.name", Environment.MachineName }
+        })
+    )
     .WithTracing(tracing => tracing
         .AddSource(Telemetry.ServiceName)
         .AddSource("MongoDB.Driver.Core.Extensions.DiagnosticSources")
         .AddAspNetCoreInstrumentation()
         .AddHttpClientInstrumentation()
-        .AddOtlpExporter()
-        .AddConsoleExporter())
+        .AddOtlpExporter())
     .WithMetrics(metrics => metrics
         .AddMeter(Telemetry.ServiceName)
         .AddAspNetCoreInstrumentation()
         .AddHttpClientInstrumentation()
         .AddRuntimeInstrumentation()
+        .AddProcessInstrumentation()
         .AddOtlpExporter()
-        .AddConsoleExporter()
         .AddPrometheusExporter());
 
 builder.Logging.AddOpenTelemetry(logging => 
@@ -71,7 +79,6 @@ builder.Logging.AddOpenTelemetry(logging =>
     logging.IncludeFormattedMessage = true;
     logging.IncludeScopes = true;
     logging.AddOtlpExporter();
-    logging.AddConsoleExporter();
 });
 
 builder.Services.ConfigureOpenTelemetryTracerProvider((sp, builder) =>
