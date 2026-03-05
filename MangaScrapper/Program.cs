@@ -15,6 +15,12 @@ using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Driver;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Options;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Logs;
+
+using MangaScrapper.Infrastructure.Utils;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddFastEndpoints()
@@ -43,12 +49,44 @@ builder.Services.AddHttpClient<ScrapperService>(c => c.Timeout = TimeSpan.FromMi
 builder.Services.AddHttpClient<KomikuService>(c => c.Timeout = TimeSpan.FromMinutes(5));
 builder.Services.AddHttpClient<KiryuuService>(c => c.Timeout = TimeSpan.FromMinutes(5));
 
+builder.Services.AddOpenTelemetry()
+    .WithTracing(tracing => tracing
+        .AddSource(Telemetry.ServiceName)
+        .AddSource("MongoDB.Driver.Core.Extensions.DiagnosticSources")
+        .AddAspNetCoreInstrumentation()
+        .AddHttpClientInstrumentation()
+        .AddOtlpExporter()
+        .AddConsoleExporter())
+    .WithMetrics(metrics => metrics
+        .AddMeter(Telemetry.ServiceName)
+        .AddAspNetCoreInstrumentation()
+        .AddHttpClientInstrumentation()
+        .AddRuntimeInstrumentation()
+        .AddOtlpExporter()
+        .AddConsoleExporter()
+        .AddPrometheusExporter());
+
+builder.Logging.AddOpenTelemetry(logging => 
+{
+    logging.IncludeFormattedMessage = true;
+    logging.IncludeScopes = true;
+    logging.AddOtlpExporter();
+    logging.AddConsoleExporter();
+});
+
+builder.Services.ConfigureOpenTelemetryTracerProvider((sp, builder) =>
+    builder.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(Telemetry.ServiceName)));
+builder.Services.ConfigureOpenTelemetryMeterProvider((sp, builder) =>
+    builder.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(Telemetry.ServiceName)));
+
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
+
+app.UseOpenTelemetryPrometheusScrapingEndpoint();
 
 using (var scope = app.Services.CreateScope())
 {

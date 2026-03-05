@@ -192,7 +192,7 @@ public abstract class ScrapperServiceBase
         return string.Equals(Path.GetExtension(uri.AbsolutePath), ".webp", StringComparison.OrdinalIgnoreCase);
     }
 
-    public async Task<JikanMangaItem> GetMangaInfo(string title, string type, CancellationToken ct = default)
+    public async Task<JikanMangaItem?> GetMangaInfo(string title, string type, CancellationToken ct = default)
     {
         var query = HttpUtility.ParseQueryString(string.Empty);
         query["q"] = title;
@@ -200,14 +200,28 @@ public abstract class ScrapperServiceBase
         query["limit"] = "1";
         
         var url = $"https://api.jikan.moe/v4/manga?{query}";
-        var response = await HttpClient.GetFromJsonAsync<JikanMangaResponse>(url, ct);
-        return response?.Data?.FirstOrDefault() ?? new JikanMangaItem();
+        try
+        {
+            var response = await HttpClient.GetFromJsonAsync<JikanMangaResponse>(url, ct);
+            return response?.Data?.FirstOrDefault();
+        }
+        catch (Exception)
+        {
+            return null;
+        }
     }
-    public async Task<JikanMangaItem> GetMangaInfoById(int malId, CancellationToken ct = default)
+    public async Task<JikanMangaItem?> GetMangaInfoById(int malId, CancellationToken ct = default)
     {
         var url = $"https://api.jikan.moe/v4/manga/{malId}";
-        var response = await HttpClient.GetFromJsonAsync<JikanMangaSingleResponse>(url, ct);
-        return response?.Data ?? new JikanMangaItem();
+        try
+        {
+            var response = await HttpClient.GetFromJsonAsync<JikanMangaSingleResponse>(url, ct);
+            return response?.Data;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
     }
     
     public async Task<MangaDocument> UpdateMangaDocument(MangaDocument manga, CancellationToken ct = default)
@@ -262,64 +276,78 @@ public abstract class ScrapperServiceBase
 
     public async Task<MangaDocument> ExtractManga(string url, CancellationToken ct, bool scrapChapters = true)
     {
-        var doc = await GetHtml(url, ct: ct);
-        var mangaData = ExtractMangaMetadata(doc);
-        mangaData.Url = url;
-
-        var existingManga = await MangaRepository.GetByTitleAsync(mangaData.Title, ct);
-
-        if (!string.IsNullOrWhiteSpace(mangaData.ImageUrl))
+        using var activity = Telemetry.ActivitySource.StartActivity("ExtractManga");
+        activity?.SetTag("manga.url", url);
+        try
         {
-            mangaData.ImageUrl = ThumbnailHelper.RemoveResizeParams(mangaData.ImageUrl);
-            mangaData.LocalImageUrl = await DownloadThumbnailAndConvertToWebP(mangaData.Title, mangaData.ImageUrl, ct);
-        }
+            var doc = await GetHtml(url, ct: ct);
+            var mangaData = ExtractMangaMetadata(doc);
+            mangaData.Url = url;
+            activity?.SetTag("manga.title", mangaData.Title);
 
-        var chapters = await ExtractChapters(doc, ct);
+            var existingManga = await MangaRepository.GetByTitleAsync(mangaData.Title, ct);
 
-        if (existingManga != null)
-        {
-            existingManga.ImageUrl = mangaData.ImageUrl;
-            existingManga.LocalImageUrl = mangaData.LocalImageUrl;
-
-            var maxExistingChapter = existingManga.Chapters.Any() ? existingManga.Chapters.Max(c => c.Number) : 0;
-            var newChapters = chapters.Where(c => c.Number > maxExistingChapter).ToList();
-
-            if (newChapters.Any())
+            if (!string.IsNullOrWhiteSpace(mangaData.ImageUrl))
             {
-                existingManga.Chapters.AddRange(newChapters);
-                existingManga.UpdatedAt = DateTime.UtcNow;
+                mangaData.ImageUrl = ThumbnailHelper.RemoveResizeParams(mangaData.ImageUrl);
+                mangaData.LocalImageUrl = await DownloadThumbnailAndConvertToWebP(mangaData.Title, mangaData.ImageUrl, ct);
+            }
 
-                if (scrapChapters)
+            var chapters = await ExtractChapters(doc, ct);
+
+            if (existingManga != null)
+            {
+                existingManga.ImageUrl = mangaData.ImageUrl;
+                existingManga.LocalImageUrl = mangaData.LocalImageUrl;
+
+                var maxExistingChapter = existingManga.Chapters.Any() ? existingManga.Chapters.Max(c => c.Number) : 0;
+                var newChapters = chapters.Where(c => c.Number > maxExistingChapter).ToList();
+
+                if (newChapters.Any())
                 {
-                    foreach (var chapter in newChapters)
+                    existingManga.Chapters.AddRange(newChapters);
+                    existingManga.UpdatedAt = DateTime.UtcNow;
+
+                    if (scrapChapters)
                     {
-                        await QueueChapterScraping(existingManga.Id, existingManga.Title, chapter);
+                        foreach (var chapter in newChapters)
+                        {
+                            await QueueChapterScraping(existingManga.Id, existingManga.Title, chapter);
+                        }
                     }
+                }
+
+                existingManga = await UpdateMangaDocument(existingManga, ct);
+                await MangaRepository.UpdateAsync(existingManga, ct);
+
+                Telemetry.MangaScrapedCounter.Add(1, new KeyValuePair<string, object?>("status", "updated"));
+                return existingManga;
+            }
+
+            mangaData.Chapters = chapters;
+            mangaData.CreatedAt = chapters.OrderBy(x => x.UploadDate).FirstOrDefault()?.UploadDate ?? DateTime.MinValue;
+            mangaData.UpdatedAt = DateTime.UtcNow;
+
+            var manga = await UpdateMangaDocument(mangaData, ct);
+            await MangaRepository.CreateAsync(manga, ct);
+
+            if (scrapChapters)
+            {
+                foreach (var chapter in chapters)
+                {
+                    await QueueChapterScraping(manga.Id, manga.Title, chapter);
                 }
             }
 
-            existingManga = await UpdateMangaDocument(existingManga, ct);
-            await MangaRepository.UpdateAsync(existingManga, ct);
-
-            return existingManga;
+            Telemetry.MangaScrapedCounter.Add(1, new KeyValuePair<string, object?>("status", "created"));
+            return manga;
         }
-
-        mangaData.Chapters = chapters;
-        mangaData.CreatedAt = chapters.OrderBy(x => x.UploadDate).FirstOrDefault()?.UploadDate ?? DateTime.MinValue;
-        mangaData.UpdatedAt = DateTime.UtcNow;
-
-        var manga = await UpdateMangaDocument(mangaData, ct);
-        await MangaRepository.CreateAsync(manga, ct);
-
-        if (scrapChapters)
+        catch (Exception ex)
         {
-            foreach (var chapter in chapters)
-            {
-                await QueueChapterScraping(manga.Id, manga.Title, chapter);
-            }
+            activity?.SetStatus(System.Diagnostics.ActivityStatusCode.Error, ex.Message);
+            Telemetry.ErrorsCounter.Add(1, new KeyValuePair<string, object?>("operation", "ExtractManga"));
+            throw;
         }
-
-        return manga;
     }
 
     protected abstract MangaDocument ExtractMangaMetadata(HtmlDocument doc);
@@ -327,6 +355,10 @@ public abstract class ScrapperServiceBase
 
     public async Task<ChapterDocument> GetChapterPage(string mangaTitle, ChapterDocument chapter, CancellationToken ct = default)
     {
+        using var activity = Telemetry.ActivitySource.StartActivity("GetChapterPage");
+        activity?.SetTag("manga.title", mangaTitle);
+        activity?.SetTag("chapter.number", chapter.Number);
+
         var url = chapter.Link;
         if (string.IsNullOrWhiteSpace(url)) return chapter;
 
@@ -338,7 +370,13 @@ public abstract class ScrapperServiceBase
         var doc = await GetHtml(url, ct: ct);
 
         var imageNodes = doc.DocumentNode.SelectNodes(Provider.PageSelectors.Images);
-        if (imageNodes == null) return chapter;
+        if (imageNodes == null)
+        {
+            activity?.SetTag("images.count", 0);
+            return chapter;
+        }
+
+        activity?.SetTag("images.count", imageNodes.Count);
 
         var downloadTasks = imageNodes.Select(async (imgNode, index) =>
         {
@@ -354,14 +392,18 @@ public abstract class ScrapperServiceBase
                     imageUrl,
                     index + 1,
                     ct);
+                
+                Telemetry.PagesDownloadedCounter.Add(1);
+                
                 return (Index: index, Page: new PageDocument
                 {
                     ImageUrl = imageUrl,
                     LocalImageUrl = localPath
                 });
             }
-            catch
+            catch (Exception ex)
             {
+                Telemetry.ErrorsCounter.Add(1, new KeyValuePair<string, object?>("operation", "DownloadPage"));
                 return (Index: index, Page: null as PageDocument);
             }
             finally
@@ -379,6 +421,7 @@ public abstract class ScrapperServiceBase
             .ToList();
 
         chapter.Pages.AddRange(orderedPages);
+        Telemetry.ChaptersScrapedCounter.Add(1);
         return chapter;
     }
 
