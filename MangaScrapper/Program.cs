@@ -51,7 +51,7 @@ builder.Services.AddHttpClient<KiryuuService>(c => c.Timeout = TimeSpan.FromMinu
 
 builder.Services.AddOpenTelemetry()
     .ConfigureResource(resource => resource.AddService(
-            serviceName: "Manga-Scrapper",
+            serviceName: "MangaScrapper",
             serviceVersion: System.Reflection.Assembly.GetEntryAssembly()?.GetName().Version?.ToString(3) // SemVer
         )
         .AddAttributes(new Dictionary<string, object>
