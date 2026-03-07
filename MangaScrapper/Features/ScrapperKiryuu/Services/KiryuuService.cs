@@ -1,6 +1,7 @@
 ﻿using System.Globalization;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Web;
 using HtmlAgilityPack;
 using MangaScrapper.Infrastructure.BackgroundJobs;
 using MangaScrapper.Infrastructure.Models;
@@ -92,14 +93,19 @@ public class KiryuuService : ScrapperServiceBase
         foreach (var node in chapterNodes)
         {
             var number = node.GetAttributeValue("data-chapter-number", 0d);
-            var link = node.SelectSingleNode(".//a")?.GetAttributeValue("href", "");
+            var link = node.SelectSingleNode(".//a")?.GetAttributeValue("href", string.Empty);
             var time = node.SelectSingleNode(".//time")?.GetAttributeValue("datetime", "");
             var views = node.SelectSingleNode(Provider.ChapterSelectors.Views)?.InnerText.Trim();
+            
+            if (string.IsNullOrWhiteSpace(link)) continue;
+            
+            var uri = new Uri(link);
+            var path = uri.PathAndQuery;
 
             data.Add(new ChapterDocument
             {
                 Number = number,
-                Link = link,
+                Link = path,
                 ChapterProvider = Provider.ProviderName,
                 ChapterProviderIcon = Provider.ProviderIcon,
                 UploadDate = DateTime.TryParse(time, out var parsedDate) ? parsedDate : DateTime.MinValue,
@@ -155,7 +161,7 @@ public class KiryuuService : ScrapperServiceBase
             foreach (var card in cards)
             {
                 var titleNode = card.SelectSingleNode(".//div[contains(@class,'rounded-lg')]//a[contains(@class,'line-clamp-1')]");
-                var title = titleNode?.InnerText.Trim();
+                var title = HttpUtility.HtmlDecode(titleNode?.InnerText.Trim());
                 var link = titleNode?.GetAttributeValue("href", "");
                 var thumb = card.SelectSingleNode(".//div[contains(@class,'rounded-lg')]//img")?.GetAttributeValue("src", "");
                 var chapter = card.SelectSingleNode(".//span[contains(text(),'Chapter')]")?.InnerText.Trim();

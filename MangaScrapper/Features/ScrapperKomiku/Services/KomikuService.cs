@@ -61,11 +61,14 @@ public class KomikuService : ScrapperServiceBase
             var uploadDate = DateTime.TryParseExact(dateText, "dd/MM/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date)
                 ? date
                 : DateTime.MinValue;
+            
+            var uri = new Uri(link);
+            var path = uri.PathAndQuery;
 
             chapters.Add(new ChapterDocument
             {
                 Number = chapterNumber,
-                Link = link,
+                Link = path,
                 ChapterProvider = Provider.ProviderName,
                 ChapterProviderIcon = Provider.ProviderIcon,
                 TotalView = totalView,

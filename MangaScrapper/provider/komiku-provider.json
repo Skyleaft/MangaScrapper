@@ -1,7 +1,7 @@
 {
   "ProviderName": "Komiku",
   "BaseUrl": "https://komiku.org",
-  "ProviderIcon": "https://img.utdstc.com/icon/5bc/95b/5bc95b6839df46e765f42356a7cad6e22a71987b52da6fc16102451e1bd9ca5f:200",
+  "ProviderIcon": "https://www.nesabamedia.com/apps/wp-content/uploads/2024/01/komiku.png",
   "MangaSelectors": {
     "Title": "//td[text()='Judul Komik']/following-sibling::td",
     "Author": "//td[text()='Pengarang']/following-sibling::td",
