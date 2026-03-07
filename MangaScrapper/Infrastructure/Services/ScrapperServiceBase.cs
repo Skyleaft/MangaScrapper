@@ -276,14 +276,11 @@ public abstract class ScrapperServiceBase
 
     public async Task<MangaDocument> ExtractManga(string url, CancellationToken ct, bool scrapChapters = true)
     {
-        using var activity = Telemetry.ActivitySource.StartActivity("ExtractManga");
-        activity?.SetTag("manga.url", url);
         try
         {
             var doc = await GetHtml(url, ct: ct);
             var mangaData = ExtractMangaMetadata(doc);
             mangaData.Url = url;
-            activity?.SetTag("manga.title", mangaData.Title);
 
             var existingManga = await MangaRepository.GetByTitleAsync(mangaData.Title, ct);
 
@@ -320,7 +317,6 @@ public abstract class ScrapperServiceBase
                 existingManga = await UpdateMangaDocument(existingManga, ct);
                 await MangaRepository.UpdateAsync(existingManga, ct);
 
-                Telemetry.MangaScrapedCounter.Add(1, new KeyValuePair<string, object?>("status", "updated"));
                 return existingManga;
             }
 
@@ -339,13 +335,10 @@ public abstract class ScrapperServiceBase
                 }
             }
 
-            Telemetry.MangaScrapedCounter.Add(1, new KeyValuePair<string, object?>("status", "created"));
             return manga;
         }
         catch (Exception ex)
         {
-            activity?.SetStatus(System.Diagnostics.ActivityStatusCode.Error, ex.Message);
-            Telemetry.ErrorsCounter.Add(1, new KeyValuePair<string, object?>("operation", "ExtractManga"));
             throw;
         }
     }
@@ -355,10 +348,6 @@ public abstract class ScrapperServiceBase
 
     public async Task<ChapterDocument> GetChapterPage(string mangaTitle, ChapterDocument chapter, CancellationToken ct = default)
     {
-        using var activity = Telemetry.ActivitySource.StartActivity("GetChapterPage");
-        activity?.SetTag("manga.title", mangaTitle);
-        activity?.SetTag("chapter.number", chapter.Number);
-
         var url = chapter.Link;
         if (string.IsNullOrWhiteSpace(url)) return chapter;
 
@@ -372,11 +361,8 @@ public abstract class ScrapperServiceBase
         var imageNodes = doc.DocumentNode.SelectNodes(Provider.PageSelectors.Images);
         if (imageNodes == null)
         {
-            activity?.SetTag("images.count", 0);
             return chapter;
         }
-
-        activity?.SetTag("images.count", imageNodes.Count);
 
         var downloadTasks = imageNodes.Select(async (imgNode, index) =>
         {
@@ -393,8 +379,6 @@ public abstract class ScrapperServiceBase
                     index + 1,
                     ct);
                 
-                Telemetry.PagesDownloadedCounter.Add(1);
-                
                 return (Index: index, Page: new PageDocument
                 {
                     ImageUrl = imageUrl,
@@ -403,7 +387,6 @@ public abstract class ScrapperServiceBase
             }
             catch (Exception ex)
             {
-                Telemetry.ErrorsCounter.Add(1, new KeyValuePair<string, object?>("operation", "DownloadPage"));
                 return (Index: index, Page: null as PageDocument);
             }
             finally
@@ -421,7 +404,6 @@ public abstract class ScrapperServiceBase
             .ToList();
 
         chapter.Pages.AddRange(orderedPages);
-        Telemetry.ChaptersScrapedCounter.Add(1);
         return chapter;
     }
 

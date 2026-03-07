@@ -60,13 +60,11 @@ builder.Services.AddOpenTelemetry()
         })
     )
     .WithTracing(tracing => tracing
-        .AddSource(Telemetry.ServiceName)
         .AddSource("MongoDB.Driver.Core.Extensions.DiagnosticSources")
         .AddAspNetCoreInstrumentation()
         .AddHttpClientInstrumentation()
         .AddOtlpExporter())
     .WithMetrics(metrics => metrics
-        .AddMeter(Telemetry.ServiceName)
         .AddAspNetCoreInstrumentation()
         .AddHttpClientInstrumentation()
         .AddRuntimeInstrumentation()
@@ -80,11 +78,6 @@ builder.Logging.AddOpenTelemetry(logging =>
     logging.IncludeScopes = true;
     logging.AddOtlpExporter();
 });
-
-builder.Services.ConfigureOpenTelemetryTracerProvider((sp, builder) =>
-    builder.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(Telemetry.ServiceName)));
-builder.Services.ConfigureOpenTelemetryMeterProvider((sp, builder) =>
-    builder.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(Telemetry.ServiceName)));
 
 
 // Add services to the container.
