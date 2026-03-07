@@ -16,19 +16,19 @@ public class Endpoint(IBackgroundTaskQueue taskQueue, IMangaRepository repositor
     public override async Task HandleAsync(CancellationToken ct)
     {
         
-        var datas = await repository.GetAllAsync(ct);
-        foreach (var manga in datas)
-        {
-            foreach (var chapter in manga.Chapters)
-            {
-                if (chapter.ChapterProvider == "Kiryuu")
-                {
-                    var path = new Uri(chapter.Link);
-                    chapter.Link = path.PathAndQuery;
-                }
-            }
-            await repository.UpdateAsync(manga, ct);
-        }
+        // var datas = await repository.GetAllAsync(ct);
+        // foreach (var manga in datas)
+        // {
+        //     foreach (var chapter in manga.Chapters)
+        //     {
+        //         if (chapter.ChapterProvider == "Kiryuu")
+        //         {
+        //             var path = new Uri(chapter.Link);
+        //             chapter.Link = path.PathAndQuery;
+        //         }
+        //     }
+        //     await repository.UpdateAsync(manga, ct);
+        // }
         
         // var events = new ScraptMeta()
         // {
