@@ -32,7 +32,7 @@ public class KiryuuService : ScrapperServiceBase
     {
         var manga = new MangaDocument
         {
-            Title = doc.DocumentNode.SelectSingleNode("//h1[@itemprop='name']")?.InnerText.Trim() ?? string.Empty,
+            Title = HttpUtility.HtmlDecode(doc.DocumentNode.SelectSingleNode("//h1[@itemprop='name']")?.InnerText.Trim() ?? string.Empty),
             ImageUrl = doc.DocumentNode.SelectSingleNode("//div[@itemprop='image']//img")?.GetAttributeValue("src", "")?.Trim(),
             Description = doc.DocumentNode.SelectSingleNode("//div[@itemprop='description']")?.InnerText.Trim()
         };

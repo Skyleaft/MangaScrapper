@@ -31,7 +31,7 @@ public class KomikuService : ScrapperServiceBase
     {
         return new MangaDocument
         {
-            Title = doc.DocumentNode.SelectSingleNode(Provider.MangaSelectors.Title)?.InnerText.Trim() ?? string.Empty,
+            Title = HttpUtility.HtmlDecode(doc.DocumentNode.SelectSingleNode(Provider.MangaSelectors.Title)?.InnerText.Trim() ?? string.Empty),
             Author = doc.DocumentNode.SelectSingleNode(Provider.MangaSelectors.Author)?.InnerText.Trim() ?? string.Empty,
             Description = doc.DocumentNode.SelectSingleNode(Provider.MangaSelectors.Description)?.InnerText.Trim(),
             Type = doc.DocumentNode.SelectSingleNode(Provider.MangaSelectors.Type)?.InnerText.Trim() ?? string.Empty,
@@ -102,7 +102,7 @@ public class KomikuService : ScrapperServiceBase
                 var titleNode = node.SelectSingleNode(".//div[@class='kan']//h3");
                 var linkNode = node.SelectSingleNode(".//div[@class='kan']//a[1]");
 
-                item.Title = titleNode?.InnerText.Trim();
+                item.Title = HttpUtility.HtmlDecode(titleNode?.InnerText.Trim());
                 item.DetailUrl = linkNode?.GetAttributeValue("href", "") ?? "";
                 if (!string.IsNullOrEmpty(request.Keyword))
                 {
