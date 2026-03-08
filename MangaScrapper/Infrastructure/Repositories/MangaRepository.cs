@@ -22,7 +22,7 @@ public class MangaRepository : IMangaRepository
 
     public async Task<MangaDocument?> GetByTitleAsync(string title, CancellationToken ct)
     {
-        return await _collection.Find(m => StringHelper.IsSimilar(m.Title,title)).FirstOrDefaultAsync(ct);
+        return await _collection.Find(m => m.Title.Contains(title)).FirstOrDefaultAsync(ct);
     }
 
     public async Task<List<MangaDocument>> GetAllAsync(CancellationToken ct)
