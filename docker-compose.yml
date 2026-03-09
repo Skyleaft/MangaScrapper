@@ -12,6 +12,8 @@ services:
       - MongoSettings__DatabaseName=manga-scrap
       - ScrapperSettings__ImageStoragePath=/app/images
       - ScrapperSettings__MaxParallelDownloads=10
+      - Cors__AllowedOrigins=*
+      - Cors__AllowCredentials=true
     volumes:
       - ./images:/app/images
       - ./MangaScrapper/provider:/app/provider:ro

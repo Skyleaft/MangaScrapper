@@ -27,6 +27,36 @@ builder.Services.AddFastEndpoints()
     .AddResponseCaching()
     .SwaggerDocument(o => o.AutoTagPathSegmentIndex = 2);
 
+// CORS configuration from appsettings.json (section: Cors)
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+var allowCredentials = builder.Configuration.GetValue<bool?>("Cors:AllowCredentials") ?? false;
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("ConfiguredCors", policy =>
+    {
+        if (allowedOrigins.Length == 0 || allowedOrigins.Contains("*"))
+        {
+            // Allow any origin when none specified or wildcard provided
+            policy.AllowAnyOrigin()
+                  .AllowAnyHeader()
+                  .AllowAnyMethod();
+            // Note: AllowCredentials cannot be used with AllowAnyOrigin
+        }
+        else
+        {
+            policy.WithOrigins(allowedOrigins)
+                  .AllowAnyHeader()
+                  .AllowAnyMethod();
+
+            if (allowCredentials)
+            {
+                policy.AllowCredentials();
+            }
+        }
+    });
+});
+
 var conventionPack = new ConventionPack { new CamelCaseElementNameConvention() };
 ConventionRegistry.Register("camelCase", conventionPack, t => true);
 
@@ -100,6 +130,9 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.UseResponseCaching().UseFastEndpoints();
+
+// Apply CORS policy
+app.UseCors("ConfiguredCors");
 
 // Configure the HTTP request pipeline.
 // if (app.Environment.IsDevelopment())
