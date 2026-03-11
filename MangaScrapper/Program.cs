@@ -43,6 +43,8 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.AccessDeniedPath = "/Forbidden/";
         options.LoginPath = "/";
         options.LogoutPath = "/api/auth/logout";
+        options.Cookie.SameSite = SameSiteMode.Lax;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
     });
 builder.Services.AddAuthorization();
 
@@ -215,8 +217,6 @@ app.UseSwaggerGen();
 app.UseAntiforgery();
 
 app.MapStaticAssets();
-
-app.UseHttpsRedirection();
 
 app.UseStaticFiles(new StaticFileOptions
 {
