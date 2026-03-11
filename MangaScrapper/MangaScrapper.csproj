@@ -63,9 +63,4 @@
       <_ContentIncludedByDefault Remove="wwwroot\css\app.css" />
       <_ContentIncludedByDefault Remove="wwwroot\css\tailwind.css" />
     </ItemGroup>
-
-    <Target Name="Tailwind" BeforeTargets="Build">
-        <Exec Command="npx @tailwindcss/cli -i ./Styles/input.css -o ./wwwroot/app.css --watch" />
-    </Target>
-
 </Project>
