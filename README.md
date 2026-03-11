@@ -1,46 +1,51 @@
 # MangaScrapper
 
-MangaScrapper is an ASP.NET Core API that scrapes manga metadata and chapter pages, stores data in MongoDB, and saves images as local WebP files.
+MangaScrapper is a comprehensive full-stack solution for scraping, managing, and reading manga. It features a robust ASP.NET Core backend that scrapes metadata and individual chapter pages, storing data in MongoDB and optimizing images as local WebP files. The project includes a modern, high-performance Blazor WebAssembly admin panel for seamless management.
 
-It uses a provider-based design, so each source can be implemented as:
+## 🚀 Key Features
 
-`ProviderNameService : ScrapperServiceBase`
+- **Multi-Source Scraping**: Provider-based design supporting multiple sources (Komiku, Kiryuu, etc.).
+- **Smart Background Processing**: Integration with **Hangfire** for reliable, queued background scraping jobs.
+- **Admin Dashboard**: Real-time statistics, monthly scrap charts, and recent activity monitoring.
+- **Advanced Management**: 
+  - Dynamic manga list with pagination, multi-genre filtering, and advanced sorting.
+  - Interactive Manga Detail Modal for editing metadata and managing chapters.
+  - Manual `TotalView` overrides and chapter availability indicators.
+- **Optimized Storage**: Automatic image conversion to WebP and centralized local storage.
+- **Secure Access**: Cookie-based authentication with a professional login interface.
 
-Current providers:
-- `KomikuService`
-- `KiryuuService`
+## 🛠️ Technical Stack
 
-## Tech Stack
+### Backend (MangaScrapper API)
+- **.NET 10** Web API
+- **FastEndpoints** (minimal API alternative with REPR pattern)
+- **Hangfire** with MongoDB storage for job orchestration
+- **MongoDB.Driver** for high-performance NoSQL operations
+- **ImageSharp** for WebP conversion and image processing
+- **HtmlAgilityPack** for robust DOM parsing
+- **OpenTelemetry** for advanced tracing and monitoring
 
-- .NET 10 Web API
-- FastEndpoints + Swagger
-- MongoDB.Driver
-- HtmlAgilityPack
-- ImageSharp (WebP conversion)
-- Background queue worker for chapter page scraping
+### Frontend (MangaPanel)
+- **Blazor WebAssembly** (.NET 10)
+- **Tailwind CSS** for modern, responsive, and premium UI
+- **Lucide Icons** & Custom SVG iconography
+- **Glassmorphism Design** for a state-of-the-art admin experience
 
-## Project Structure
+## 📁 Project Structure
 
-- `MangaScrapper/Program.cs`: app bootstrap, DI, middleware, static files
-- `MangaScrapper/Infrastructure/Services/ScrapperServiceBase.cs`: shared scraper functionality
-- `MangaScrapper/Features/ScrapperKomiku/Services/KomikuService.cs`: Komiku provider implementation
-- `MangaScrapper/Features/ScrapperKiryuu/Services/KiryuuService.cs`: Kiryuu provider implementation
-- `MangaScrapper/provider/*.json`: provider configs (base URL + selectors)
-- `MangaScrapper/Infrastructure/BackgroundJobs/*`: background queue and worker
-- `MangaScrapper/Infrastructure/Repositories/*`: Mongo repository layer
+- `MangaScrapper/`: The core API project.
+  - `Features/`: Organized by feature sets (Manga, Scrapper, Auth, Dashboard).
+  - `Infrastructure/`: Repositories, Mongo context, background job implementations.
+  - `provider/`: JSON configurations for scraping selectors.
+- `MangaPanel/`: The Blazor WASM client.
+  - `Pages/`: Admin dashboard, Manage Manga, and Login pages.
+  - `Components/`: Reusable UI elements like `MangaCard`, `MangaDetailModal`, and `StatsCard`.
+  - `Layout/`: Professional sidebar-based admin layout with sticky headers.
+- `MangaScrapper.Shared/`: Shared DTOs and models between API and Client.
 
-## Requirements
+## ⚙️ Configuration
 
-- .NET SDK 10
-- MongoDB
-
-## Configuration
-
-App settings are in:
-- `MangaScrapper/appsettings.json`
-- `MangaScrapper/appsettings.Development.json`
-
-Main sections:
+Main configuration is handled via `appsettings.json` in the API project:
 
 ```json
 {
@@ -51,124 +56,42 @@ Main sections:
   "ScrapperSettings": {
     "MaxParallelDownloads": 10,
     "ImageStoragePath": "images"
-  }
+  },
+  "JwtSigningKey": "your_secure_signing_key_here"
 }
 ```
 
-Notes:
-- `ImageStoragePath` can be relative (`images`) or absolute (`Z:\\Manga`).
-- Images are served from `/images/*` by static file middleware.
+## 🏁 Getting Started
 
-## Run Locally
+### Prerequisites
+- .NET 10 SDK
+- MongoDB Server
 
-From repository root:
+### Local Development
+1. **Clone the repository**
+2. **Setup Database**: Ensure MongoDB is running.
+3. **Run the API**:
+   ```powershell
+   dotnet run --project .\MangaScrapper\MangaScrapper.csproj
+   ```
+4. **Run the Panel**:
+   ```powershell
+   dotnet run --project .\MangaPanel\MangaPanel.Client\MangaPanel.Client.csproj
+   ```
 
-```powershell
-dotnet restore .\MangaScrapper.sln
-dotnet run --project .\MangaScrapper\MangaScrapper.csproj
-```
+### Admin Access
+- **Main URL**: `http://localhost:<port>/`
+- **Hangfire Dashboard**: `http://localhost:<port>/hangfire` (Requires login)
+- **API Documentation**: `/swagger` or `/openapi/v1.json`
 
-Typical local URLs:
-- Swagger UI: `https://localhost:<port>/swagger`
-- OpenAPI JSON: `https://localhost:<port>/openapi/v1.json`
+## 📊 Management Workflow
 
-## Run With Docker
+1. **Dashboard**: Monitor monthly growth and recent additions.
+2. **Manage Manga**: Search, filter, and find manga to update.
+3. **Manga Detail**:
+   - Edit release date, genres, and status.
+   - Click **"Scrap Missing"** to automatically queue Hangfire jobs for missing chapter pages.
+   - Delete specific chapters or the entire manga including local files.
 
-```powershell
-docker compose up --build
-```
-
-`docker-compose.yml` starts:
-- API on `http://localhost:5000`
-- MongoDB on `localhost:27017`
-
-## API Endpoints
-
-### Manga
-
-- `GET /api/manga/paged`
-  - Query: `search`, `genres`, `status`, `type`, `page`, `pageSize`, `sortBy`, `orderBy`
-- `GET /api/manga/{MangaId}`
-- `GET /api/manga/{MangaId}/chapters`
-- `GET /api/manga/{MangaId}/chapter/{Chapter}`
-- `GET /api/manga/genres`
-- `GET /api/manga/types`
-- `DELETE /api/manga/{MangaId}`
-
-### Images
-
-- `GET /api/images/{*FilePath}`
-
-### Scrapper Utility
-
-- `GET /api/scrapper/queue`
-- `GET /api/scrapper/fixfile`
-
-### Komiku Provider
-
-- `POST /api/scrapper/komiku/manga`
-  - Body:
-  ```json
-  {
-    "mangaUrl": "https://komiku.org/manga/<slug>",
-    "scrapChapters": true
-  }
-  ```
-- `GET /api/scrapper/komiku/manga/{MangaId}/chapter-pages`
-- `GET /api/scrapper/komiku/manga/search?query=<keyword>`
-
-### Kiryuu Provider
-
-- `GET /api/scrapper/kiryuu/manga/{MangaId}`
-- `POST /api/scrapper/kiryuu/manga/pages`
-  - Body:
-  ```json
-  {
-    "chapterUrl": "https://kiryuu03.com/<chapter-path>"
-  }
-  ```
-
-## How Background Scraping Works
-
-When scraping manga with `scrapChapters: true`, chapter page jobs are enqueued.
-
-- Queue is bounded (`BackgroundTaskQueue`, capacity 100).
-- `BackgroundWorker` consumes jobs and updates queue status.
-- Job progress can be checked at `GET /api/scrapper/queue`.
-
-## Adding a New Provider
-
-1. Create a provider config JSON in `MangaScrapper/provider/` (base URL + selectors).
-2. Add service class:
-
-```csharp
-public class NewProviderService : ScrapperServiceBase
-{
-    public NewProviderService(
-        HttpClient httpClient,
-        IMangaRepository mangaRepository,
-        IBackgroundTaskQueue taskQueue,
-        IServiceScopeFactory scopeFactory,
-        IOptions<ScrapperSettings> settings,
-        SemaphoreSlim semaphore)
-        : base(httpClient, mangaRepository, taskQueue, scopeFactory, settings, semaphore)
-    {
-        LoadProvider("new-provider.json");
-    }
-}
-```
-
-3. Implement provider-specific methods (metadata, chapter pages, search, etc.).
-4. Register in DI:
-
-```csharp
-builder.Services.AddHttpClient<NewProviderService>();
-```
-
-5. Add provider endpoints under `Features/ScrapperNewProvider`.
-
-## Notes
-
-- Manga title is indexed as unique in MongoDB.
-- Images are converted and saved as `.webp`.
-- If file paths have legacy formats (leading slash / wrong file name), use `GET /api/scrapper/fixfile`.
+---
+*© 2026 MangaScrapper Engine v2.0*

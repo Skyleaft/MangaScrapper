@@ -64,6 +64,17 @@
     private string? errorMessage;
     private bool isSubmitting;
 
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated ?? false)
+        {
+            Navigation.NavigateTo("/admin/dashboard");
+        }
+    }
+
     private async Task HandleLogin()
     {
         errorMessage = null;
