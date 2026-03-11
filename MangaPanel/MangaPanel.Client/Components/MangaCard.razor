@@ -1,6 +1,6 @@
 @using MangaScrapper.Shared.Models
 
-<div class="group bg-white rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-100 overflow-hidden flex flex-col h-full">
+<div class="group bg-surface rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 border border-border-main overflow-hidden flex flex-col h-full">
     <div class="relative aspect-[3/4] overflow-hidden">
         @if (!string.IsNullOrEmpty(Manga.LocalImageUrl))
         {
@@ -18,7 +18,7 @@
         </div>
         
         <div class="absolute top-3 left-3 flex flex-wrap gap-1">
-            <span class="px-2 py-1 bg-white/90 backdrop-blur-sm text-secondary text-[10px] font-bold uppercase tracking-wider rounded shadow-sm">@Manga.Type</span>
+            <span class="px-2 py-1 bg-surface/90 backdrop-blur-sm text-secondary text-[10px] font-bold uppercase tracking-wider rounded shadow-sm border border-border-main/50">@Manga.Type</span>
             @if (Manga.Rating.HasValue)
             {
                 <span class="px-2 py-1 bg-yellow-400 text-white text-[10px] font-bold rounded shadow-sm flex items-center gap-0.5">
@@ -30,15 +30,15 @@
     </div>
 
     <div class="p-4 flex flex-col flex-grow">
-        <h3 class="text-base font-bold text-slate-800 line-clamp-2 leading-tight mb-1 group-hover:text-primary transition-colors cursor-pointer" @onclick="() => OnDetailClick.InvokeAsync(Manga)" title="@Manga.Title">
+        <h3 class="text-base font-bold text-text-main line-clamp-2 leading-tight mb-1 group-hover:text-primary transition-colors cursor-pointer" @onclick="() => OnDetailClick.InvokeAsync(Manga)" title="@Manga.Title">
             @Manga.Title
         </h3>
-        <p class="text-xs text-slate-500 font-medium truncate mb-3">@Manga.Author</p>
+        <p class="text-xs text-slate-500 dark:text-slate-400 font-medium truncate mb-3">@Manga.Author</p>
         
         <div class="mt-auto">
             @if (Manga.LatestChapter != null)
             {
-                <div class="flex items-center justify-between pt-3 border-t border-slate-50">
+                <div class="flex items-center justify-between pt-3 border-t border-border-main/50">
                     <span class="text-[11px] font-bold text-slate-400">Chapter @Manga.LatestChapter.Number</span>
                     <span class="text-[10px] text-slate-400">@Manga.LatestChapter.UploadDate.ToShortDateString()</span>
                 </div>

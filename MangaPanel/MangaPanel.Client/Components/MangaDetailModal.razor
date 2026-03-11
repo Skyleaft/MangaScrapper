@@ -3,30 +3,40 @@
 @inject HttpClient Http
 @inject IJSRuntime JS
 
-@if (Manga != null)
-{
-    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm transition-opacity duration-300">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[95vh] overflow-hidden flex flex-col transform transition-all duration-300 scale-100 animate-in fade-in zoom-in duration-300">
+@* Removed top-level if to allow opening animation to trigger immediately *@
+
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm opacity-0 @(_isClosing ? "animate-backdrop-out" : "animate-backdrop-in")">
+        <div class="bg-surface rounded-2xl shadow-2xl w-full max-w-5xl max-h-[95vh] overflow-hidden flex flex-col border border-border-main opacity-0
+                    @(_isClosing ? "animate-modal-out" : "animate-modal-in")">
+
+
+
+
             <!-- Modal Header -->
-            <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white shadow-sm z-10">
+            <div class="px-6 py-4 border-b border-border-main flex items-center justify-between bg-surface shadow-sm z-10 transition-colors duration-300">
+
                 <div class="flex items-center gap-3 overflow-hidden">
                     <span class="px-2 py-1 bg-primary/10 text-primary text-[10px] font-bold rounded uppercase">Details</span>
-                    <h2 class="text-xl font-bold text-slate-800 truncate">@Manga.Title</h2>
+                    <h2 class="text-xl font-bold text-text-main truncate">@(Manga?.Title ?? "Loading...")</h2>
+
+
                 </div>
                 <div class="flex items-center gap-2">
-                    <button @onclick="ConfirmDeleteManga" class="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors flex items-center gap-1.5 px-3" title="Delete Manga">
+                    <button @onclick="ConfirmDeleteManga" class="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-colors flex items-center gap-1.5 px-3" title="Delete Manga">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                         <span class="text-xs font-bold">Delete</span>
                     </button>
-                    <div class="w-px h-6 bg-slate-100 mx-1"></div>
-                    <button @onclick="Close" class="p-2 hover:bg-slate-100 rounded-full transition-colors">
+                    <div class="w-px h-6 bg-border-main mx-1"></div>
+                    <button @onclick="Close" class="p-2 hover:bg-bg-app rounded-full transition-colors">
                         <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                     </button>
+
                 </div>
             </div>
 
             <!-- Modal Body -->
-            <div class="flex-grow overflow-y-auto bg-slate-50/30">
+            <div class="flex-grow overflow-y-auto bg-bg-app transition-colors duration-300">
+
                 @if (IsLoading)
                 {
                     <div class="flex flex-col items-center justify-center py-24">
@@ -40,7 +50,8 @@
                         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
                             <!-- Left Column: Image & Info (3 cols) -->
                             <div class="lg:col-span-4 space-y-6 lg:sticky lg:top-0">
-                                <div class="rounded-2xl overflow-hidden shadow-xl border border-white bg-white aspect-[3/4] relative group">
+                                <div class="rounded-2xl overflow-hidden shadow-xl border border-border-main bg-surface aspect-[3/4] relative group transition-colors duration-300">
+
                                     @if (!string.IsNullOrEmpty(Manga.LocalImageUrl))
                                     {
                                         <img src="/images/@Manga.LocalImageUrl" alt="@Manga.Title" class="w-full h-full object-cover" />
@@ -54,17 +65,19 @@
                                     </div>
                                 </div>
                                 
-                                <div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm space-y-4">
+                                <div class="bg-surface rounded-2xl p-5 border border-border-main shadow-sm space-y-4 transition-colors duration-300">
+
                                     <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest">Metadata</h3>
                                     <div class="space-y-3">
                                         <div>
                                             <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Created At</label>
-                                            <p class="text-sm font-medium text-slate-700">@Manga.CreatedAt.ToLocalTime().ToString("f")</p>
+                                            <p class="text-sm font-medium text-text-main">@Manga.CreatedAt.ToLocalTime().ToString("f")</p>
                                         </div>
                                         <div>
                                             <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Last Updated</label>
-                                            <p class="text-sm font-medium text-slate-700">@Manga.UpdatedAt.ToLocalTime().ToString("f")</p>
+                                            <p class="text-sm font-medium text-text-main">@Manga.UpdatedAt.ToLocalTime().ToString("f")</p>
                                         </div>
+
                                         <div>
                                             <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Source URL</label>
                                             <a href="@Manga.Url" target="_blank" class="text-sm text-primary hover:underline flex items-center gap-1">
@@ -79,9 +92,11 @@
                             <!-- Right Column: Form & Chapters (8 cols) -->
                             <div class="lg:col-span-8 space-y-8">
                                 <!-- Tabs-like content (simplified) -->
-                                <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                                    <div class="px-6 py-4 border-b border-slate-50 flex items-center justify-between bg-slate-50/30">
-                                        <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                                <div class="bg-surface rounded-2xl border border-border-main shadow-sm overflow-hidden transition-colors duration-300">
+                                    <div class="px-6 py-4 border-b border-border-main/50 flex items-center justify-between bg-bg-app transition-colors duration-300">
+
+                                        <h3 class="text-sm font-bold text-text-main flex items-center gap-2">
+
                                             <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
                                             Edit Information
                                         </h3>
@@ -89,45 +104,46 @@
                                     <div class="p-6 space-y-6">
                                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
                                             <div class="space-y-1.5">
-                                                <label class="text-xs font-bold text-slate-600 ml-1">MAL ID</label>
-                                                <input type="number" @bind="EditModel.MalId" class="w-full px-4 py-2.5 bg-slate-50/50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-400 text-sm" placeholder="e.g. 123456" />
+                                                <label class="text-xs font-bold text-slate-600 dark:text-slate-400 ml-1">MAL ID</label>
+                                                <input type="number" @bind="EditModel.MalId" class="w-full px-4 py-2.5 bg-bg-app border border-border-main rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-400 text-sm text-text-main" placeholder="e.g. 123456" />
                                             </div>
                                             <div class="space-y-1.5">
-                                                <label class="text-xs font-bold text-slate-600 ml-1">Author</label>
-                                                <input type="text" @bind="EditModel.Author" class="w-full px-4 py-2.5 bg-slate-50/50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-400 text-sm" placeholder="Author name" />
+                                                <label class="text-xs font-bold text-slate-600 dark:text-slate-400 ml-1">Author</label>
+                                                <input type="text" @bind="EditModel.Author" class="w-full px-4 py-2.5 bg-bg-app border border-border-main rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-400 text-sm text-text-main" placeholder="Author name" />
                                             </div>
                                             <div class="space-y-1.5">
-                                                <label class="text-xs font-bold text-slate-600 ml-1">Type</label>
-                                                <input type="text" @bind="EditModel.Type" class="w-full px-4 py-2.5 bg-slate-50/50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-400 text-sm" placeholder="Manga, Manhwa, etc." />
+                                                <label class="text-xs font-bold text-slate-600 dark:text-slate-400 ml-1">Type</label>
+                                                <input type="text" @bind="EditModel.Type" class="w-full px-4 py-2.5 bg-bg-app border border-border-main rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-400 text-sm text-text-main" placeholder="Manga, Manhwa, etc." />
                                             </div>
                                             <div class="space-y-1.5">
-                                                <label class="text-xs font-bold text-slate-600 ml-1">Status</label>
-                                                <input type="text" @bind="EditModel.Status" class="w-full px-4 py-2.5 bg-slate-50/50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-400 text-sm" placeholder="Ongoing, Completed, etc." />
+                                                <label class="text-xs font-bold text-slate-600 dark:text-slate-400 ml-1">Status</label>
+                                                <input type="text" @bind="EditModel.Status" class="w-full px-4 py-2.5 bg-bg-app border border-border-main rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-400 text-sm text-text-main" placeholder="Ongoing, Completed, etc." />
                                             </div>
                                             <div class="space-y-1.5">
-                                                <label class="text-xs font-bold text-slate-600 ml-1">Rating</label>
-                                                <input type="number" step="0.1" @bind="EditModel.Rating" class="w-full px-4 py-2.5 bg-slate-50/50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-400 text-sm" />
+                                                <label class="text-xs font-bold text-slate-600 dark:text-slate-400 ml-1">Rating</label>
+                                                <input type="number" step="0.1" @bind="EditModel.Rating" class="w-full px-4 py-2.5 bg-bg-app border border-border-main rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-400 text-sm text-text-main" />
                                             </div>
                                             <div class="space-y-1.5">
-                                                <label class="text-xs font-bold text-slate-600 ml-1">Release Date</label>
-                                                <input type="date" @bind="EditModel.ReleaseDate" class="w-full px-4 py-2.5 bg-slate-50/50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm" />
+                                                <label class="text-xs font-bold text-slate-600 dark:text-slate-400 ml-1">Release Date</label>
+                                                <input type="date" @bind="EditModel.ReleaseDate" class="w-full px-4 py-2.5 bg-bg-app border border-border-main rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm text-text-main" />
                                             </div>
                                             <div class="space-y-1.5 lg:col-span-2">
-                                                <label class="text-xs font-bold text-slate-600 ml-1">Total View</label>
-                                                <input type="number" @bind="Manga.TotalView" class="w-full px-4 py-2.5 bg-slate-50/50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-400 text-sm" />
+                                                <label class="text-xs font-bold text-slate-600 dark:text-slate-400 ml-1">Total View</label>
+                                                <input type="number" @bind="Manga.TotalView" class="w-full px-4 py-2.5 bg-bg-app border border-border-main rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-400 text-sm text-text-main" />
                                             </div>
+
                                         </div>
 
                                         <div class="space-y-1.5">
-                                            <label class="text-xs font-bold text-slate-600 ml-1">Genres</label>
+                                            <label class="text-xs font-bold text-slate-600 dark:text-slate-400 ml-1">Genres</label>
                                             <div class="relative">
-                                                <input type="text" value="@GenresString" @onchange="OnGenresChanged" class="w-full px-4 py-2.5 bg-slate-50/50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-400 text-sm" placeholder="Action, Adventure, etc." />
+                                                <input type="text" value="@GenresString" @onchange="OnGenresChanged" class="w-full px-4 py-2.5 bg-bg-app border border-border-main rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-400 text-sm text-text-main" placeholder="Action, Adventure, etc." />
                                                 <div class="mt-2 flex flex-wrap gap-1.5">
                                                     @if (EditModel.Genres != null)
                                                     {
                                                         @foreach (var genre in EditModel.Genres)
                                                         {
-                                                            <span class="px-2 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-bold rounded">@genre</span>
+                                                            <span class="px-2 py-0.5 bg-bg-app border border-border-main text-slate-600 dark:text-slate-400 text-[10px] font-bold rounded">@genre</span>
                                                         }
                                                     }
                                                 </div>
@@ -135,22 +151,24 @@
                                         </div>
 
                                         <div class="space-y-1.5">
-                                            <label class="text-xs font-bold text-slate-600 ml-1">Description</label>
-                                            <textarea @bind="EditModel.Description" rows="5" class="w-full px-4 py-3 bg-slate-50/50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-400 text-sm resize-none" placeholder="Enter manga description..."></textarea>
+                                            <label class="text-xs font-bold text-slate-600 dark:text-slate-400 ml-1">Description</label>
+                                            <textarea @bind="EditModel.Description" rows="5" class="w-full px-4 py-3 bg-bg-app border border-border-main rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-400 text-sm text-text-main resize-none" placeholder="Enter manga description..."></textarea>
                                         </div>
+
                                     </div>
                                 </div>
 
                                 <!-- Chapters List -->
-                                <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                                    <div class="px-6 py-4 border-b border-slate-50 flex items-center justify-between bg-slate-50/30">
+                                <div class="bg-surface rounded-2xl border border-border-main shadow-sm overflow-hidden transition-colors duration-300">
+                                    <div class="px-6 py-4 border-b border-border-main/50 flex items-center justify-between bg-bg-app transition-colors duration-300">
                                         <div class="flex items-center gap-2">
-                                            <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                                            <h3 class="text-sm font-bold text-text-main flex items-center gap-2">
                                                 <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
                                                 Chapters List
                                                 <span class="ml-1 px-2 py-0.5 bg-primary/10 text-primary text-[10px] rounded-full">@Chapters.Count</span>
                                             </h3>
                                         </div>
+
                                         <button @onclick="ScrapMissingChapters" class="flex items-center gap-1.5 px-3 py-1.5 bg-secondary/10 text-secondary hover:bg-secondary/20 rounded-lg transition-all text-[10px] font-bold uppercase tracking-wider">
                                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
                                             Scrap Missing
@@ -158,16 +176,17 @@
                                     </div>
                                     <div class="overflow-x-auto">
                                         <table class="w-full text-left text-sm">
-                                            <thead class="bg-slate-50/50 border-b border-slate-100">
+                                            <thead class="bg-bg-app border-b border-border-main">
                                                 <tr>
-                                                    <th class="px-6 py-3 font-bold text-slate-500 text-xs uppercase tracking-wider">Number</th>
-                                                    <th class="px-6 py-3 font-bold text-slate-500 text-xs uppercase tracking-wider">Status</th>
-                                                    <th class="px-6 py-3 font-bold text-slate-500 text-xs uppercase tracking-wider">Upload Date</th>
-                                                    <th class="px-6 py-3 font-bold text-slate-500 text-xs uppercase tracking-wider">Views</th>
-                                                    <th class="px-6 py-3 font-right text-slate-500 text-xs uppercase tracking-wider">Actions</th>
+                                                    <th class="px-6 py-3 font-bold text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider">Number</th>
+                                                    <th class="px-6 py-3 font-bold text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider">Status</th>
+                                                    <th class="px-6 py-3 font-bold text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider">Upload Date</th>
+                                                    <th class="px-6 py-3 font-bold text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider">Views</th>
+                                                    <th class="px-6 py-3 font-right text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider">Actions</th>
                                                 </tr>
                                             </thead>
-                                            <tbody class="divide-y divide-slate-50">
+                                            <tbody class="divide-y divide-border-main">
+
                                                 @if (!Chapters.Any())
                                                 {
                                                     <tr>
@@ -178,8 +197,9 @@
                                                 {
                                                     @foreach (var chapter in Chapters)
                                                     {
-                                                        <tr class="hover:bg-slate-50/50 transition-colors group">
-                                                            <td class="px-6 py-4 font-bold text-slate-700">Ch. @chapter.Number</td>
+                                                        <tr class="hover:bg-bg-app transition-colors group">
+                                                            <td class="px-6 py-4 font-bold text-text-main">Ch. @chapter.Number</td>
+
                                                             <td class="px-6 py-4">
                                                                 @if (chapter.IsChapterAvailable)
                                                                 {
@@ -218,8 +238,9 @@
             </div>
 
             <!-- Modal Footer -->
-            <div class="px-6 py-4 border-t border-slate-100 flex items-center justify-end gap-3 bg-white z-10 shadow-[0_-1px_10px_rgba(0,0,0,0.02)]">
-                <button @onclick="Close" class="px-5 py-2 text-slate-500 font-bold text-xs uppercase tracking-widest hover:bg-slate-50 rounded-xl transition-all">
+            <div class="px-6 py-4 border-t border-border-main flex items-center justify-end gap-3 bg-surface z-10 shadow-[0_-1px_10px_rgba(0,0,0,0.02)] transition-colors duration-300">
+                <button @onclick="Close" class="px-5 py-2 text-slate-500 dark:text-slate-400 font-bold text-xs uppercase tracking-widest hover:bg-bg-app rounded-xl transition-all">
+
                     Cancel
                 </button>
                 <button @onclick="Save" disabled="@IsSaving" class="px-8 py-2.5 bg-primary text-white font-bold text-xs uppercase tracking-widest rounded-xl hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 flex items-center gap-2 disabled:opacity-50">
@@ -232,7 +253,8 @@
             </div>
         </div>
     </div>
-}
+@* End of modal *@
+
 
 @code {
     [Parameter] public Guid MangaId { get; set; }
@@ -244,6 +266,8 @@
     private List<ChapterResponse> Chapters { get; set; } = new();
     private bool IsLoading { get; set; } = true;
     private bool IsSaving { get; set; } = false;
+    private bool _isClosing = false;
+
 
     private string GenresString => EditModel.Genres != null ? string.Join(", ", EditModel.Genres) : "";
 
@@ -401,8 +425,12 @@
 
     private async Task Close()
     {
+        _isClosing = true;
+        StateHasChanged();
+        await Task.Delay(300); // Wait for animation
         await OnClosed.InvokeAsync();
     }
+
 
     public class UpdateModel
     {
