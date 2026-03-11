@@ -194,9 +194,14 @@ public class MangaRepository : IMangaRepository
         var totalThumbnailSize = thumbnailResult != null && thumbnailResult.Contains("total") ? thumbnailResult["total"].ToInt64() : 0;
 
         var pagesResult = await _collection.Aggregate()
-            .Unwind(m => m.Chapters)
-            .Unwind("Chapters.Pages")
-            .Group(new BsonDocument { { "_id", BsonNull.Value }, { "total", new BsonDocument("$sum", "$Chapters.Pages.size") } })
+            .Project(m => new {
+                totalSize = m.Chapters.Sum(c => c.Pages.Sum(p => p.Size))
+            })
+            .Group(new BsonDocument 
+            { 
+                { "_id", BsonNull.Value }, 
+                { "total", new BsonDocument("$sum", "$totalSize") } 
+            })
             .FirstOrDefaultAsync(ct);
         var totalPagesSize = pagesResult != null && pagesResult.Contains("total") ? pagesResult["total"].ToInt64() : 0;
 

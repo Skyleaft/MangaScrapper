@@ -1,35 +1,27 @@
-@using MangaPanel.Client.Authentication
+﻿@using MangaPanel.Client.Authentication
 @inherits LayoutComponentBase
 @inject NavigationManager Navigation
 @inject HttpClient Http
 @inject AuthenticationStateProvider AuthStateProvider
 
 
-<div class="min-h-screen bg-slate-50 flex flex-col md:flex-row">
+<div class="flex min-h-screen flex-col md:flex-row">
     <!-- Sidebar -->
-    <aside class="w-full md:w-64 bg-secondary text-white p-6 md:min-h-screen flex flex-col">
-        <div class="flex items-center space-x-3 mb-10">
-            <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center font-bold">M</div>
+    <aside class="flex w-full flex-col p-6 text-primary md:min-h-screen md:w-64">
+        <div class="mb-10 flex items-center space-x-3">
+            <div class="text-white flex h-8 w-8 items-center justify-center rounded-lg bg-primary font-bold">M</div>
             <h1 class="text-xl font-bold tracking-tight">MangaPanel</h1>
         </div>
         
         <nav class="flex-grow space-y-2">
-            <NavLink href="/admin/dashboard" class="flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-700 transition-colors" ActiveClass="bg-primary shadow-md">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                </svg>
-                <span>Dashboard</span>
-            </NavLink>
-            <NavLink href="/admin/manga" class="flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-700 transition-colors" ActiveClass="bg-primary shadow-md">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                </svg>
-                <span>Manage Manga</span>
-            </NavLink>
+            @foreach (var item in _menuDatas)
+            {
+                <NavItem MenuData="item"></NavItem>
+            }
         </nav>
 
-        <div class="mt-auto pt-6 border-t border-slate-700">
-            <button @onclick="Logout" class="flex items-center space-x-3 p-3 w-full rounded-lg hover:bg-red-900/40 text-red-400 transition-colors">
+        <div class="mt-auto border-t border-slate-700 pt-6">
+            <button @onclick="Logout" class="flex w-full items-center space-x-3 rounded-lg p-3 text-red-400 transition-colors hover:bg-red-900/40">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                 </svg>
@@ -40,18 +32,18 @@
 
     <!-- Main Content -->
     <main class="flex-grow p-6 md:p-10">
-        <header class="flex justify-between items-center mb-10">
+        <header class="mb-10 flex items-center justify-between">
             <div>
-                <p class="text-slate-500 text-sm font-medium uppercase tracking-wider">Welcome Back</p>
+                <p class="text-sm font-medium tracking-wider text-slate-500 uppercase">Welcome Back</p>
                 <h2 class="text-2xl font-bold text-secondary">Admin Dashboard</h2>
             </div>
             <div class="flex items-center space-x-4">
-                <div class="bg-white p-2 rounded-full shadow-sm border border-slate-200">
+                <div class="rounded-full border border-slate-200 bg-white p-2 shadow-sm">
                      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 01-6 0v-1m6 0H9" />
                     </svg>
                 </div>
-                <div class="w-10 h-10 bg-primary rounded-full border-2 border-white shadow-sm"></div>
+                <div class="h-10 w-10 rounded-full border-2 border-white bg-primary shadow-sm"></div>
             </div>
         </header>
 
@@ -60,6 +52,33 @@
 </div>
 
 @code {
+    private List<MenuData> _menuDatas = new()
+    {
+        new ()
+        {
+            Href = "/admin/dashboard",
+            Label = "Dashboard",
+            Icon = @<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                   </svg>
+        },
+        new ()
+        {
+            Href = "/admin/manga",
+            Label = "Manage Manga",
+            Icon = @<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                   </svg>
+        },
+        new ()
+        {
+            Href = "/admin/discover",
+            Label = "Discover Manga",
+            Icon = @<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                   </svg>
+        }
+    };
     private string? errorMessage;
     private bool isSubmitting;
     

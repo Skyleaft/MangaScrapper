@@ -1,4 +1,4 @@
-﻿using FastEndpoints;
+using FastEndpoints;
 using MangaScrapper.Infrastructure.Repositories;
 
 namespace MangaScrapper.Features.Manga.GetManga;

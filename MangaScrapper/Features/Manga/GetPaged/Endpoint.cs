@@ -1,4 +1,4 @@
-﻿using FastEndpoints;
+using FastEndpoints;
 using MangaScrapper.Infrastructure.Repositories;
 
 namespace MangaScrapper.Features.Manga.GetPaged;
@@ -45,7 +45,7 @@ public class Endpoint(IMangaRepository mangaRepository) : Endpoint<Request, Resp
                 Popularity = m.Popularity,
                 Rating = m.Rating,
                 ReleaseDate = m.ReleaseDate,
-                TotalView = m.Chapters.Sum(c => c.TotalView),
+                TotalView = m.TotalView > 0 ? m.TotalView : m.Chapters.Sum(c => c.TotalView),
                 LatestChapter = m.Chapters.OrderByDescending(c => c.Number).Select(c => new LatestChapterSummary
                 {
                     Id = c.Id,

@@ -1,5 +1,8 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 18
+VisualStudioVersion = 18.4.11605.240 stable
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MangaScrapper", "MangaScrapper\MangaScrapper.csproj", "{0C1D68B2-3138-44F5-8C27-12CE5FB62B1C}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{DA760FF0-3466-4E98-85DD-5F6DF8DC1845}"
@@ -29,5 +32,8 @@ Global
 		{90949556-09B3-4692-BFDB-687DEC09974D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{90949556-09B3-4692-BFDB-687DEC09974D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{90949556-09B3-4692-BFDB-687DEC09974D}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
 	EndGlobalSection
 EndGlobal

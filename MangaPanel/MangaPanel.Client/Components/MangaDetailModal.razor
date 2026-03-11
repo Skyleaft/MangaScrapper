@@ -1,0 +1,432 @@
+@using MangaScrapper.Shared.Models
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject IJSRuntime JS
+
+@if (Manga != null)
+{
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm transition-opacity duration-300">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[95vh] overflow-hidden flex flex-col transform transition-all duration-300 scale-100 animate-in fade-in zoom-in duration-300">
+            <!-- Modal Header -->
+            <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white shadow-sm z-10">
+                <div class="flex items-center gap-3 overflow-hidden">
+                    <span class="px-2 py-1 bg-primary/10 text-primary text-[10px] font-bold rounded uppercase">Details</span>
+                    <h2 class="text-xl font-bold text-slate-800 truncate">@Manga.Title</h2>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button @onclick="ConfirmDeleteManga" class="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors flex items-center gap-1.5 px-3" title="Delete Manga">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        <span class="text-xs font-bold">Delete</span>
+                    </button>
+                    <div class="w-px h-6 bg-slate-100 mx-1"></div>
+                    <button @onclick="Close" class="p-2 hover:bg-slate-100 rounded-full transition-colors">
+                        <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="flex-grow overflow-y-auto bg-slate-50/30">
+                @if (IsLoading)
+                {
+                    <div class="flex flex-col items-center justify-center py-24">
+                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
+                        <p class="text-slate-500 font-medium">Loading manga details...</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="p-6 space-y-8">
+                        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                            <!-- Left Column: Image & Info (3 cols) -->
+                            <div class="lg:col-span-4 space-y-6 lg:sticky lg:top-0">
+                                <div class="rounded-2xl overflow-hidden shadow-xl border border-white bg-white aspect-[3/4] relative group">
+                                    @if (!string.IsNullOrEmpty(Manga.LocalImageUrl))
+                                    {
+                                        <img src="/images/@Manga.LocalImageUrl" alt="@Manga.Title" class="w-full h-full object-cover" />
+                                    }
+                                    else if (!string.IsNullOrEmpty(Manga.ImageUrl))
+                                    {
+                                        <img src="@Manga.ImageUrl" alt="@Manga.Title" class="w-full h-full object-cover" />
+                                    }
+                                    <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
+                                        <span class="text-white text-[10px] font-medium">Cover Image</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm space-y-4">
+                                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest">Metadata</h3>
+                                    <div class="space-y-3">
+                                        <div>
+                                            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Created At</label>
+                                            <p class="text-sm font-medium text-slate-700">@Manga.CreatedAt.ToLocalTime().ToString("f")</p>
+                                        </div>
+                                        <div>
+                                            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Last Updated</label>
+                                            <p class="text-sm font-medium text-slate-700">@Manga.UpdatedAt.ToLocalTime().ToString("f")</p>
+                                        </div>
+                                        <div>
+                                            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Source URL</label>
+                                            <a href="@Manga.Url" target="_blank" class="text-sm text-primary hover:underline flex items-center gap-1">
+                                                <span class="truncate">@Manga.Url</span>
+                                                <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Right Column: Form & Chapters (8 cols) -->
+                            <div class="lg:col-span-8 space-y-8">
+                                <!-- Tabs-like content (simplified) -->
+                                <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                                    <div class="px-6 py-4 border-b border-slate-50 flex items-center justify-between bg-slate-50/30">
+                                        <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                                            <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                                            Edit Information
+                                        </h3>
+                                    </div>
+                                    <div class="p-6 space-y-6">
+                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                                            <div class="space-y-1.5">
+                                                <label class="text-xs font-bold text-slate-600 ml-1">MAL ID</label>
+                                                <input type="number" @bind="EditModel.MalId" class="w-full px-4 py-2.5 bg-slate-50/50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-400 text-sm" placeholder="e.g. 123456" />
+                                            </div>
+                                            <div class="space-y-1.5">
+                                                <label class="text-xs font-bold text-slate-600 ml-1">Author</label>
+                                                <input type="text" @bind="EditModel.Author" class="w-full px-4 py-2.5 bg-slate-50/50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-400 text-sm" placeholder="Author name" />
+                                            </div>
+                                            <div class="space-y-1.5">
+                                                <label class="text-xs font-bold text-slate-600 ml-1">Type</label>
+                                                <input type="text" @bind="EditModel.Type" class="w-full px-4 py-2.5 bg-slate-50/50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-400 text-sm" placeholder="Manga, Manhwa, etc." />
+                                            </div>
+                                            <div class="space-y-1.5">
+                                                <label class="text-xs font-bold text-slate-600 ml-1">Status</label>
+                                                <input type="text" @bind="EditModel.Status" class="w-full px-4 py-2.5 bg-slate-50/50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-400 text-sm" placeholder="Ongoing, Completed, etc." />
+                                            </div>
+                                            <div class="space-y-1.5">
+                                                <label class="text-xs font-bold text-slate-600 ml-1">Rating</label>
+                                                <input type="number" step="0.1" @bind="EditModel.Rating" class="w-full px-4 py-2.5 bg-slate-50/50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-400 text-sm" />
+                                            </div>
+                                            <div class="space-y-1.5">
+                                                <label class="text-xs font-bold text-slate-600 ml-1">Release Date</label>
+                                                <input type="date" @bind="EditModel.ReleaseDate" class="w-full px-4 py-2.5 bg-slate-50/50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm" />
+                                            </div>
+                                            <div class="space-y-1.5 lg:col-span-2">
+                                                <label class="text-xs font-bold text-slate-600 ml-1">Total View</label>
+                                                <input type="number" @bind="Manga.TotalView" class="w-full px-4 py-2.5 bg-slate-50/50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-400 text-sm" />
+                                            </div>
+                                        </div>
+
+                                        <div class="space-y-1.5">
+                                            <label class="text-xs font-bold text-slate-600 ml-1">Genres</label>
+                                            <div class="relative">
+                                                <input type="text" value="@GenresString" @onchange="OnGenresChanged" class="w-full px-4 py-2.5 bg-slate-50/50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-400 text-sm" placeholder="Action, Adventure, etc." />
+                                                <div class="mt-2 flex flex-wrap gap-1.5">
+                                                    @if (EditModel.Genres != null)
+                                                    {
+                                                        @foreach (var genre in EditModel.Genres)
+                                                        {
+                                                            <span class="px-2 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-bold rounded">@genre</span>
+                                                        }
+                                                    }
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="space-y-1.5">
+                                            <label class="text-xs font-bold text-slate-600 ml-1">Description</label>
+                                            <textarea @bind="EditModel.Description" rows="5" class="w-full px-4 py-3 bg-slate-50/50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-400 text-sm resize-none" placeholder="Enter manga description..."></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Chapters List -->
+                                <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                                    <div class="px-6 py-4 border-b border-slate-50 flex items-center justify-between bg-slate-50/30">
+                                        <div class="flex items-center gap-2">
+                                            <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                                                <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
+                                                Chapters List
+                                                <span class="ml-1 px-2 py-0.5 bg-primary/10 text-primary text-[10px] rounded-full">@Chapters.Count</span>
+                                            </h3>
+                                        </div>
+                                        <button @onclick="ScrapMissingChapters" class="flex items-center gap-1.5 px-3 py-1.5 bg-secondary/10 text-secondary hover:bg-secondary/20 rounded-lg transition-all text-[10px] font-bold uppercase tracking-wider">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                                            Scrap Missing
+                                        </button>
+                                    </div>
+                                    <div class="overflow-x-auto">
+                                        <table class="w-full text-left text-sm">
+                                            <thead class="bg-slate-50/50 border-b border-slate-100">
+                                                <tr>
+                                                    <th class="px-6 py-3 font-bold text-slate-500 text-xs uppercase tracking-wider">Number</th>
+                                                    <th class="px-6 py-3 font-bold text-slate-500 text-xs uppercase tracking-wider">Status</th>
+                                                    <th class="px-6 py-3 font-bold text-slate-500 text-xs uppercase tracking-wider">Upload Date</th>
+                                                    <th class="px-6 py-3 font-bold text-slate-500 text-xs uppercase tracking-wider">Views</th>
+                                                    <th class="px-6 py-3 font-right text-slate-500 text-xs uppercase tracking-wider">Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="divide-y divide-slate-50">
+                                                @if (!Chapters.Any())
+                                                {
+                                                    <tr>
+                                                        <td colspan="5" class="px-6 py-8 text-center text-slate-400 italic">No chapters found</td>
+                                                    </tr>
+                                                }
+                                                else
+                                                {
+                                                    @foreach (var chapter in Chapters)
+                                                    {
+                                                        <tr class="hover:bg-slate-50/50 transition-colors group">
+                                                            <td class="px-6 py-4 font-bold text-slate-700">Ch. @chapter.Number</td>
+                                                            <td class="px-6 py-4">
+                                                                @if (chapter.IsChapterAvailable)
+                                                                {
+                                                                    <span class="flex items-center gap-1.5 text-emerald-600 font-bold text-xs">
+                                                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                                                        Available
+                                                                        <span class="text-[10px] text-slate-300 font-medium">(@chapter.PageCount pages)</span>
+                                                                    </span>
+                                                                }
+                                                                else
+                                                                {
+                                                                    <span class="flex items-center gap-1.5 text-rose-500 font-bold text-xs">
+                                                                        <span class="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse"></span>
+                                                                        Missing
+                                                                    </span>
+                                                                }
+                                                            </td>
+                                                            <td class="px-6 py-4 text-slate-500 text-xs whitespace-nowrap">@chapter.UploadDate.ToLocalTime().ToString("MMM dd, yyyy")</td>
+                                                            <td class="px-6 py-4 text-slate-600 font-medium">@chapter.TotalView.ToString("N0")</td>
+                                                            <td class="px-6 py-4 text-right">
+                                                                <button @onclick="() => ConfirmDeleteChapter(chapter)" class="p-1.5 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all opacity-0 group-hover:opacity-100" title="Delete Chapter">
+                                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    }
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="px-6 py-4 border-t border-slate-100 flex items-center justify-end gap-3 bg-white z-10 shadow-[0_-1px_10px_rgba(0,0,0,0.02)]">
+                <button @onclick="Close" class="px-5 py-2 text-slate-500 font-bold text-xs uppercase tracking-widest hover:bg-slate-50 rounded-xl transition-all">
+                    Cancel
+                </button>
+                <button @onclick="Save" disabled="@IsSaving" class="px-8 py-2.5 bg-primary text-white font-bold text-xs uppercase tracking-widest rounded-xl hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 flex items-center gap-2 disabled:opacity-50">
+                    @if (IsSaving)
+                    {
+                        <div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    }
+                    Save Changes
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public Guid MangaId { get; set; }
+    [Parameter] public EventCallback OnClosed { get; set; }
+    [Parameter] public EventCallback OnSaved { get; set; }
+
+    private MangaSummary? Manga { get; set; }
+    private UpdateModel EditModel { get; set; } = new();
+    private List<ChapterResponse> Chapters { get; set; } = new();
+    private bool IsLoading { get; set; } = true;
+    private bool IsSaving { get; set; } = false;
+
+    private string GenresString => EditModel.Genres != null ? string.Join(", ", EditModel.Genres) : "";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (MangaId != Guid.Empty)
+        {
+            await LoadManga();
+        }
+    }
+
+    private async Task LoadManga()
+    {
+        IsLoading = true;
+        try
+        {
+            var mangaTask = Http.GetFromJsonAsync<MangaSummary>($"/api/manga/{MangaId}");
+            var chaptersTask = Http.GetFromJsonAsync<List<ChapterResponse>>($"/api/manga/{MangaId}/chapters");
+            
+            await Task.WhenAll(mangaTask, chaptersTask);
+
+            Manga = await mangaTask;
+            Chapters = await chaptersTask ?? new();
+
+            if (Manga != null)
+            {
+                EditModel = new UpdateModel
+                {
+                    Id = Manga.Id,
+                    MalId = Manga.MalId,
+                    Author = Manga.Author,
+                    Type = Manga.Type,
+                    Genres = Manga.Genres ?? new List<string>(),
+                    Description = Manga.Description,
+                    Rating = Manga.Rating,
+                    ReleaseDate = Manga.ReleaseDate,
+                    Status = Manga.Status,
+                    TotalView = Manga.TotalView
+                };
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading manga: {ex.Message}");
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private void OnGenresChanged(ChangeEventArgs e)
+    {
+        var val = e.Value?.ToString();
+        if (!string.IsNullOrEmpty(val))
+        {
+            EditModel.Genres = val.Split(',').Select(x => x.Trim()).ToList();
+        }
+        else
+        {
+            EditModel.Genres = new List<string>();
+        }
+    }
+
+    private async Task Save()
+    {
+        IsSaving = true;
+        try
+        {
+            // Sync TotalView from Manga object back to EditModel before saving
+            if (Manga != null) EditModel.TotalView = Manga.TotalView;
+
+            var response = await Http.PutAsJsonAsync($"/api/manga/{MangaId}", EditModel);
+            if (response.IsSuccessStatusCode)
+            {
+                await OnSaved.InvokeAsync();
+                await Close();
+            }
+            else
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"Error saving: {content}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error saving: {ex.Message}");
+        }
+        finally
+        {
+            IsSaving = false;
+        }
+    }
+
+    private async Task ConfirmDeleteManga()
+    {
+        if (Manga == null) return;
+        
+        var confirmed = await JS.InvokeAsync<bool>("confirm", $"Are you sure you want to delete the entire manga '{Manga.Title}'?\n\nThis will also delete ALL downloaded chapters and images. This action cannot be undone.");
+        if (confirmed)
+        {
+            try
+            {
+                var response = await Http.DeleteAsync($"/api/manga/{MangaId}");
+                if (response.IsSuccessStatusCode)
+                {
+                    await OnSaved.InvokeAsync();
+                    await Close();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error deleting manga: {ex.Message}");
+            }
+        }
+    }
+
+    private async Task ConfirmDeleteChapter(ChapterResponse chapter)
+    {
+        var confirmed = await JS.InvokeAsync<bool>("confirm", $"Delete Chapter {chapter.Number} from storage and database?");
+        if (confirmed)
+        {
+            try
+            {
+                var response = await Http.DeleteAsync($"/api/manga/{MangaId}/chapter/{chapter.Id}");
+                if (response.IsSuccessStatusCode)
+                {
+                    Chapters.Remove(chapter);
+                    StateHasChanged();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error deleting chapter: {ex.Message}");
+            }
+        }
+    }
+
+    private async Task ScrapMissingChapters()
+    {
+        try 
+        {
+            var response = await Http.GetAsync($"/api/scrapper/manga/{MangaId}/chapter-pages");
+            if (response.IsSuccessStatusCode)
+            {
+                await JS.InvokeVoidAsync("alert", "Scraping jobs have been queued for missing chapters!");
+                await Close();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error triggering scrap: {ex.Message}");
+        }
+    }
+
+    private async Task Close()
+    {
+        await OnClosed.InvokeAsync();
+    }
+
+    public class UpdateModel
+    {
+        public Guid Id { get; set; }
+        public int MalId { get; set; }
+        public string Author { get; set; } = string.Empty;
+        public string Type { get; set; } = string.Empty;
+        public List<string>? Genres { get; set; }
+        public string? Description { get; set; }
+        public double? Rating { get; set; }
+        public DateTime? ReleaseDate { get; set; }
+        public string? Status { get; set; }
+        public int TotalView { get; set; }
+    }
+
+    public class ChapterResponse
+    {
+        public Guid Id { get; set; }
+        public double Number { get; set; }
+        public int TotalView { get; set; }
+        public DateTime UploadDate { get; set; }
+        public string? ChapterProvider { get; set; }
+        public string? ChapterProviderIcon { get; set; }
+        public int PageCount { get; set; }
+        public bool IsChapterAvailable { get; set; }
+    }
+}

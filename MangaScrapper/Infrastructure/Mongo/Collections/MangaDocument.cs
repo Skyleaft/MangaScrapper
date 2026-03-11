@@ -9,40 +9,41 @@ public class MangaDocument
     [BsonRepresentation(BsonType.String)]
     public Guid Id { get; set; }
     public int MalID { get; set; }
-    
+
     public string Title { get; set; } = string.Empty;
-    
+
     public string Author { get; set; } = string.Empty;
-    
+
     public string Type { get; set; } = string.Empty;
     public double? Rating { get; set; }
     public int Popularity { get; set; }
     public int Members { get; set; }
-    
+
     [BsonIgnoreIfNull]
     public List<string>? Genres { get; set; }
-    
+
     [BsonIgnoreIfNull]
     public string? Description { get; set; }
-    
+
     [BsonIgnoreIfNull]
     public string? ImageUrl { get; set; }
     public string? LocalImageUrl { get; set; }
     public long ThumbnailSize { get; set; }
-    
+
     [BsonIgnoreIfNull]
     public string? Status { get; set; }
     public DateTime? ReleaseDate { get; set; }
-    
+    public int TotalView { get; set; }
+
     [BsonDateTimeOptions(Kind = DateTimeKind.Utc)]
     public DateTime CreatedAt { get; set; }
-    
+
     [BsonDateTimeOptions(Kind = DateTimeKind.Utc)]
     public DateTime UpdatedAt { get; set; }
-    
+
     [BsonIgnoreIfNull]
     public string? Url { get; set; }
-    
+
     public List<ChapterDocument> Chapters { get; set; } = new();
 }
 
@@ -65,9 +66,9 @@ public class PageDocument
 {
     [BsonRepresentation(BsonType.String)]
     public Guid Id { get; set; } = Guid.CreateVersion7();
-    
+
     public string ImageUrl { get; set; } = default!;
-    
+
     [BsonIgnoreIfNull]
     public string? LocalImageUrl { get; set; }
     public long Size { get; set; }

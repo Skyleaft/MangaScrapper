@@ -4,77 +4,175 @@
 @using MangaPanel.Client.Components
 @using Microsoft.AspNetCore.Authorization
 @attribute [Authorize]
+@inject HttpClient Http
+@inject IJSRuntime JS
 
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center space-x-4">
-        <div class="p-3 bg-blue-50 rounded-xl text-blue-500">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-            </svg>
+@if (isLoading)
+{
+    <div class="flex items-center justify-center min-h-[400px]">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+    </div>
+}
+else
+{
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center space-x-4">
+            <div class="p-3 bg-blue-50 rounded-xl text-blue-500">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+            </div>
+            <div>
+                <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider">Total Manga</p>
+                <h4 class="text-2xl font-bold text-secondary">@stats.TotalManga.ToString("N0")</h4>
+            </div>
         </div>
-        <div>
-            <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider">Total Manga</p>
-            <h4 class="text-2xl font-bold text-secondary">@totalManga</h4>
+        
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center space-x-4">
+            <div class="p-3 bg-green-50 rounded-xl text-green-500">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </div>
+            <div>
+                <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider">Scrapped Today</p>
+                <h4 class="text-2xl font-bold text-secondary">@stats.ScrappedToday.ToString("N0")</h4>
+            </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center space-x-4">
+            <div class="p-3 bg-purple-50 rounded-xl text-purple-500">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+            </div>
+            <div>
+                <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider">Month Scrap</p>
+                <h4 class="text-2xl font-bold text-secondary">@stats.ScrappedThisMonth.ToString("N0")</h4>
+            </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center space-x-4">
+            <div class="p-3 bg-orange-50 rounded-xl text-orange-500">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+                </svg>
+            </div>
+            <div>
+                <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider">Storage Used</p>
+                <h4 class="text-2xl font-bold text-secondary">@FormatSize(stats.TotalStorageUsed)</h4>
+            </div>
         </div>
     </div>
-    
-    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center space-x-4">
-        <div class="p-3 bg-green-50 rounded-xl text-green-500">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-        </div>
-        <div>
-            <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider">Scrapped Today</p>
-            <h4 class="text-2xl font-bold text-secondary">24</h4>
-        </div>
-    </div>
 
-    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center space-x-4">
-        <div class="p-3 bg-purple-50 rounded-xl text-purple-500">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-            </svg>
-        </div>
-        <div>
-            <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider">Monthly Views</p>
-            <h4 class="text-2xl font-bold text-secondary">1.2M</h4>
-        </div>
-    </div>
-
-    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center space-x-4">
-        <div class="p-3 bg-orange-50 rounded-xl text-orange-500">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-        </div>
-        <div>
-            <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider">Avg. Update</p>
-            <h4 class="text-2xl font-bold text-secondary">2h 15m</h4>
-        </div>
-    </div>
-</div>
-
-<div class="flex justify-between items-center mb-6">
-    <h3 class="text-xl font-bold text-secondary">Recent Manga</h3>
-    <button class="text-primary font-bold text-sm hover:underline">View All</button>
-</div>
-
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-    @foreach(var manga in recentManga)
+    @if (stats.MonthlyScrap.Any())
     {
-        <MangaCard Manga="manga" />
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 mb-10">
+            <h3 class="text-xl font-bold text-secondary mb-6">Monthly Scrap Activity</h3>
+            <div class="h-[300px]">
+                <canvas id="scrapChart"></canvas>
+            </div>
+        </div>
     }
-</div>
+
+    <div class="flex justify-between items-center mb-6">
+        <h3 class="text-xl font-bold text-secondary">Recent Manga</h3>
+        <a href="/admin/manga" class="text-primary font-bold text-sm hover:underline">View All</a>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-6">
+        @foreach (var manga in recentManga)
+        {
+            <MangaCard Manga="manga" OnDetailClick="OpenDetail" />
+        }
+    </div>
+
+    @if (selectedMangaId != Guid.Empty)
+    {
+        <MangaDetailModal MangaId="selectedMangaId" OnClosed="CloseDetail" OnSaved="OnMangaSaved" />
+    }
+}
 
 @code {
-    private int totalManga = 1500;
-    private List<MangaSummary> recentManga = new()
+    private DashboardStatistic stats = new();
+    private List<MangaSummary> recentManga = new();
+    private bool isLoading = true;
+    private Guid selectedMangaId = Guid.Empty;
+
+    protected override async Task OnInitializedAsync()
     {
-        new MangaSummary { Title = "One Piece", Author = "Eiichiro Oda", Type = "Manga", Rating = 9.2, ImageUrl = "https://cdn.myanimelist.net/images/manga/2/253146.jpg" },
-        new MangaSummary { Title = "Solo Leveling", Author = "Chugong", Type = "Manhwa", Rating = 8.8, ImageUrl = "https://cdn.myanimelist.net/images/manga/3/222295.jpg" },
-        new MangaSummary { Title = "Kingdom", Author = "Yasuhisa Hara", Type = "Manga", Rating = 9.0, ImageUrl = "https://cdn.myanimelist.net/images/manga/2/171872.jpg" },
-        new MangaSummary { Title = "Berserk", Author = "Kentaro Miura", Type = "Manga", Rating = 9.5, ImageUrl = "https://cdn.myanimelist.net/images/manga/1/157897.jpg" }
-    };
+        await LoadData();
+        isLoading = false;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!isLoading && stats.MonthlyScrap.Any())
+        {
+            await CreateChart();
+        }
+    }
+
+    private async Task CreateChart()
+    {
+        var labels = stats.MonthlyScrap.Select(x => x.Date.ToString("MMM dd")).ToArray();
+        var data = stats.MonthlyScrap.Select(x => x.TotalScrap).ToArray();
+
+        try
+        {
+            await JS.InvokeVoidAsync("createScrapChart", "scrapChart", labels, data);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error creating chart: {ex.Message}");
+        }
+    }
+
+    private void OpenDetail(MangaSummary manga)
+    {
+        selectedMangaId = manga.Id;
+    }
+
+    private void CloseDetail()
+    {
+        selectedMangaId = Guid.Empty;
+    }
+
+    private async Task OnMangaSaved()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            var statsTask = Http.GetFromJsonAsync<DashboardStatistic>("/api/dashboard/statistics");
+            var mangaTask = Http.GetFromJsonAsync<MangaListResponse>("/api/manga/paged?pageSize=5");
+
+            await Task.WhenAll(statsTask, mangaTask);
+
+            stats = await statsTask ?? new();
+            recentManga = (await mangaTask)?.Items ?? new();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading dashboard: {ex.Message}");
+        }
+    }
+
+    private string FormatSize(long bytes)
+    {
+        string[] unit = { "B", "KB", "MB", "GB", "TB" };
+        int i = 0;
+        double dblSByte = bytes;
+        while (dblSByte >= 1024 && i < unit.Length - 1)
+        {
+            i++;
+            dblSByte /= 1024;
+        }
+        return $"{dblSByte:0.##} {unit[i]}";
+    }
 }
+
