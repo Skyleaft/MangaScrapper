@@ -189,7 +189,10 @@ app.UseAuthentication()
    .UseAuthorization();
 
 // Note: Hangfire Dashboard URL will be available if Hangfire.Dashboard is installed
-app.MapHangfireDashboard().RequireAuthorization();
+app.MapHangfireDashboard("/hangfire",new DashboardOptions()
+{
+    Authorization = new[]{new HangfireAuthFillter()}
+}).RequireAuthorization();
 
 
 app.UseResponseCaching().UseFastEndpoints();
