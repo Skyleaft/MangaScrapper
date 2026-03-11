@@ -25,9 +25,9 @@ using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Logs;
-
 using MangaScrapper.Infrastructure.Utils;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.DataProtection;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -49,6 +49,12 @@ builder.Services.AddAuthorization();
 builder.Services.AddFastEndpoints()
     .AddResponseCaching()
     .SwaggerDocument(o => o.AutoTagPathSegmentIndex = 2);
+
+var keysFolder = Path.Combine(builder.Environment.ContentRootPath, "temp-keys");
+
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(keysFolder))
+    .SetApplicationName("MangaScrapper");
 
 // CORS configuration from appsettings.json (section: Cors)
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
@@ -94,6 +100,8 @@ builder.Services.AddSingleton(sp =>
     return new SemaphoreSlim(settings.MaxParallelDownloads);
 });
 builder.Services.AddScoped<IMangaRepository, MangaRepository>();
+
+
 
 // Configure Hangfire with MongoDB
 var mongoSettings = builder.Configuration.GetSection("MongoSettings").Get<MongoSettings>();

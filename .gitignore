@@ -7,3 +7,4 @@ MangaScrapper.Shared/bin
 node_modules
 package-lock.json
 MangaScrapper.Shared/obj
+MangaScrapper/temp-keys

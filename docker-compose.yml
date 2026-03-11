@@ -18,6 +18,7 @@ services:
     volumes:
       - ./images:/app/images
       - ./MangaScrapper/provider:/app/provider:ro
+      - ./keys:/app/temp-keys
     depends_on:
       - mongodb
 
