@@ -10,6 +10,7 @@ services:
       - ASPNETCORE_ENVIRONMENT=Production
       - MongoSettings__ConnectionString=mongodb://mongodb:27017
       - MongoSettings__DatabaseName=manga-scrap
+      - JwtSigningKey="I4G5ZR2ZgGtjWWnKtf6InBJpGWwm7IrmM4Mzxu3iUm7"
       - ScrapperSettings__ImageStoragePath=/app/images
       - ScrapperSettings__MaxParallelDownloads=10
       - Cors__AllowedOrigins=*

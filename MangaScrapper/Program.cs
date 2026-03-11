@@ -27,6 +27,7 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Logs;
 
 using MangaScrapper.Infrastructure.Utils;
+using Microsoft.AspNetCore.Authentication.Cookies;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -34,6 +35,15 @@ builder.Services.AddRazorComponents()
     .AddInteractiveWebAssemblyComponents();
 
 builder.Services.AddAuthenticationJwtBearer(s => s.SigningKey = builder.Configuration["JwtSigningKey"] ?? "a_very_secret_key_that_is_at_least_32_chars_long!!");
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.ExpireTimeSpan = TimeSpan.FromDays(3);
+        options.SlidingExpiration = true;
+        options.AccessDeniedPath = "/Forbidden/";
+        options.LoginPath = "/";
+        options.LogoutPath = "/api/auth/logout";
+    });
 builder.Services.AddAuthorization();
 
 builder.Services.AddFastEndpoints()
@@ -169,7 +179,8 @@ app.UseAuthentication()
    .UseAuthorization();
 
 // Note: Hangfire Dashboard URL will be available if Hangfire.Dashboard is installed
-app.UseHangfireDashboard("/hangfire");
+app.MapHangfireDashboard().RequireAuthorization();
+
 
 app.UseResponseCaching().UseFastEndpoints();
 

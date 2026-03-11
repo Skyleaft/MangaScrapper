@@ -14,7 +14,6 @@ public class Endpoint(IMangaRepository mangaRepository, IOptions<ScrapperSetting
     public override void Configure()
     {
         Delete("/api/manga/{MangaId}");
-        AllowAnonymous();
     }
 
     public override async Task HandleAsync(Request r, CancellationToken ct)
