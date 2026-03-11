@@ -1,11 +1,12 @@
 ﻿using FastEndpoints;
 using Hangfire;
 using MangaScrapper.Infrastructure.Repositories;
+using MangaScrapper.Infrastructure.Services;
 using MangaScrapper.Shared.Models;
 
 namespace MangaScrapper.Features.Dashboard.GetStatistics;
 
-public class Endpoint(IMangaRepository mangaRepository) : EndpointWithoutRequest<DashboardStatistic>
+public class Endpoint(IMangaRepository mangaRepository, ScrapperService scrapperService) : EndpointWithoutRequest<DashboardStatistic>
 {
     public override void Configure()
     {

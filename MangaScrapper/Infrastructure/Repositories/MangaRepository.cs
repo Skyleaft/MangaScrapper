@@ -1,4 +1,4 @@
-﻿using MangaScrapper.Infrastructure.Mongo;
+using MangaScrapper.Infrastructure.Mongo;
 using MangaScrapper.Infrastructure.Mongo.Collections;
 using MangaScrapper.Infrastructure.Utils;
 using MangaScrapper.Shared.Models;
@@ -162,7 +162,7 @@ public class MangaRepository : IMangaRepository
         var totalSourceProvider = providers.Count;
 
         var today = DateTime.UtcNow.Date;
-        var lastWeek = DateTime.UtcNow.Date.AddDays(-7);
+        var lastMonth = DateTime.UtcNow.Date.AddDays(-30);
 
         // ScrappedToday (Count chapters uploaded today)
         var scrappedToday = await _collection.Aggregate()
@@ -172,10 +172,10 @@ public class MangaRepository : IMangaRepository
             .FirstOrDefaultAsync(ct)
             .ContinueWith(t => t.Result?.Count ?? 0);
 
-        // ScrappedThisWeek
-        var scrappedThisWeek = await _collection.Aggregate()
+        // ScrappedThisMonth
+        var scrappedThisMonth = await _collection.Aggregate()
             .Unwind<MangaDocument, ChapterDocumentUnwound>(m => m.Chapters)
-            .Match(c => c.Chapters.UploadDate >= lastWeek)
+            .Match(c => c.Chapters.UploadDate >= lastMonth)
             .Count()
             .FirstOrDefaultAsync(ct)
             .ContinueWith(t => t.Result?.Count ?? 0);
@@ -186,15 +186,52 @@ public class MangaRepository : IMangaRepository
         var totalUnavailableMangaChapter = await _collection
             .Find(m => m.Chapters.Any(c => c.Pages == null || c.Pages.Count == 0))
             .CountDocumentsAsync(ct);
+        
+        // Calculate TotalStorageUsed
+        var thumbnailResult = await _collection.Aggregate()
+            .Group(new BsonDocument { { "_id", BsonNull.Value }, { "total", new BsonDocument("$sum", "$thumbnailSize") } })
+            .FirstOrDefaultAsync(ct);
+        var totalThumbnailSize = thumbnailResult != null && thumbnailResult.Contains("total") ? thumbnailResult["total"].ToInt64() : 0;
+
+        var pagesResult = await _collection.Aggregate()
+            .Unwind(m => m.Chapters)
+            .Unwind("Chapters.Pages")
+            .Group(new BsonDocument { { "_id", BsonNull.Value }, { "total", new BsonDocument("$sum", "$Chapters.Pages.size") } })
+            .FirstOrDefaultAsync(ct);
+        var totalPagesSize = pagesResult != null && pagesResult.Contains("total") ? pagesResult["total"].ToInt64() : 0;
+
+        var totalStorageUsed = totalThumbnailSize + totalPagesSize;
+
+        // Calculate MonthlyScrap
+        var monthlyScrapRaw = await _collection.Aggregate()
+            .Unwind<MangaDocument, ChapterDocumentUnwound>(m => m.Chapters)
+            .Match(c => c.Chapters.UploadDate >= lastMonth)
+            .Group(c => new { Date = c.Chapters.UploadDate.Date }, g => new { Date = g.Key.Date, Count = g.Count() })
+            .SortBy(x => x.Date)
+            .ToListAsync(ct);
+
+        var monthlyScrap = new List<ScrapStats>();
+        for (int i = 0; i <= 30; i++)
+        {
+            var date = lastMonth.AddDays(i);
+            var stats = monthlyScrapRaw.FirstOrDefault(x => x.Date.Date == date.Date);
+            monthlyScrap.Add(new ScrapStats
+            {
+                Date = date,
+                TotalScrap = stats?.Count ?? 0
+            });
+        }
 
         return new DashboardStatistic
         {
             TotalManga = totalManga,
             TotalSourceProvider = totalSourceProvider,
             ScrappedToday = scrappedToday,
-            ScrappedThisWeek = scrappedThisWeek,
+            ScrappedThisMonth = scrappedThisMonth,
             TotalUnlinkedMetadata = totalUnlinkedMetadata,
-            TotalUnavailableMangaChapter = totalUnavailableMangaChapter
+            TotalUnavailableMangaChapter = totalUnavailableMangaChapter,
+            TotalStorageUsed = totalStorageUsed,
+            MonthlyScrap = monthlyScrap
         };
     }
 

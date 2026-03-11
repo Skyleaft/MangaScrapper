@@ -130,6 +130,7 @@ builder.Services.AddHangfireServer();
 
 // Register ChapterScrapingJob for Hangfire
 builder.Services.AddTransient<ChapterScrapingJob>();
+builder.Services.AddScoped<StorageSyncService>();
 
 builder.Services.AddHttpClient<ScrapperService>(c => c.Timeout = TimeSpan.FromMinutes(5));
 builder.Services.AddHttpClient<KomikuService>(c => c.Timeout = TimeSpan.FromMinutes(5));

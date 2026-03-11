@@ -1,4 +1,4 @@
-﻿using MongoDB.Bson;
+using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 
 namespace MangaScrapper.Infrastructure.Mongo.Collections;
@@ -28,6 +28,7 @@ public class MangaDocument
     [BsonIgnoreIfNull]
     public string? ImageUrl { get; set; }
     public string? LocalImageUrl { get; set; }
+    public long ThumbnailSize { get; set; }
     
     [BsonIgnoreIfNull]
     public string? Status { get; set; }
@@ -69,4 +70,5 @@ public class PageDocument
     
     [BsonIgnoreIfNull]
     public string? LocalImageUrl { get; set; }
+    public long Size { get; set; }
 }

@@ -1,4 +1,4 @@
-﻿using Hangfire;
+using Hangfire;
 using System.Globalization;
 using System.Text.Json;
 using System.Web;
@@ -122,7 +122,7 @@ public abstract class ScrapperServiceBase
         throw new Exception("Retry failed");
     }
     
-    public async Task<string> DownloadAndConvertToWebP(string mangaTitle, string chapterNumber, string imageUrl, int index, CancellationToken ct = default)
+    public async Task<(string path, long size)> DownloadAndConvertToWebP(string mangaTitle, string chapterNumber, string imageUrl, int index, CancellationToken ct = default)
     {
         var cleanTitle = GetCleanTitle(mangaTitle);
         var subDir = Path.Combine(ImageStoragePath, cleanTitle, chapterNumber);
@@ -131,7 +131,7 @@ public abstract class ScrapperServiceBase
         return await SaveImageAsync(imageUrl, subDir, fileName, $"{cleanTitle}/{chapterNumber}/{fileName}", ct);
     }
 
-    public async Task<string> DownloadThumbnailAndConvertToWebP(string mangaTitle, string imageUrl, CancellationToken ct = default)
+    public async Task<(string path, long size)> DownloadThumbnailAndConvertToWebP(string mangaTitle, string imageUrl, CancellationToken ct = default)
     {
         try
         {
@@ -143,7 +143,7 @@ public abstract class ScrapperServiceBase
         }
         catch
         {
-            return string.Empty;
+            return (string.Empty, 0);
         }
     }
 
@@ -157,7 +157,7 @@ public abstract class ScrapperServiceBase
         return string.Concat(title.Split(invalidChars));
     }
 
-    private async Task<string> SaveImageAsync(string imageUrl, string subDir, string fileName, string relativePath, CancellationToken ct)
+    private async Task<(string path, long size)> SaveImageAsync(string imageUrl, string subDir, string fileName, string relativePath, CancellationToken ct)
     {
         return await ExecuteWithRetryAsync(async (token) =>
         {
@@ -173,13 +173,15 @@ public abstract class ScrapperServiceBase
             {
                 await using var output = File.Create(filePath);
                 await imageStream.CopyToAsync(output, token);
-                return relativePath.Replace("\\", "/");
+                var size = new FileInfo(filePath).Length;
+                return (relativePath.Replace("\\", "/"), size);
             }
 
             using var image = await Image.LoadAsync(imageStream, token);
             await image.SaveAsync(filePath, new WebpEncoder(), token);
+            var finalSize = new FileInfo(filePath).Length;
 
-            return relativePath.Replace("\\", "/");
+            return (relativePath.Replace("\\", "/"), finalSize);
         }, ct);
     }
 
@@ -288,7 +290,9 @@ public abstract class ScrapperServiceBase
             if (!string.IsNullOrWhiteSpace(mangaData.ImageUrl))
             {
                 mangaData.ImageUrl = ThumbnailHelper.RemoveResizeParams(mangaData.ImageUrl);
-                mangaData.LocalImageUrl = await DownloadThumbnailAndConvertToWebP(mangaData.Title, mangaData.ImageUrl, ct);
+                var thumb = await DownloadThumbnailAndConvertToWebP(mangaData.Title, mangaData.ImageUrl, ct);
+                mangaData.LocalImageUrl = thumb.path;
+                mangaData.ThumbnailSize = thumb.size;
             }
 
             var chapters = await ExtractChapters(doc, ct);
@@ -297,6 +301,7 @@ public abstract class ScrapperServiceBase
             {
                 existingManga.ImageUrl = mangaData.ImageUrl;
                 existingManga.LocalImageUrl = mangaData.LocalImageUrl;
+                existingManga.ThumbnailSize = mangaData.ThumbnailSize;
 
                 var maxExistingChapter = existingManga.Chapters.Any() ? existingManga.Chapters.Max(c => c.Number) : 0;
                 var newChapters = chapters.Where(c => c.Number > maxExistingChapter).ToList();
@@ -373,7 +378,7 @@ public abstract class ScrapperServiceBase
             await Semaphore.WaitAsync(ct);
             try
             {
-                var localPath = await DownloadAndConvertToWebP(
+                var result = await DownloadAndConvertToWebP(
                     mangaTitle,
                     chapter.Number.ToString(CultureInfo.InvariantCulture),
                     imageUrl,
@@ -383,7 +388,8 @@ public abstract class ScrapperServiceBase
                 return (Index: index, Page: new PageDocument
                 {
                     ImageUrl = imageUrl,
-                    LocalImageUrl = localPath
+                    LocalImageUrl = result.path,
+                    Size = result.size
                 });
             }
             catch (Exception ex)
