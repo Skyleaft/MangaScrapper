@@ -16,6 +16,7 @@
         <PackageReference Include="Hangfire.Mongo" Version="1.13.1" />
         <PackageReference Include="HtmlAgilityPack" Version="1.12.4" />
         <PackageReference Include="Isopoh.Cryptography.Argon2" Version="2.0.0" />
+        <PackageReference Include="MeiliSearch" Version="0.18.0" />
         <PackageReference Include="Microsoft.AspNetCore.App.Internal.Assets" Version="10.0.4" />
         <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.4" />
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.3"/>

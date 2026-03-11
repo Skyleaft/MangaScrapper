@@ -21,6 +21,14 @@ public class MangaRepository : IMangaRepository
         return await _collection.Find(m => m.Id == id).FirstOrDefaultAsync(ct);
     }
 
+    public async Task<List<MangaDocument>> GetByIdsAsync(List<Guid> ids, CancellationToken ct)
+    {
+        var filter = Builders<MangaDocument>.Filter.In(m => m.Id, ids);
+        return await _collection.Find(filter)
+            .Project<MangaDocument>(Builders<MangaDocument>.Projection.Exclude("chapters.pages"))
+            .ToListAsync(ct);
+    }
+
     public async Task<MangaDocument?> GetByTitleAsync(string title, CancellationToken ct)
     {
         return await _collection.Find(m => m.Title.Contains(title)).FirstOrDefaultAsync(ct);

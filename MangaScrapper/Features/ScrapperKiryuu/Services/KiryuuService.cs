@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Web;
@@ -23,8 +23,9 @@ public class KiryuuService : ScrapperServiceBase
         IBackgroundJobClient jobClient,
         IServiceScopeFactory scopeFactory,
         IOptions<ScrapperSettings> settings,
-        SemaphoreSlim semaphore)
-        : base(httpClient, mangaRepository, jobClient, scopeFactory, settings, semaphore)
+        SemaphoreSlim semaphore,
+        MeilisearchService meilisearchService)
+        : base(httpClient, mangaRepository, jobClient, scopeFactory, settings, semaphore, meilisearchService)
     {
         LoadProvider("kiryuu-provider.json");
     }
@@ -173,7 +174,13 @@ public class KiryuuService : ScrapperServiceBase
                 var timeNode = card.SelectSingleNode(".//div[contains(@class,'group-data-[mode=horizontal]')]//a[1]//time");
                 var latestTimeText = timeNode?.InnerText.Trim();
 
-                var currentManga = await MangaRepository.GetByTitleAsync(title ?? string.Empty, ct);
+                var searchmanga = await MeilisearchService.SearchTittleAsync(title!,ct);
+                MangaDocument? currentManga = null;
+                if (searchmanga != null)
+                {
+                    if(StringHelper.CalculateSimilarity(searchmanga.Title,title)>=0.8)
+                        currentManga = await MangaRepository.GetByIdAsync(Guid.Parse(searchmanga.Id),ct);
+                }
 
                 data.Add(new SearchItem
                 {

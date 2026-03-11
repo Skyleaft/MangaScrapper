@@ -1,9 +1,10 @@
 using FastEndpoints;
 using MangaScrapper.Infrastructure.Repositories;
+using MangaScrapper.Infrastructure.Services;
 
 namespace MangaScrapper.Features.Manga.UpdateManga;
 
-public class Endpoint(IMangaRepository mangaRepository) : Endpoint<Request, Response>
+public class Endpoint(IMangaRepository mangaRepository, MeilisearchService meilisearchService) : Endpoint<Request, Response>
 {
     public override void Configure()
     {
@@ -33,6 +34,7 @@ public class Endpoint(IMangaRepository mangaRepository) : Endpoint<Request, Resp
         manga.UpdatedAt = DateTime.UtcNow;
 
         await mangaRepository.UpdateAsync(manga, ct);
+        await meilisearchService.IndexMangaAsync(manga, ct);
 
         await Send.OkAsync(new Response { Success = true, Message = "Manga updated successfully" }, ct);
     }

@@ -14,6 +14,7 @@ using MangaScrapper.Infrastructure.Mongo.Collections;
 using MangaScrapper.Infrastructure.Repositories;
 using MangaScrapper.Infrastructure.Services;
 using MangaScrapper.Infrastructure.BackgroundJobs;
+using MangaScrapper.Infrastructure.Models;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Conventions;
@@ -95,6 +96,7 @@ BsonSerializer.RegisterSerializer(new GuidSerializer(GuidRepresentation.Standard
 
 builder.Services.Configure<MongoSettings>(builder.Configuration.GetSection("MongoSettings"));
 builder.Services.Configure<ScrapperSettings>(builder.Configuration.GetSection("ScrapperSettings"));
+builder.Services.Configure<MeiliConfig>(builder.Configuration.GetSection("MeiliSettings"));
 builder.Services.AddSingleton<MongoContext>();
 builder.Services.AddSingleton(sp => 
 {
@@ -128,8 +130,12 @@ builder.Services.AddHangfire(configuration => configuration
 
 builder.Services.AddHangfireServer();
 
+builder.Services.AddHttpContextAccessor();
+
 // Register ChapterScrapingJob for Hangfire
 builder.Services.AddTransient<ChapterScrapingJob>();
+builder.Services.AddTransient<MeiliSyncJob>();
+builder.Services.AddScoped<MeilisearchService>();
 builder.Services.AddScoped<StorageSyncService>();
 
 builder.Services.AddHttpClient<ScrapperService>(c => c.Timeout = TimeSpan.FromMinutes(5));

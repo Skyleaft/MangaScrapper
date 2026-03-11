@@ -15,6 +15,8 @@ services:
       - ScrapperSettings__MaxParallelDownloads=10
       - Cors__AllowedOrigins=*
       - Cors__AllowCredentials=true
+      - MeiliSettings__Host=http://meilisearch:7700
+      - MeiliSettings__MasterKey=mangas
     volumes:
       - ./images:/app/images
       - ./MangaScrapper/provider:/app/provider:ro
@@ -30,6 +32,17 @@ services:
       - mongo-data:/data/db
     environment:
       - MONGO_INITDB_DATABASE=manga-scrap
+  
+  meilisearch:
+    image: getmeili/meilisearch:latest
+    container_name: meilisearch
+    ports:
+      - "7700:7700"
+    environment:
+      MEILI_NO_ANALYTICS: "true"
+    volumes:
+      - meili_data:/meili_data
 
 volumes:
   mongo-data:
+  meili_data:

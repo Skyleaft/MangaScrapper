@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Text.RegularExpressions;
 using System.Web;
 using Hangfire;
@@ -22,8 +22,9 @@ public class KomikuService : ScrapperServiceBase
         IBackgroundJobClient jobClient,
         IServiceScopeFactory scopeFactory,
         IOptions<ScrapperSettings> settings,
-        SemaphoreSlim semaphore) 
-        : base(httpClient, mangaRepository, jobClient, scopeFactory, settings, semaphore)
+        SemaphoreSlim semaphore,
+        MeilisearchService meilisearchService) 
+        : base(httpClient, mangaRepository, jobClient, scopeFactory, settings, semaphore, meilisearchService)
     {
         LoadProvider("komiku-provider.json");
     }
@@ -152,7 +153,14 @@ public class KomikuService : ScrapperServiceBase
                     }
                 }
 
-                var currentManga = await MangaRepository.GetByTitleAsync(item.Title, ct);
+                var searchmanga = await MeilisearchService.SearchTittleAsync(item.Title!,ct);
+                MangaDocument? currentManga = null;
+                if (searchmanga != null)
+                {
+                    if(StringHelper.CalculateSimilarity(searchmanga.Title,item.Title)>=0.8)
+                        currentManga = await MangaRepository.GetByIdAsync(Guid.Parse(searchmanga.Id),ct);
+                }
+                
                 item.LatestScrapped = currentManga?.UpdatedAt ?? null;
 
                 results.Add(item);

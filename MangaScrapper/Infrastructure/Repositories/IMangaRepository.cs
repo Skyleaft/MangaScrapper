@@ -1,4 +1,4 @@
-﻿using MangaScrapper.Infrastructure.Mongo.Collections;
+using MangaScrapper.Infrastructure.Mongo.Collections;
 using MangaScrapper.Shared.Models;
 
 namespace MangaScrapper.Infrastructure.Repositories;
@@ -6,6 +6,7 @@ namespace MangaScrapper.Infrastructure.Repositories;
 public interface IMangaRepository
 {
     Task<MangaDocument?> GetByIdAsync(Guid id, CancellationToken ct);
+    Task<List<MangaDocument>> GetByIdsAsync(List<Guid> ids, CancellationToken ct);
     Task<MangaDocument?> GetByTitleAsync(string title, CancellationToken ct);
     Task<List<MangaDocument>> GetAllAsync(CancellationToken ct);
     Task<(List<MangaDocument> Items, long TotalCount)> GetPagedAsync(

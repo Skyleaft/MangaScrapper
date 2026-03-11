@@ -5,7 +5,7 @@ using Microsoft.Extensions.Options;
 
 namespace MangaScrapper.Features.Manga.DeleteManga;
 
-public class Endpoint(IMangaRepository mangaRepository, IOptions<ScrapperSettings> settings) : Endpoint<Request>
+public class Endpoint(IMangaRepository mangaRepository,MeilisearchService meilisearchService, IOptions<ScrapperSettings> settings) : Endpoint<Request>
 {
     private readonly string _imageStoragePath = Path.IsPathRooted(settings.Value.ImageStoragePath)
         ? settings.Value.ImageStoragePath
@@ -46,6 +46,7 @@ public class Endpoint(IMangaRepository mangaRepository, IOptions<ScrapperSetting
         }
 
         await mangaRepository.DeleteAsync(r.MangaId, ct);
+        await meilisearchService.DeleteMangaAsync( r.MangaId, ct);
         await Send.OkAsync(cancellation: ct);
     }
 
