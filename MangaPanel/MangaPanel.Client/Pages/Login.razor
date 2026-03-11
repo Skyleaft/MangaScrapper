@@ -1,6 +1,11 @@
 @page "/"
+@using MangaScrapper.Shared.Models
+@using MangaPanel.Client.Authentication
+@using System.Net.Http.Json
 @layout Layout.MainLayout
 @inject NavigationManager Navigation
+@inject HttpClient Http
+@inject AuthenticationStateProvider AuthStateProvider
 
 <div class="min-h-screen bg-secondary flex items-center justify-center p-4">
     <div class="max-w-md w-full bg-white rounded-2xl shadow-2xl overflow-hidden">
@@ -15,18 +20,32 @@
         </div>
 
         <div class="px-8 pb-10 space-y-6">
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
+                    <p class="text-red-700 text-sm">@errorMessage</p>
+                </div>
+            }
+
             <div class="space-y-2">
                 <label class="text-sm font-semibold text-slate-700 ml-1">Username</label>
-                <input type="text" placeholder="admin" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all" />
+                <input type="text" placeholder="admin" @bind="loginRequest.Username" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all" />
             </div>
             
             <div class="space-y-2">
                 <label class="text-sm font-semibold text-slate-700 ml-1">Password</label>
-                <input type="password" placeholder="••••••••" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all" />
+                <input type="password" placeholder="••••••••" @bind="loginRequest.Password" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all" />
             </div>
 
-            <button @onclick="HandleLogin" class="w-full bg-primary hover:bg-[#3d5d85] text-white font-bold py-3 rounded-xl shadow-lg shadow-primary/30 transition-all active:scale-[0.98] mt-4">
-                Login to Dashboard
+            <button @onclick="HandleLogin" disabled="@isSubmitting" class="w-full bg-primary hover:bg-slate-700 text-white font-bold py-3 rounded-xl shadow-lg shadow-primary/30 transition-all active:scale-[0.98] mt-4 disabled:opacity-50">
+                @if (isSubmitting)
+                {
+                    <span>Logging in...</span>
+                }
+                else
+                {
+                    <span>Login to Dashboard</span>
+                }
             </button>
 
             <div class="text-center">
@@ -41,9 +60,36 @@
 </div>
 
 @code {
-    private void HandleLogin()
+    private LoginRequest loginRequest = new();
+    private string? errorMessage;
+    private bool isSubmitting;
+
+    private async Task HandleLogin()
     {
-        // auth logic
-        Navigation.NavigateTo("/admin/dashboard");
+        errorMessage = null;
+        isSubmitting = true;
+
+        try
+        {
+            var response = await Http.PostAsJsonAsync("api/auth/login", loginRequest);
+
+            if (response.IsSuccessStatusCode)
+            {
+                ((JwtAuthenticationStateProvider)AuthStateProvider).NotifyUserAuthentication();
+                Navigation.NavigateTo("/admin/dashboard");
+            }
+            else
+            {
+                errorMessage = "Invalid username or password.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
     }
 }

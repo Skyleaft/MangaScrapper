@@ -1,5 +1,9 @@
+@using MangaPanel.Client.Authentication
 @inherits LayoutComponentBase
 @inject NavigationManager Navigation
+@inject HttpClient Http
+@inject AuthenticationStateProvider AuthStateProvider
+
 
 <div class="min-h-screen bg-slate-50 flex flex-col md:flex-row">
     <!-- Sidebar -->
@@ -56,9 +60,30 @@
 </div>
 
 @code {
-    private void Logout()
+    private string? errorMessage;
+    private bool isSubmitting;
+    
+    private async Task Logout()
     {
         // logout logic here
-        Navigation.NavigateTo("/");
+        try
+        {
+            var response = await Http.GetAsync("api/auth/logout");
+
+            if (response.IsSuccessStatusCode)
+            {
+                ((JwtAuthenticationStateProvider)AuthStateProvider).NotifyUserAuthentication();
+                Navigation.NavigateTo("/");
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+        
     }
 }

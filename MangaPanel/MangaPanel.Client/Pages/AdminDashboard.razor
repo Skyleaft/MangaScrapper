@@ -2,6 +2,8 @@
 @layout Layout.AdminLayout
 @using MangaScrapper.Shared.Models
 @using MangaPanel.Client.Components
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
 
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
     <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center space-x-4">

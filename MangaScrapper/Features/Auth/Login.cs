@@ -41,15 +41,15 @@ public class Login : Endpoint<LoginRequest, LoginResponse>
                 o.SigningKey = Config["JwtSigningKey"] ?? "a_very_secret_key_that_is_at_least_32_chars_long!!";
                 o.ExpireAt = DateTime.UtcNow.AddDays(1);
                 o.User.Claims.Add(("Username", user.Username));
-                o.User.Roles.Add("Admin");
+                o.User.Roles.Add(user.Roles.FirstOrDefault()??"user");
             });
         
         var claims = new List<Claim>
         {
             new Claim(ClaimTypes.Name, user.Email),
             new Claim("Username", user.Username),
-            new Claim(ClaimTypes.Role, "Administrator"),
         };
+        user.Roles.ForEach(r => claims.Add(new Claim(ClaimTypes.Role, r)));
         var claimsIdentity = new ClaimsIdentity(
             claims, CookieAuthenticationDefaults.AuthenticationScheme);
         

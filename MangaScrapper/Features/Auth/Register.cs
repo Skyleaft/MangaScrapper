@@ -32,11 +32,19 @@ public class Register : Endpoint<RegisterRequest, LoginResponse>
             return;
         }
 
+        var roles = "User";
+
+        if (_context.Users.Count(u => u.Roles.Contains("superuser")) == 0)
+        {
+            roles = "superuser";
+        }
+
         var user = new UserDocument
         {
             Username = req.Username,
             PasswordHash = Argon2.Hash(req.Password),
-            Email = req.Email
+            Email = req.Email,
+            Roles = new List<string>(){roles}
         };
 
         await _context.Users.InsertOneAsync(user, null, ct);
