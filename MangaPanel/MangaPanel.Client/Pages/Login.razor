@@ -1,0 +1,49 @@
+@page "/"
+@layout Layout.MainLayout
+@inject NavigationManager Navigation
+
+<div class="min-h-screen bg-secondary flex items-center justify-center p-4">
+    <div class="max-w-md w-full bg-white rounded-2xl shadow-2xl overflow-hidden">
+        <div class="p-8 text-center">
+            <div class="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-2xl mb-6">
+                 <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+            </div>
+            <h2 class="text-3xl font-bold text-secondary mb-2">Welcome Back</h2>
+            <p class="text-slate-500 italic">MangaPanel Admin Access</p>
+        </div>
+
+        <div class="px-8 pb-10 space-y-6">
+            <div class="space-y-2">
+                <label class="text-sm font-semibold text-slate-700 ml-1">Username</label>
+                <input type="text" placeholder="admin" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all" />
+            </div>
+            
+            <div class="space-y-2">
+                <label class="text-sm font-semibold text-slate-700 ml-1">Password</label>
+                <input type="password" placeholder="••••••••" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all" />
+            </div>
+
+            <button @onclick="HandleLogin" class="w-full bg-primary hover:bg-[#3d5d85] text-white font-bold py-3 rounded-xl shadow-lg shadow-primary/30 transition-all active:scale-[0.98] mt-4">
+                Login to Dashboard
+            </button>
+
+            <div class="text-center">
+                <a href="#" class="text-sm text-primary hover:underline font-medium">Forgot password?</a>
+            </div>
+        </div>
+        
+        <div class="bg-slate-50 p-4 text-center border-t border-slate-100">
+            <p class="text-xs text-slate-400">© 2026 MangaScrapper Engine v2.0</p>
+        </div>
+    </div>
+</div>
+
+@code {
+    private void HandleLogin()
+    {
+        // auth logic
+        Navigation.NavigateTo("/admin/dashboard");
+    }
+}

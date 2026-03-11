@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+@layer base {
+    :root {
+        /* Mode Terang (Default) */
+        --brand-primary: #088395; /* Ocean Blue */
+        --brand-secondary: #7AB2B2; /* Muted Teal */
+        --brand-dark: #09637E; /* Deep Teal */
+        --brand-bg: #EBF4F6; /* Ice Blue */
+        --brand-surface: #ffffff; /* Card/White */
+        --brand-text: #09637E; /* Dark Text */
+    }
+
+    /* Bisa dipicu lewat class .dark atau otomatis (media query) */
+    @media (prefers-color-scheme: dark) {
+        :root {
+            /* Mode Gelap */
+            --brand-primary: #7AB2B2; /* Lebih terang agar terlihat di gelap */
+            --brand-secondary: #088395; /* Kontras terbalik */
+            --brand-dark: #EBF4F6; /* Menjadi warna highlight terang */
+            --brand-bg: #041C24; /* Versi jauh lebih gelap dari #09637E */
+            --brand-surface: #09637E; /* Deep Teal sebagai background kartu */
+            --brand-text: #EBF4F6; /* Teks menjadi sangat terang */
+        }
+    }
+}
+
+@theme {
+    /* Mapping variabel CSS ke utility Tailwind */
+    --color-primary: var(--brand-primary);
+    --color-secondary: var(--brand-secondary);
+    --color-dark: var(--brand-dark);
+    --color-bg-app: var(--brand-bg);
+    --color-surface: var(--brand-surface);
+    --color-text-main: var(--brand-text);
+
+    --font-sans: "Inter", ui-sans-serif, system-ui;
+    --font-display: "Clash Display", sans-serif;
+    --radius-xl: 1.5rem;
+    --radius-brand: 0.75rem;
+    --spacing-128: 32rem;
+    --shadow-soft: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+}

@@ -1,4 +1,4 @@
-﻿using MangaScrapper.Infrastructure.Mongo.Collections;
+using MangaScrapper.Infrastructure.Mongo.Collections;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 using MongoDB.Driver.Core.Extensions.DiagnosticSources;
@@ -9,6 +9,7 @@ public class MongoContext
 {
     public IMongoDatabase Database { get; }
     public IMongoCollection<MangaDocument> Mangas { get; }
+    public IMongoCollection<UserDocument> Users { get; }
 
     public MongoContext(IOptions<MongoSettings> settings)
     {
@@ -17,5 +18,6 @@ public class MongoContext
         var client = new MongoClient(mongoClientSettings);
         Database = client.GetDatabase(settings.Value.DatabaseName);
         Mangas = Database.GetCollection<MangaDocument>("mangas");
+        Users = Database.GetCollection<UserDocument>("users");
     }
 }

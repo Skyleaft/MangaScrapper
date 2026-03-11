@@ -1,6 +1,7 @@
 ﻿using System.Globalization;
 using System.Text.RegularExpressions;
 using System.Web;
+using Hangfire;
 using HtmlAgilityPack;
 using MangaScrapper.Infrastructure.BackgroundJobs;
 using MangaScrapper.Infrastructure.Models;
@@ -18,11 +19,11 @@ public class KomikuService : ScrapperServiceBase
     public KomikuService(
         HttpClient httpClient,
         IMangaRepository mangaRepository,
-        IBackgroundTaskQueue taskQueue,
+        IBackgroundJobClient jobClient,
         IServiceScopeFactory scopeFactory,
         IOptions<ScrapperSettings> settings,
-        SemaphoreSlim semaphore)
-        : base(httpClient, mangaRepository, taskQueue, scopeFactory, settings, semaphore)
+        SemaphoreSlim semaphore) 
+        : base(httpClient, mangaRepository, jobClient, scopeFactory, settings, semaphore)
     {
         LoadProvider("komiku-provider.json");
     }

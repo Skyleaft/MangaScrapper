@@ -1,3 +1,9 @@
 ﻿/MangaScrapper/images/
 MangaScrapper/bin
 MangaScrapper/obj
+MangaPanel/MangaPanel.Client/bin
+MangaPanel/MangaPanel.Client/obj
+MangaScrapper.Shared/bin
+node_modules
+package-lock.json
+MangaScrapper.Shared/obj

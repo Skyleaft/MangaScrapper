@@ -1,11 +1,18 @@
 ﻿using FastEndpoints;
+using Hangfire;
 using MangaScrapper.Features.ScrapperKomiku.Services;
-using MangaScrapper.Infrastructure.BackgroundJobs;
 using MangaScrapper.Infrastructure.Repositories;
 
 namespace MangaScrapper.Features.Scrapper.GetQueue;
 
-public class Endpoint(IBackgroundTaskQueue taskQueue, IMangaRepository repository, KomikuService komikuService, ILogger<Endpoint>logger) : EndpointWithoutRequest<List<QueueItem>>
+public record JobQueueItem(
+    string Id,
+    string JobName,
+    string State,
+    DateTime CreatedAt
+);
+
+public class Endpoint(IMangaRepository repository, KomikuService komikuService, ILogger<Endpoint> logger) : EndpointWithoutRequest<List<JobQueueItem>>
 {
     public override void Configure()
     {
@@ -15,29 +22,33 @@ public class Endpoint(IBackgroundTaskQueue taskQueue, IMangaRepository repositor
 
     public override async Task HandleAsync(CancellationToken ct)
     {
-        
-        // var datas = await repository.GetAllAsync(ct);
-        // foreach (var manga in datas)
-        // {
-        //     foreach (var chapter in manga.Chapters)
-        //     {
-        //         if (chapter.ChapterProvider == "Kiryuu")
-        //         {
-        //             var path = new Uri(chapter.Link);
-        //             chapter.Link = path.PathAndQuery;
-        //         }
-        //     }
-        //     await repository.UpdateAsync(manga, ct);
-        // }
-        
-        // var events = new ScraptMeta()
-        // {
-        //     KomikuService = komikuService,
-        //     Repository = repository
-        // };
-        // await PublishAsync(events,Mode.WaitForNone, cancellation: ct);
-        
-        var items = taskQueue.GetQueueItems();
+        var monitoringApi = JobStorage.Current.GetMonitoringApi();
+        var items = new List<JobQueueItem>();
+
+        // Get enqueued jobs (queued for processing)
+        var enqueuedJobs = monitoringApi.EnqueuedJobs("default", 0, int.MaxValue);
+        foreach (var job in enqueuedJobs)
+        {
+            items.Add(new JobQueueItem(
+                job.Key,
+                job.Value.Job?.Method.Name ?? "Unknown",
+                "Enqueued",
+                DateTime.UtcNow
+            ));
+        }
+
+        // Get fetched jobs (currently being processed)
+        var fetchedJobs = monitoringApi.FetchedJobs("default", 0, int.MaxValue);
+        foreach (var job in fetchedJobs)
+        {
+            items.Add(new JobQueueItem(
+                job.Key,
+                job.Value.Job?.Method.Name ?? "Unknown",
+                "Processing",
+                DateTime.UtcNow
+            ));
+        }
+
         await Send.OkAsync(items, ct);
     }
 }

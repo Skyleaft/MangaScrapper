@@ -1,0 +1,124 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "E:\\repo\\cs\\MangaScrapper\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{0C1D68B2-3138-44F5-8C27-12CE5FB62B1C}|MangaScrapper\\MangaScrapper.csproj|e:\\repo\\cs\\mangascrapper\\mangascrapper\\mangascrapper.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
+      "RelativeMoniker": "D:0:0:{0C1D68B2-3138-44F5-8C27-12CE5FB62B1C}|MangaScrapper\\MangaScrapper.csproj|solutionrelative:mangascrapper\\mangascrapper.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{0C1D68B2-3138-44F5-8C27-12CE5FB62B1C}|MangaScrapper\\MangaScrapper.csproj|e:\\repo\\cs\\mangascrapper\\mangascrapper\\styles\\input.css||{A5401142-F49D-43DB-90B1-F57BA349E55C}",
+      "RelativeMoniker": "D:0:0:{0C1D68B2-3138-44F5-8C27-12CE5FB62B1C}|MangaScrapper\\MangaScrapper.csproj|solutionrelative:mangascrapper\\styles\\input.css||{A5401142-F49D-43DB-90B1-F57BA349E55C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{C15CE978-6B69-4FF8-B3C9-09421C895E5B}|MangaPanel\\MangaPanel.Client\\MangaPanel.Client.csproj|e:\\repo\\cs\\mangascrapper\\mangapanel\\mangapanel.client\\pages\\login.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{C15CE978-6B69-4FF8-B3C9-09421C895E5B}|MangaPanel\\MangaPanel.Client\\MangaPanel.Client.csproj|solutionrelative:mangapanel\\mangapanel.client\\pages\\login.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{C15CE978-6B69-4FF8-B3C9-09421C895E5B}|MangaPanel\\MangaPanel.Client\\MangaPanel.Client.csproj|e:\\repo\\cs\\mangascrapper\\mangapanel\\mangapanel.client\\pages\\admindashboard.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{C15CE978-6B69-4FF8-B3C9-09421C895E5B}|MangaPanel\\MangaPanel.Client\\MangaPanel.Client.csproj|solutionrelative:mangapanel\\mangapanel.client\\pages\\admindashboard.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{C15CE978-6B69-4FF8-B3C9-09421C895E5B}|MangaPanel\\MangaPanel.Client\\MangaPanel.Client.csproj|e:\\repo\\cs\\mangascrapper\\mangapanel\\mangapanel.client\\components\\mangacard.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{C15CE978-6B69-4FF8-B3C9-09421C895E5B}|MangaPanel\\MangaPanel.Client\\MangaPanel.Client.csproj|solutionrelative:mangapanel\\mangapanel.client\\components\\mangacard.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{C15CE978-6B69-4FF8-B3C9-09421C895E5B}|MangaPanel\\MangaPanel.Client\\MangaPanel.Client.csproj|e:\\repo\\cs\\mangascrapper\\mangapanel\\mangapanel.client\\mangapanel.client.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
+      "RelativeMoniker": "D:0:0:{C15CE978-6B69-4FF8-B3C9-09421C895E5B}|MangaPanel\\MangaPanel.Client\\MangaPanel.Client.csproj|solutionrelative:mangapanel\\mangapanel.client\\mangapanel.client.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 4,
+          "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{aa2115a1-9712-457b-9047-dbb71ca2cdd2}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "AdminDashboard.razor",
+              "DocumentMoniker": "E:\\repo\\cs\\MangaScrapper\\MangaPanel\\MangaPanel.Client\\Pages\\AdminDashboard.razor",
+              "RelativeDocumentMoniker": "MangaPanel\\MangaPanel.Client\\Pages\\AdminDashboard.razor",
+              "ToolTip": "E:\\repo\\cs\\MangaScrapper\\MangaPanel\\MangaPanel.Client\\Pages\\AdminDashboard.razor",
+              "RelativeToolTip": "MangaPanel\\MangaPanel.Client\\Pages\\AdminDashboard.razor",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
+              "WhenOpened": "2026-03-11T08:04:08.84Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "MangaCard.razor",
+              "DocumentMoniker": "E:\\repo\\cs\\MangaScrapper\\MangaPanel\\MangaPanel.Client\\Components\\MangaCard.razor",
+              "RelativeDocumentMoniker": "MangaPanel\\MangaPanel.Client\\Components\\MangaCard.razor",
+              "ToolTip": "E:\\repo\\cs\\MangaScrapper\\MangaPanel\\MangaPanel.Client\\Components\\MangaCard.razor",
+              "RelativeToolTip": "MangaPanel\\MangaPanel.Client\\Components\\MangaCard.razor",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
+              "WhenOpened": "2026-03-11T08:04:04.761Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "input.css",
+              "DocumentMoniker": "E:\\repo\\cs\\MangaScrapper\\MangaScrapper\\Styles\\input.css",
+              "RelativeDocumentMoniker": "MangaScrapper\\Styles\\input.css",
+              "ToolTip": "E:\\repo\\cs\\MangaScrapper\\MangaScrapper\\Styles\\input.css",
+              "RelativeToolTip": "MangaScrapper\\Styles\\input.css",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAACIAAAAgAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003000|",
+              "WhenOpened": "2026-03-11T08:03:29.86Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "MangaScrapper.csproj",
+              "DocumentMoniker": "E:\\repo\\cs\\MangaScrapper\\MangaScrapper\\MangaScrapper.csproj",
+              "RelativeDocumentMoniker": "MangaScrapper\\MangaScrapper.csproj",
+              "ToolTip": "E:\\repo\\cs\\MangaScrapper\\MangaScrapper\\MangaScrapper.csproj",
+              "RelativeToolTip": "MangaScrapper\\MangaScrapper.csproj",
+              "ViewState": "AgIAACEAAAAAAAAAAAAAAEAAAAAXAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
+              "WhenOpened": "2026-03-11T08:03:25.527Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "Login.razor",
+              "DocumentMoniker": "E:\\repo\\cs\\MangaScrapper\\MangaPanel\\MangaPanel.Client\\Pages\\Login.razor",
+              "RelativeDocumentMoniker": "MangaPanel\\MangaPanel.Client\\Pages\\Login.razor",
+              "ToolTip": "E:\\repo\\cs\\MangaScrapper\\MangaPanel\\MangaPanel.Client\\Pages\\Login.razor",
+              "RelativeToolTip": "MangaPanel\\MangaPanel.Client\\Pages\\Login.razor",
+              "ViewState": "AgIAAAYAAAAAAAAAAAAAABsAAABBAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
+              "WhenOpened": "2026-03-11T07:53:10.588Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "MangaPanel.Client.csproj",
+              "DocumentMoniker": "E:\\repo\\cs\\MangaScrapper\\MangaPanel\\MangaPanel.Client\\MangaPanel.Client.csproj",
+              "RelativeDocumentMoniker": "MangaPanel\\MangaPanel.Client\\MangaPanel.Client.csproj",
+              "ToolTip": "E:\\repo\\cs\\MangaScrapper\\MangaPanel\\MangaPanel.Client\\MangaPanel.Client.csproj",
+              "RelativeToolTip": "MangaPanel\\MangaPanel.Client\\MangaPanel.Client.csproj",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
+              "WhenOpened": "2026-03-11T07:53:02.216Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

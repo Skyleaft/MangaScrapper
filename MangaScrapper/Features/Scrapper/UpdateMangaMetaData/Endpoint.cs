@@ -1,11 +1,10 @@
 ﻿using FastEndpoints;
 using MangaScrapper.Features.ScrapperKomiku.Services;
-using MangaScrapper.Infrastructure.BackgroundJobs;
 using MangaScrapper.Infrastructure.Repositories;
 
 namespace MangaScrapper.Features.Scrapper.UpdateMangaMetaData;
 
-public class Endpoint(IBackgroundTaskQueue taskQueue, IMangaRepository repository, KomikuService komikuService, ILogger<Endpoint>logger) : Endpoint<Request>
+public class Endpoint(IMangaRepository repository, KomikuService komikuService, ILogger<Endpoint>logger) : Endpoint<Request>
 {
     public override void Configure()
     {

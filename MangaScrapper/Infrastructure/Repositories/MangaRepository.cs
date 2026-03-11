@@ -1,6 +1,7 @@
 ﻿using MangaScrapper.Infrastructure.Mongo;
 using MangaScrapper.Infrastructure.Mongo.Collections;
 using MangaScrapper.Infrastructure.Utils;
+using MangaScrapper.Shared.Models;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
@@ -150,5 +151,55 @@ public class MangaRepository : IMangaRepository
     public async Task DeleteAsync(Guid id, CancellationToken ct)
     {
         await _collection.DeleteOneAsync(m => m.Id == id, ct);
+    }
+
+    public async Task<DashboardStatistic> GetStatisticsAsync(CancellationToken ct)
+    {
+        var totalManga = await _collection.CountDocumentsAsync(_ => true, cancellationToken: ct);
+
+        // Get unique providers
+        var providers = await _collection.Distinct<string>("Chapters.ChapterProvider", FilterDefinition<MangaDocument>.Empty).ToListAsync(ct);
+        var totalSourceProvider = providers.Count;
+
+        var today = DateTime.UtcNow.Date;
+        var lastWeek = DateTime.UtcNow.Date.AddDays(-7);
+
+        // ScrappedToday (Count chapters uploaded today)
+        var scrappedToday = await _collection.Aggregate()
+            .Unwind<MangaDocument, ChapterDocumentUnwound>(m => m.Chapters)
+            .Match(c => c.Chapters.UploadDate >= today)
+            .Count()
+            .FirstOrDefaultAsync(ct)
+            .ContinueWith(t => t.Result?.Count ?? 0);
+
+        // ScrappedThisWeek
+        var scrappedThisWeek = await _collection.Aggregate()
+            .Unwind<MangaDocument, ChapterDocumentUnwound>(m => m.Chapters)
+            .Match(c => c.Chapters.UploadDate >= lastWeek)
+            .Count()
+            .FirstOrDefaultAsync(ct)
+            .ContinueWith(t => t.Result?.Count ?? 0);
+
+        var totalUnlinkedMetadata = await _collection.CountDocumentsAsync(m => m.MalID == 0, cancellationToken: ct);
+
+        // Chapters with null or empty Link
+        var totalUnavailableMangaChapter = await _collection
+            .Find(m => m.Chapters.Any(c => c.Pages == null || c.Pages.Count == 0))
+            .CountDocumentsAsync(ct);
+
+        return new DashboardStatistic
+        {
+            TotalManga = totalManga,
+            TotalSourceProvider = totalSourceProvider,
+            ScrappedToday = scrappedToday,
+            ScrappedThisWeek = scrappedThisWeek,
+            TotalUnlinkedMetadata = totalUnlinkedMetadata,
+            TotalUnavailableMangaChapter = totalUnavailableMangaChapter
+        };
+    }
+
+    private class ChapterDocumentUnwound
+    {
+        public ChapterDocument Chapters { get; set; } = null!;
     }
 }

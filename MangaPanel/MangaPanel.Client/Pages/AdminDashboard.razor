@@ -1,0 +1,78 @@
+@page "/admin/dashboard"
+@layout Layout.AdminLayout
+@using MangaScrapper.Shared.Models
+@using MangaPanel.Client.Components
+
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center space-x-4">
+        <div class="p-3 bg-blue-50 rounded-xl text-blue-500">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+            </svg>
+        </div>
+        <div>
+            <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider">Total Manga</p>
+            <h4 class="text-2xl font-bold text-secondary">@totalManga</h4>
+        </div>
+    </div>
+    
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center space-x-4">
+        <div class="p-3 bg-green-50 rounded-xl text-green-500">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+        </div>
+        <div>
+            <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider">Scrapped Today</p>
+            <h4 class="text-2xl font-bold text-secondary">24</h4>
+        </div>
+    </div>
+
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center space-x-4">
+        <div class="p-3 bg-purple-50 rounded-xl text-purple-500">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+        </div>
+        <div>
+            <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider">Monthly Views</p>
+            <h4 class="text-2xl font-bold text-secondary">1.2M</h4>
+        </div>
+    </div>
+
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center space-x-4">
+        <div class="p-3 bg-orange-50 rounded-xl text-orange-500">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+        </div>
+        <div>
+            <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider">Avg. Update</p>
+            <h4 class="text-2xl font-bold text-secondary">2h 15m</h4>
+        </div>
+    </div>
+</div>
+
+<div class="flex justify-between items-center mb-6">
+    <h3 class="text-xl font-bold text-secondary">Recent Manga</h3>
+    <button class="text-primary font-bold text-sm hover:underline">View All</button>
+</div>
+
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+    @foreach(var manga in recentManga)
+    {
+        <MangaCard Manga="manga" />
+    }
+</div>
+
+@code {
+    private int totalManga = 1500;
+    private List<MangaSummary> recentManga = new()
+    {
+        new MangaSummary { Title = "One Piece", Author = "Eiichiro Oda", Type = "Manga", Rating = 9.2, ImageUrl = "https://cdn.myanimelist.net/images/manga/2/253146.jpg" },
+        new MangaSummary { Title = "Solo Leveling", Author = "Chugong", Type = "Manhwa", Rating = 8.8, ImageUrl = "https://cdn.myanimelist.net/images/manga/3/222295.jpg" },
+        new MangaSummary { Title = "Kingdom", Author = "Yasuhisa Hara", Type = "Manga", Rating = 9.0, ImageUrl = "https://cdn.myanimelist.net/images/manga/2/171872.jpg" },
+        new MangaSummary { Title = "Berserk", Author = "Kentaro Miura", Type = "Manga", Rating = 9.5, ImageUrl = "https://cdn.myanimelist.net/images/manga/1/157897.jpg" }
+    };
+}

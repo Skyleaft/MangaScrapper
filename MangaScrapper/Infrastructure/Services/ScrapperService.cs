@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using Hangfire;
+using System.Text.Json;
 using HtmlAgilityPack;
 using MangaScrapper.Infrastructure.BackgroundJobs;
 using MangaScrapper.Infrastructure.Models;
@@ -13,11 +14,11 @@ public class ScrapperService : ScrapperServiceBase
     public ScrapperService(
         HttpClient httpClient, 
         IMangaRepository mangaRepository, 
-        IBackgroundTaskQueue taskQueue, 
+        IBackgroundJobClient jobClient, 
         IServiceScopeFactory scopeFactory, 
         IOptions<ScrapperSettings> settings, 
         SemaphoreSlim semaphore) 
-        : base(httpClient, mangaRepository, taskQueue, scopeFactory, settings, semaphore)
+        : base(httpClient, mangaRepository, jobClient, scopeFactory, settings, semaphore)
     {
     }
 

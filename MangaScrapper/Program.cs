@@ -1,5 +1,11 @@
+using Hangfire;
+using Hangfire.Mongo;
+using Hangfire.Mongo.Migration.Strategies;
+using Hangfire.Mongo.Migration.Strategies.Backup;
 using FastEndpoints;
+using FastEndpoints.Security;
 using FastEndpoints.Swagger;
+using MangaScrapper.Components;
 using MangaScrapper.Features.ScrapperKomiku.Services;
 using MangaScrapper.Features.ScrapperKiryuu;
 using MangaScrapper.Features.ScrapperKiryuu.Services;
@@ -23,6 +29,13 @@ using OpenTelemetry.Logs;
 using MangaScrapper.Infrastructure.Utils;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorComponents()
+    .AddInteractiveWebAssemblyComponents();
+
+builder.Services.AddAuthenticationJwtBearer(s => s.SigningKey = builder.Configuration["JwtSigningKey"] ?? "a_very_secret_key_that_is_at_least_32_chars_long!!");
+builder.Services.AddAuthorization();
+
 builder.Services.AddFastEndpoints()
     .AddResponseCaching()
     .SwaggerDocument(o => o.AutoTagPathSegmentIndex = 2);
@@ -72,8 +85,31 @@ builder.Services.AddSingleton(sp =>
 });
 builder.Services.AddScoped<IMangaRepository, MangaRepository>();
 
-builder.Services.AddSingleton<IBackgroundTaskQueue>(_ => new BackgroundTaskQueue(100));
-builder.Services.AddHostedService<BackgroundWorker>();
+// Configure Hangfire with MongoDB
+var mongoSettings = builder.Configuration.GetSection("MongoSettings").Get<MongoSettings>();
+var mongoStorageOptions = new MongoStorageOptions
+{
+    Prefix = "hangfire.mongo",
+    CheckConnection = true,
+    MigrationOptions = new MongoMigrationOptions
+    {
+        MigrationStrategy = new MigrateMongoMigrationStrategy(),
+        BackupStrategy = new CollectionMongoBackupStrategy()
+    }
+};
+
+// Add Hangfire server
+
+builder.Services.AddHangfire(configuration => configuration
+    .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+    .UseSimpleAssemblyNameTypeSerializer()
+    .UseRecommendedSerializerSettings()
+    .UseMongoStorage(mongoSettings!.ConnectionString, mongoSettings.DatabaseName, mongoStorageOptions));
+
+builder.Services.AddHangfireServer();
+
+// Register ChapterScrapingJob for Hangfire
+builder.Services.AddTransient<ChapterScrapingJob>();
 
 builder.Services.AddHttpClient<ScrapperService>(c => c.Timeout = TimeSpan.FromMinutes(5));
 builder.Services.AddHttpClient<KomikuService>(c => c.Timeout = TimeSpan.FromMinutes(5));
@@ -129,18 +165,37 @@ using (var scope = app.Services.CreateScope())
     );
 }
 
+app.UseAuthentication()
+   .UseAuthorization();
+
+// Note: Hangfire Dashboard URL will be available if Hangfire.Dashboard is installed
+app.UseHangfireDashboard("/hangfire");
+
 app.UseResponseCaching().UseFastEndpoints();
 
 // Apply CORS policy
 app.UseCors("ConfiguredCors");
 
 // Configure the HTTP request pipeline.
-// if (app.Environment.IsDevelopment())
-// {
-    
-// }
+if (app.Environment.IsDevelopment())
+{
+    app.UseWebAssemblyDebugging();
+}
+else
+{
+    app.UseExceptionHandler("/Error", createScopeForErrors: true);
+    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
+    app.UseHsts();
+}
+
+app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
+
 app.MapOpenApi();
 app.UseSwaggerGen();
+
+app.UseAntiforgery();
+
+app.MapStaticAssets();
 
 app.UseHttpsRedirection();
 
@@ -152,5 +207,9 @@ app.UseStaticFiles(new StaticFileOptions
             : Path.Combine(builder.Environment.ContentRootPath, builder.Configuration["ScrapperSettings:ImageStoragePath"] ?? "images")),
     RequestPath = "/images"
 });
+
+app.MapRazorComponents<App>()
+    .AddInteractiveWebAssemblyRenderMode()
+    .AddAdditionalAssemblies(typeof(MangaPanel.Client._Imports).Assembly);
 
 app.Run();

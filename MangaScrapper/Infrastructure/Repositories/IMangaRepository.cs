@@ -1,4 +1,5 @@
 ﻿using MangaScrapper.Infrastructure.Mongo.Collections;
+using MangaScrapper.Shared.Models;
 
 namespace MangaScrapper.Infrastructure.Repositories;
 
@@ -24,4 +25,5 @@ public interface IMangaRepository
     Task<List<string>> GetAllGenresAsync(CancellationToken ct);
     Task<List<string>> GetAllTypesAsync(CancellationToken ct);
     Task DeleteAsync(Guid id, CancellationToken ct);
+    Task<DashboardStatistic> GetStatisticsAsync(CancellationToken ct);
 }

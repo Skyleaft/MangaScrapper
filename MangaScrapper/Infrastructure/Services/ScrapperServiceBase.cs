@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using Hangfire;
+using System.Globalization;
 using System.Text.Json;
 using System.Web;
 using HtmlAgilityPack;
@@ -18,7 +19,7 @@ public abstract class ScrapperServiceBase
 {
     protected readonly HttpClient HttpClient;
     protected readonly IMangaRepository MangaRepository;
-    protected readonly IBackgroundTaskQueue TaskQueue;
+    protected readonly IBackgroundJobClient JobClient;
     protected readonly IServiceScopeFactory ScopeFactory;
     private readonly ScrapperSettings _settings;
     protected readonly SemaphoreSlim Semaphore;
@@ -28,14 +29,14 @@ public abstract class ScrapperServiceBase
     protected ScrapperServiceBase(
         HttpClient httpClient,
         IMangaRepository mangaRepository,
-        IBackgroundTaskQueue taskQueue,
+        IBackgroundJobClient jobClient,
         IServiceScopeFactory scopeFactory,
         IOptions<ScrapperSettings> settings,
         SemaphoreSlim semaphore)
     {
         HttpClient = httpClient;
         MangaRepository = mangaRepository;
-        TaskQueue = taskQueue;
+        JobClient = jobClient;
         ScopeFactory = scopeFactory;
         _settings = settings.Value;
         Semaphore = semaphore;
@@ -409,15 +410,15 @@ public abstract class ScrapperServiceBase
 
     public async Task QueueChapterScraping(Guid mangaId, string mangaTitle, ChapterDocument chapter)
     {
-        await TaskQueue.QueueBackgroundWorkItemAsync(mangaTitle, chapter.Number, async token =>
-        {
-            using var scope = ScopeFactory.CreateScope();
-            var scopedScrapper = (ScrapperServiceBase)scope.ServiceProvider.GetRequiredService(this.GetType());
-            var scopedRepo = scope.ServiceProvider.GetRequiredService<IMangaRepository>();
-
-            var processedChapter = await scopedScrapper.GetChapterPage(mangaTitle, chapter, token);
-            await scopedRepo.UpdateChapterPagesAsync(mangaId, chapter.Id, processedChapter.Pages, token);
-        });
+        JobClient.Enqueue<ChapterScrapingJob>(job => job.ExecuteAsync(
+            mangaId,
+            mangaTitle,
+            chapter.Number,
+            chapter.Id.ToString(),
+            this.GetType().AssemblyQualifiedName!,
+            CancellationToken.None));
+        
+        await Task.CompletedTask;
     }
 
     public abstract Task<List<SearchItem>> SearchManga(SearchRequest request, CancellationToken ct);

@@ -1,0 +1,31 @@
+@using MangaScrapper.Shared.Models
+
+<div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 border border-slate-200">
+    @if (!string.IsNullOrEmpty(Manga.LocalImageUrl))
+    {
+        <img src="/images/@Manga.LocalImageUrl" alt="@Manga.Title" class="w-full h-64 object-cover" />
+    }
+    else if (!string.IsNullOrEmpty(Manga.ImageUrl))
+    {
+        <img src="@Manga.ImageUrl" alt="@Manga.Title" class="w-full h-64 object-cover" />
+    }
+    <div class="p-4">
+        <h3 class="text-lg font-bold text-secondary truncate" title="@Manga.Title">@Manga.Title</h3>
+        <p class="text-sm text-slate-500 mb-2">@Manga.Author</p>
+        <div class="flex justify-between items-center mt-4">
+            <span class="px-2 py-1 bg-primary text-white text-xs rounded">@Manga.Type</span>
+            <span class="text-secondary font-semibold">★ @(Manga.Rating?.ToString("F1") ?? "N/A")</span>
+        </div>
+        @if (Manga.LatestChapter != null)
+        {
+            <div class="mt-3 pt-3 border-t border-slate-100 italic text-xs text-slate-400">
+                Latest: Ch. @Manga.LatestChapter.Number
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public MangaSummary Manga { get; set; } = new();
+}
