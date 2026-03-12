@@ -98,6 +98,7 @@ BsonSerializer.RegisterSerializer(new GuidSerializer(GuidRepresentation.Standard
 builder.Services.Configure<MongoSettings>(builder.Configuration.GetSection("MongoSettings"));
 builder.Services.Configure<ScrapperSettings>(builder.Configuration.GetSection("ScrapperSettings"));
 builder.Services.Configure<MeiliConfig>(builder.Configuration.GetSection("MeiliSettings"));
+builder.Services.Configure<QdrantConfig>(builder.Configuration.GetSection("QdrantSettings"));
 builder.Services.AddSingleton<MongoContext>();
 builder.Services.AddSingleton(sp => 
 {
@@ -137,6 +138,7 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddTransient<ChapterScrapingJob>();
 builder.Services.AddTransient<MeiliSyncJob>();
 builder.Services.AddScoped<MeilisearchService>();
+builder.Services.AddScoped<QdrantService>();
 builder.Services.AddScoped<StorageSyncService>();
 
 //setting httpclient

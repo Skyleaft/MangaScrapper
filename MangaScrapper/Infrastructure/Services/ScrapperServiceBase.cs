@@ -25,6 +25,7 @@ public abstract class ScrapperServiceBase
     protected readonly SemaphoreSlim Semaphore;
     protected readonly string ImageStoragePath;
     protected readonly MeilisearchService MeilisearchService;
+    protected readonly QdrantService QdrantService;
     private ScrapperProvider? _provider;
 
     protected ScrapperServiceBase(
@@ -34,7 +35,8 @@ public abstract class ScrapperServiceBase
         IServiceScopeFactory scopeFactory,
         IOptions<ScrapperSettings> settings,
         SemaphoreSlim semaphore,
-        MeilisearchService meilisearchService)
+        MeilisearchService meilisearchService,
+        QdrantService qdrantService)
     {
         HttpClient = httpClient;
         MangaRepository = mangaRepository;
@@ -43,6 +45,7 @@ public abstract class ScrapperServiceBase
         _settings = settings.Value;
         Semaphore = semaphore;
         MeilisearchService = meilisearchService;
+        QdrantService = qdrantService;
         ImageStoragePath = Path.IsPathRooted(_settings.ImageStoragePath) 
             ? _settings.ImageStoragePath 
             : Path.Combine(Directory.GetCurrentDirectory(), _settings.ImageStoragePath);
@@ -334,6 +337,7 @@ public abstract class ScrapperServiceBase
                 existingManga = await UpdateMangaDocument(existingManga, ct);
                 await MangaRepository.UpdateAsync(existingManga, ct);
                 await MeilisearchService.IndexMangaAsync(existingManga, ct);
+                await QdrantService.UpsertMangaAsync(existingManga, ct);
 
                 return existingManga;
             }
@@ -348,6 +352,7 @@ public abstract class ScrapperServiceBase
             manga.Id = Guid.NewGuid();
             await MangaRepository.CreateAsync(manga, ct);
             await MeilisearchService.IndexMangaAsync(manga, ct);
+            await QdrantService.UpsertMangaAsync(manga, ct);
 
             if (scrapChapters)
             {

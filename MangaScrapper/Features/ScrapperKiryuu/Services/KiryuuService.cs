@@ -24,8 +24,9 @@ public class KiryuuService : ScrapperServiceBase
         IServiceScopeFactory scopeFactory,
         IOptions<ScrapperSettings> settings,
         SemaphoreSlim semaphore,
-        MeilisearchService meilisearchService)
-        : base(httpClient, mangaRepository, jobClient, scopeFactory, settings, semaphore, meilisearchService)
+        MeilisearchService meilisearchService,
+        QdrantService qdrantService)
+        : base(httpClient, mangaRepository, jobClient, scopeFactory, settings, semaphore, meilisearchService, qdrantService)
     {
         LoadProvider("kiryuu-provider.json");
     }
