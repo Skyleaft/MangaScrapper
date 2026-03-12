@@ -17,7 +17,8 @@ services:
       - Cors__AllowCredentials=true
       - MeiliSettings__Host=http://meilisearch:7700
       - MeiliSettings__MasterKey=mangas
-      - QdrantSettings__Host=http://qdrant:6333
+      - QdrantSettings__Host=http://qdrant
+      - QdrantSettings__Port=6334
       - QdrantSettings__ApiKey=mangas_qdrant_key
     volumes:
       - ./images:/app/images
