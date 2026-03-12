@@ -109,22 +109,44 @@ public class QdrantService
         {
             return new List<Guid>();
         }
+        
+        foreach (var p in points)
+        {
+            if (p.Vectors?.Vector?.Data == null)
+            {
+                _logger.LogWarning("Point {Id} has no vector", p.Id);
+            }
+            else
+            {
+                _logger.LogInformation("Point {Id} vector size: {Size}", p.Id, p.Vectors.Vector.Data.Count);
+            }
+        }
 
         // 2. Compute a simple centroid (mean vector)
-        var vectors = points.Select(p => p.Vectors.Vector.Data).ToList();
-        var centroid = new float[VectorSize];
-        
+        var vectors = points
+            .Where(p => p.Vectors?.Vector?.Data?.Count > 0)
+            .Select(p => p.Vectors.Vector.Data.ToArray())
+            .ToList();
+
+        if (vectors.Count == 0)
+        {
+            return new List<Guid>();
+        }
+
+        var dimension = vectors[0].Length;
+        var centroid = new float[dimension];
+
         foreach (var vector in vectors)
         {
-            for (int i = 0; i < (int)VectorSize; i++)
+            for (int i = 0; i < dimension; i++)
             {
                 centroid[i] += vector[i];
             }
         }
 
-        for (int i = 0; i < (int)VectorSize; i++)
+        for (int i = 0; i < dimension; i++)
         {
-            centroid[i] /= points.Count;
+            centroid[i] /= vectors.Count;
         }
 
         // 3. Query Qdrant with the centroid, filtering out the already read IDs
