@@ -56,6 +56,14 @@ services:
     volumes:
       - qdrant_data:/qdrant/storage
 
+  embedding-service:
+    build:
+      context: ./embedding-service
+      dockerfile: Dockerfile
+    ports:
+      - "8222:8000"
+    restart: unless-stopped
+
 volumes:
   mongo-data:
   meili_data:
