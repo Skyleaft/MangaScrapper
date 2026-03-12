@@ -1,3 +1,4 @@
+using System.Net;
 using Hangfire;
 using Hangfire.Mongo;
 using Hangfire.Mongo.Migration.Strategies;
@@ -138,9 +139,16 @@ builder.Services.AddTransient<MeiliSyncJob>();
 builder.Services.AddScoped<MeilisearchService>();
 builder.Services.AddScoped<StorageSyncService>();
 
-builder.Services.AddHttpClient<ScrapperService>(c => c.Timeout = TimeSpan.FromMinutes(5));
-builder.Services.AddHttpClient<KomikuService>(c => c.Timeout = TimeSpan.FromMinutes(5));
-builder.Services.AddHttpClient<KiryuuService>(c => c.Timeout = TimeSpan.FromMinutes(5));
+//setting httpclient
+builder.Services.AddHttpClient<ScrapperService>(HttpConfig.ConfigureClient)
+    .ConfigurePrimaryHttpMessageHandler(HttpConfig.CreateHandler);
+
+builder.Services.AddHttpClient<KomikuService>(HttpConfig.ConfigureClient)
+    .ConfigurePrimaryHttpMessageHandler(HttpConfig.CreateHandler);
+
+builder.Services.AddHttpClient<KiryuuService>(HttpConfig.ConfigureClient)
+    .ConfigurePrimaryHttpMessageHandler(HttpConfig.CreateHandler);
+
 
 builder.Services.AddOpenTelemetry()
     .ConfigureResource(resource => resource.AddService(

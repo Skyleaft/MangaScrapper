@@ -46,7 +46,6 @@ public abstract class ScrapperServiceBase
         ImageStoragePath = Path.IsPathRooted(_settings.ImageStoragePath) 
             ? _settings.ImageStoragePath 
             : Path.Combine(Directory.GetCurrentDirectory(), _settings.ImageStoragePath);
-        HttpClient.DefaultRequestHeaders.Add("User-Agent", "minimal-api-httpclient-sample");
         Directory.CreateDirectory(ImageStoragePath);
     }
 
@@ -280,6 +279,19 @@ public abstract class ScrapperServiceBase
         return manga;
     }
 
+    private async Task<MangaDocument> UpdateThumbnail(MangaDocument mangaData, CancellationToken ct = default)
+    {
+        if (!string.IsNullOrWhiteSpace(mangaData.ImageUrl))
+        {
+            mangaData.ImageUrl = ThumbnailHelper.RemoveResizeParams(mangaData.ImageUrl);
+            var thumb = await DownloadThumbnailAndConvertToWebP(mangaData.Title, mangaData.ImageUrl, ct);
+            mangaData.LocalImageUrl = thumb.path;
+            mangaData.ThumbnailSize = thumb.size;
+        }
+
+        return mangaData;
+    }
+
     public async Task<MangaDocument> ExtractManga(string url, CancellationToken ct, bool scrapChapters = true)
     {
         try
@@ -288,30 +300,19 @@ public abstract class ScrapperServiceBase
             var mangaData = ExtractMangaMetadata(doc);
             mangaData.Url = url;
             
-
-            if (!string.IsNullOrWhiteSpace(mangaData.ImageUrl))
-            {
-                mangaData.ImageUrl = ThumbnailHelper.RemoveResizeParams(mangaData.ImageUrl);
-                var thumb = await DownloadThumbnailAndConvertToWebP(mangaData.Title, mangaData.ImageUrl, ct);
-                mangaData.LocalImageUrl = thumb.path;
-                mangaData.ThumbnailSize = thumb.size;
-            }
-            
-            var searchmanga = await MeilisearchService.SearchAsync(mangaData.Title,mangaData.Genres,null,mangaData.Type,"UpdatedAt","desc",1,1,ct);
+            var searchmanga = await MeilisearchService.SearchTittleAsync(mangaData.Title, ct);
             MangaDocument? existingManga = null;
-            if (searchmanga.Items.Any())
+            if (searchmanga is not null)
             {
-                if(StringHelper.CalculateSimilarity(searchmanga.Items.First().Title,mangaData.Title)>=0.8)
-                    existingManga = await MangaRepository.GetByIdAsync(Guid.Parse(searchmanga.Items.First().Id),ct);
+                if(StringHelper.CalculateSimilarity(searchmanga.Title,mangaData.Title)>=0.8)
+                    existingManga = await MangaRepository.GetByIdAsync(Guid.Parse(searchmanga.Id),ct);
             }
 
             var chapters = await ExtractChapters(doc, ct);
 
             if (existingManga != null)
             {
-                existingManga.ImageUrl = mangaData.ImageUrl;
-                existingManga.LocalImageUrl = mangaData.LocalImageUrl;
-                existingManga.ThumbnailSize = mangaData.ThumbnailSize;
+                existingManga = await UpdateThumbnail(existingManga, ct);
 
                 var maxExistingChapter = existingManga.Chapters.Any() ? existingManga.Chapters.Max(c => c.Number) : 0;
                 var newChapters = chapters.Where(c => c.Number > maxExistingChapter).ToList();
@@ -336,7 +337,7 @@ public abstract class ScrapperServiceBase
 
                 return existingManga;
             }
-
+            mangaData = await UpdateThumbnail(mangaData, ct);
             mangaData.Chapters = chapters;
             mangaData.CreatedAt = chapters.OrderBy(x => x.UploadDate).FirstOrDefault()?.UploadDate ?? DateTime.MinValue;
             mangaData.UpdatedAt = DateTime.UtcNow;

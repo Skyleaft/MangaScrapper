@@ -2,6 +2,7 @@ using Meilisearch;
 using MangaScrapper.Infrastructure.Models;
 using MangaScrapper.Infrastructure.Mongo;
 using MangaScrapper.Infrastructure.Mongo.Collections;
+using Meilisearch.QueryParameters;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
@@ -112,7 +113,12 @@ public class MeilisearchService
     {
         var document = MapToMeiliDocument(manga);
         var index = _client.Index(IndexName);
-        var task = await index.AddDocumentsAsync(new[] { document }, "id", ct);
+        var exist = await index.GetDocumentAsync<MeiliMangaDocument>(manga.Id.ToString(), cancellationToken: ct);
+        TaskInfo? task;
+        if (exist is not null)
+            task = await index.UpdateDocumentsAsync(new[] { document }, "id", ct);
+        else
+            task = await index.AddDocumentsAsync(new[] { document }, "id", ct);
         await _client.WaitForTaskAsync(task.TaskUid, cancellationToken: ct);
 
         _logger.LogInformation("Indexed manga '{Title}' (ID: {Id}) to Meilisearch.", manga.Title, manga.Id);
@@ -136,11 +142,13 @@ public class MeilisearchService
         var searchQuery = new SearchQuery
         {
             AttributesToHighlight = new []{"title"},
+            ShowRankingScore = true,
             HitsPerPage = 1,
             Page = 1
         };
 
-        var result = await index.SearchAsync<MeiliMangaDocument>(title ?? "", searchQuery, ct);
+        var result = await index.SearchAsync<MeiliMangaDocument>(title, searchQuery, ct);
+        
         return result.Hits.FirstOrDefault()!;
     }
 
