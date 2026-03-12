@@ -279,12 +279,12 @@ public abstract class ScrapperServiceBase
         return manga;
     }
 
-    private async Task<MangaDocument> UpdateThumbnail(MangaDocument mangaData, CancellationToken ct = default)
+    private async Task<MangaDocument> UpdateThumbnail(MangaDocument mangaData,string? imageUrl, CancellationToken ct = default)
     {
-        if (!string.IsNullOrWhiteSpace(mangaData.ImageUrl))
+        if (!string.IsNullOrWhiteSpace(imageUrl))
         {
-            mangaData.ImageUrl = ThumbnailHelper.RemoveResizeParams(mangaData.ImageUrl);
-            var thumb = await DownloadThumbnailAndConvertToWebP(mangaData.Title, mangaData.ImageUrl, ct);
+            mangaData.ImageUrl = ThumbnailHelper.RemoveResizeParams(imageUrl);
+            var thumb = await DownloadThumbnailAndConvertToWebP(mangaData.Title, imageUrl, ct);
             mangaData.LocalImageUrl = thumb.path;
             mangaData.ThumbnailSize = thumb.size;
         }
@@ -312,7 +312,7 @@ public abstract class ScrapperServiceBase
 
             if (existingManga != null)
             {
-                existingManga = await UpdateThumbnail(existingManga, ct);
+                existingManga = await UpdateThumbnail(existingManga,mangaData.ImageUrl, ct);
 
                 var maxExistingChapter = existingManga.Chapters.Any() ? existingManga.Chapters.Max(c => c.Number) : 0;
                 var newChapters = chapters.Where(c => c.Number > maxExistingChapter).ToList();
@@ -337,12 +337,15 @@ public abstract class ScrapperServiceBase
 
                 return existingManga;
             }
-            mangaData = await UpdateThumbnail(mangaData, ct);
+            mangaData = await UpdateThumbnail(mangaData,mangaData.ImageUrl, ct);
             mangaData.Chapters = chapters;
             mangaData.CreatedAt = chapters.OrderBy(x => x.UploadDate).FirstOrDefault()?.UploadDate ?? DateTime.MinValue;
             mangaData.UpdatedAt = DateTime.UtcNow;
+            if (mangaData.Type.Contains("-"))
+                mangaData.Type = "Manga";
 
             var manga = await UpdateMangaDocument(mangaData, ct);
+            manga.Id = Guid.NewGuid();
             await MangaRepository.CreateAsync(manga, ct);
             await MeilisearchService.IndexMangaAsync(manga, ct);
 

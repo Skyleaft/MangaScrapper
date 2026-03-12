@@ -108,7 +108,6 @@ public class MangaRepository : IMangaRepository
 
     public async Task<Guid> CreateAsync(MangaDocument manga, CancellationToken ct)
     {
-        manga.Id = Guid.NewGuid();
         await _collection.InsertOneAsync(manga, cancellationToken: ct);
         return manga.Id;
     }

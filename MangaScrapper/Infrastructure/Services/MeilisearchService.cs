@@ -113,12 +113,7 @@ public class MeilisearchService
     {
         var document = MapToMeiliDocument(manga);
         var index = _client.Index(IndexName);
-        var exist = await index.GetDocumentAsync<MeiliMangaDocument>(manga.Id.ToString(), cancellationToken: ct);
-        TaskInfo? task;
-        if (exist is not null)
-            task = await index.UpdateDocumentsAsync(new[] { document }, "id", ct);
-        else
-            task = await index.AddDocumentsAsync(new[] { document }, "id", ct);
+        var task = await index.AddDocumentsAsync(new[] { document }, "id", ct);
         await _client.WaitForTaskAsync(task.TaskUid, cancellationToken: ct);
 
         _logger.LogInformation("Indexed manga '{Title}' (ID: {Id}) to Meilisearch.", manga.Title, manga.Id);
@@ -237,8 +232,8 @@ public class MeilisearchService
             LocalImageUrl = manga.LocalImageUrl,
             TotalChapters = manga.Chapters?.Count ?? 0,
             LatestChapterNumber = manga.Chapters?.MaxBy(c => c.Number)?.Number ?? 0,
-            CreatedAtTimestamp = new DateTimeOffset(manga.CreatedAt, TimeSpan.Zero).ToUnixTimeSeconds(),
-            UpdatedAtTimestamp = new DateTimeOffset(manga.UpdatedAt, TimeSpan.Zero).ToUnixTimeSeconds()
+            CreatedAtTimestamp = ((DateTimeOffset)manga.CreatedAt.ToUniversalTime()).ToUnixTimeSeconds(),
+            UpdatedAtTimestamp = ((DateTimeOffset)manga.UpdatedAt.ToUniversalTime()).ToUnixTimeSeconds()
         };
     }
 }
