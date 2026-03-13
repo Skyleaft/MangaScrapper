@@ -108,70 +108,59 @@ public class QdrantService
 
     public async Task<List<Guid>> RecommendAsync(List<Guid> readingHistoryIds, int limit = 10, CancellationToken ct = default)
     {
-        if (readingHistoryIds == null || readingHistoryIds.Count == 0)
+        if (readingHistoryIds == null || !readingHistoryIds.Any())
         {
             return new List<Guid>();
         }
 
-        var points = await _client.RetrieveAsync(CollectionName, readingHistoryIds.Select(id => (PointId)id).ToArray(), withVectors: true, cancellationToken: ct);
+        // 1. Retrieve points with vectors
+        var points = await _client.RetrieveAsync(
+            CollectionName, 
+            readingHistoryIds.Select(id => (PointId)id).ToList(), 
+            withVectors: true, 
+            cancellationToken: ct
+        );
 
-        if (points.Count == 0)
-        {
-            return new List<Guid>();
-        }
-        
-        foreach (var p in points)
-        {
-            if (p.Vectors?.Vector?.Data == null)
-            {
-                _logger.LogWarning("Point {Id} has no vector", p.Id);
-            }
-            else
-            {
-                _logger.LogInformation("Point {Id} vector size: {Size}", p.Id, p.Vectors.Vector.Data.Count);
-            }
-        }
+        if (points.Count == 0) return new List<Guid>();
 
-        // 2. Compute a simple centroid (mean vector)
-        var vectors = points
-            .Where(p => p.Vectors?.Vector?.Data?.Count > 0)
-            .Select(p => p.Vectors.Vector.Data.ToArray())
+        // 2. Filter for points that actually contain dense vectors
+        var denseVectors = points
+            .Where(p => p.Vectors?.Vector?.Dense != null)
+            .Select(p => p.Vectors.Vector.Dense.Data)
             .ToList();
 
-        if (vectors.Count == 0)
+        if (!denseVectors.Any())
         {
+            _logger.LogWarning("No valid dense vectors found for provided IDs.");
             return new List<Guid>();
         }
 
-        var dimension = vectors[0].Length;
-        var centroid = new float[dimension];
-
-        foreach (var vector in vectors)
+        // 3. Compute centroid (Mean Vector)
+        var centroid = new float[VectorSize];
+        foreach (var vector in denseVectors)
         {
-            for (int i = 0; i < dimension; i++)
+            for (int i = 0; i < (int)VectorSize; i++)
             {
                 centroid[i] += vector[i];
             }
         }
 
-        for (int i = 0; i < dimension; i++)
+        for (int i = 0; i < (int)VectorSize; i++)
         {
-            centroid[i] /= vectors.Count;
+            centroid[i] /= denseVectors.Count;
         }
 
-        // 3. Query Qdrant with the centroid, filtering out the already read IDs
+        // 4. Query Qdrant, filtering out original IDs
         var filter = new Filter();
-        var hasIdCondition = new HasIdCondition();
-        hasIdCondition.HasId.AddRange(readingHistoryIds.Select(id => (PointId)id));
-
-        filter.MustNot.Add(new Condition
-        {
-            HasId = hasIdCondition
+        // Use the simplified 'MustNot' with 'HasId'
+        filter.MustNot.Add(new Condition 
+        { 
+            HasId = new HasIdCondition { HasId = { readingHistoryIds.Select(id => (PointId)id) } } 
         });
 
         var searchResult = await _client.SearchAsync(
             CollectionName,
-            centroid,
+            centroid, // Pass the calculated float array
             filter: filter,
             limit: (ulong)limit,
             cancellationToken: ct
