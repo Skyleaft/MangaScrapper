@@ -15,16 +15,22 @@ public class QdrantService
     private readonly QdrantClient _client;
     private readonly MongoContext _mongoContext;
     private readonly ILogger<QdrantService> _logger;
+    private readonly IHttpClientFactory _httpClientFactory;
+    private readonly EmbeddingConfig _embeddingConfig;
     private const ulong VectorSize = 384; // Typical size for MiniLM
 
     public QdrantService(
         IOptions<QdrantConfig> config,
         MongoContext mongoContext,
-        ILogger<QdrantService> logger)
+        ILogger<QdrantService> logger,
+        IHttpClientFactory httpClientFactory,
+        IOptions<EmbeddingConfig> embeddingConfig)
     {
         _client = new QdrantClient(config.Value.Host,port:config.Value.Port, apiKey: config.Value.ApiKey);
         _mongoContext = mongoContext;
         _logger = logger;
+        _httpClientFactory = httpClientFactory;
+        _embeddingConfig = embeddingConfig.Value;
     }
 
     public async Task InitializeAsync(CancellationToken ct = default)
@@ -72,7 +78,11 @@ public class QdrantService
         for (int i = 0; i < mangas.Count; i += batchSize)
         {
             var batch = mangas.Skip(i).Take(batchSize).ToList();
-            var points = batch.Select(MapToPointStruct).ToList();
+            var points = new List<PointStruct>();
+            foreach (var manga in batch)
+            {
+                points.Add(await MapToPointStructAsync(manga, ct));
+            }
 
             await _client.UpsertAsync(CollectionName, points, cancellationToken: ct);
             
@@ -85,7 +95,7 @@ public class QdrantService
 
     public async Task UpsertMangaAsync(MangaDocument manga, CancellationToken ct = default)
     {
-        var point = MapToPointStruct(manga);
+        var point = await MapToPointStructAsync(manga, ct);
         await _client.UpsertAsync(CollectionName, new[] { point }, cancellationToken: ct);
         _logger.LogInformation("Upserted manga '{Title}' (ID: {Id}) to Qdrant.", manga.Title, manga.Id);
     }
@@ -170,17 +180,43 @@ public class QdrantService
         return searchResult.Select(r => Guid.Parse(r.Id.Uuid)).ToList();
     }
 
-    private PointStruct MapToPointStruct(MangaDocument manga)
+    private async Task<PointStruct> MapToPointStructAsync(MangaDocument manga, CancellationToken ct = default)
     {
-        // 🚨 Placeholder vector generator 🚨
-        // As discussed in the implementation plan, you'll need a real embedding model.
-        // For now, we seed with zeroes to establish the pipeline.
-        var dummyVector = new float[VectorSize];
+        float[] vector = new float[VectorSize];
+        
+        try
+        {
+            var text = $"{manga.Title} {manga.Description} {manga.Author} {string.Join(" ", manga.Genres ?? new List<string>())}";
+            var httpClient = _httpClientFactory.CreateClient();
+            var requestBody = new EmbedRequest { Text = text };
+            var response = await httpClient.PostAsJsonAsync($"{_embeddingConfig.Host}/embed", requestBody, cancellationToken: ct);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<EmbedResponse>(cancellationToken: ct);
+                if (result?.Vector != null && result.Vector.Count == (int)VectorSize)
+                {
+                    vector = result.Vector.ToArray();
+                }
+                else
+                {
+                    _logger.LogWarning("Embedding response null or invalid size for manga {Id}", manga.Id);
+                }
+            }
+            else
+            {
+                _logger.LogError("Failed to get embedding from service. Status Code: {StatusCode}", response.StatusCode);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting embedding for manga {Id}", manga.Id);
+        }
 
         var point = new PointStruct
         {
             Id = (PointId)manga.Id,
-            Vectors = dummyVector,
+            Vectors = vector,
             Payload =
             {
                 ["title"] = manga.Title,
@@ -193,5 +229,17 @@ public class QdrantService
         };
 
         return point;
+    }
+
+    private class EmbedRequest
+    {
+        [System.Text.Json.Serialization.JsonPropertyName("text")]
+        public string Text { get; set; } = string.Empty;
+    }
+
+    private class EmbedResponse
+    {
+        [System.Text.Json.Serialization.JsonPropertyName("vector")]
+        public List<float> Vector { get; set; } = new();
     }
 }

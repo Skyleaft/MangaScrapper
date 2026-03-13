@@ -99,6 +99,7 @@ builder.Services.Configure<MongoSettings>(builder.Configuration.GetSection("Mong
 builder.Services.Configure<ScrapperSettings>(builder.Configuration.GetSection("ScrapperSettings"));
 builder.Services.Configure<MeiliConfig>(builder.Configuration.GetSection("MeiliSettings"));
 builder.Services.Configure<QdrantConfig>(builder.Configuration.GetSection("QdrantSettings"));
+builder.Services.Configure<EmbeddingConfig>(builder.Configuration.GetSection("EmbeddingSettings"));
 builder.Services.AddSingleton<MongoContext>();
 builder.Services.AddSingleton(sp => 
 {

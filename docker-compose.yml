@@ -20,6 +20,7 @@ services:
       - QdrantSettings__Host=http://qdrant
       - QdrantSettings__Port=6334
       - QdrantSettings__ApiKey=mangas_qdrant_key
+      - EmbeddingSettings__Host=http://embedding-service:8222
     volumes:
       - ./images:/app/images
       - ./MangaScrapper/provider:/app/provider:ro
@@ -61,7 +62,7 @@ services:
       context: ./embedding-service
       dockerfile: Dockerfile
     ports:
-      - "8222:8000"
+      - "8222:8222"
     restart: unless-stopped
 
 volumes:
