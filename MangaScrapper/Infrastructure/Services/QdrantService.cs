@@ -17,7 +17,7 @@ public class QdrantService
     private readonly ILogger<QdrantService> _logger;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly EmbeddingConfig _embeddingConfig;
-    private const ulong VectorSize = 384; // Typical size for MiniLM
+    private const ulong VectorSize = 768; // Typical size for BgeBase
 
     public QdrantService(
         IOptions<QdrantConfig> config,
