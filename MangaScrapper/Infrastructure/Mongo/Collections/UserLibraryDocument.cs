@@ -16,6 +16,7 @@ public class UserLibraryDocument
     public Guid MangaId { get; set; }
 
     public string MangaTitle { get; set; } = string.Empty;
+    public string Type { get; set; } = "Manga";
 
     public string? MangaImageUrl { get; set; }
 

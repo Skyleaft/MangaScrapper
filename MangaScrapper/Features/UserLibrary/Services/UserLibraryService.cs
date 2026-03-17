@@ -12,7 +12,7 @@ public class UserLibraryService : IUserLibraryService
         _repository = repository;
     }
 
-    public async Task<UserLibraryDocument> AddOrUpdateLibraryEntryAsync(Guid userId, Guid mangaId, string mangaTitle, string mangaImageUrl, string status, CancellationToken ct)
+    public async Task<UserLibraryDocument> AddOrUpdateLibraryEntryAsync(Guid userId, Guid mangaId, string mangaTitle, string mangaImageUrl,string type, string status, CancellationToken ct)
     {
         var existing = await _repository.GetByUserAndMangaAsync(userId, mangaId, ct);
         if (existing != null)
@@ -28,6 +28,7 @@ public class UserLibraryService : IUserLibraryService
             MangaId = mangaId,
             MangaTitle = mangaTitle,
             MangaImageUrl = mangaImageUrl,
+            Type = type,
             Status = status
         };
 

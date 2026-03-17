@@ -10,6 +10,7 @@ public class Request
     public Guid MangaId { get; set; }
     public string MangaTitle { get; set; } = string.Empty;
     public string MangaImageUrl { get; set; } = string.Empty;
+    public string Type { get; set; } = "Manga";
     public string Status { get; set; } = "Reading";
 }
 
@@ -24,7 +25,7 @@ public class Endpoint(IUserLibraryService service) : Endpoint<Request, UserLibra
     {
         var userId = User.FindFirst(c => c.Type == ClaimTypes.NameIdentifier)?.Value ??
                      throw new Exception("User not found");
-        var result = await service.AddOrUpdateLibraryEntryAsync(Guid.Parse(userId), r.MangaId, r.MangaTitle, r.MangaImageUrl, r.Status, ct);
+        var result = await service.AddOrUpdateLibraryEntryAsync(Guid.Parse(userId), r.MangaId, r.MangaTitle, r.MangaImageUrl,r.Type, r.Status, ct);
         await Send.OkAsync(result, ct);
     }
 }
