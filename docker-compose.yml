@@ -21,10 +21,12 @@ services:
       - QdrantSettings__Port=6334
       - QdrantSettings__ApiKey=mangas_qdrant_key
       - EmbeddingSettings__Host=http://embedding-service:8222
+      - Firebase__CredentialPath=/app/secrets/firebase.json
     volumes:
       - ./images:/app/images
       - ./MangaScrapper/provider:/app/provider:ro
       - ./keys:/app/temp-keys
+      - ./MangaScrapper/secrets:/app/secrets:ro
     depends_on:
       - mongodb
 

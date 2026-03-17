@@ -10,6 +10,8 @@ public class MongoContext
     public IMongoDatabase Database { get; }
     public IMongoCollection<MangaDocument> Mangas { get; }
     public IMongoCollection<UserDocument> Users { get; }
+    public IMongoCollection<UserLibraryDocument> UserLibraries { get; }
+    public IMongoCollection<UserProgressionDocument> UserProgressions { get; }
 
     public MongoContext(IOptions<MongoSettings> settings)
     {
@@ -19,5 +21,7 @@ public class MongoContext
         Database = client.GetDatabase(settings.Value.DatabaseName);
         Mangas = Database.GetCollection<MangaDocument>("mangas");
         Users = Database.GetCollection<UserDocument>("users");
+        UserLibraries = Database.GetCollection<UserLibraryDocument>("user_libraries");
+        UserProgressions = Database.GetCollection<UserProgressionDocument>("user_progressions");
     }
 }

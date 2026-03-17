@@ -10,6 +10,10 @@ using MangaScrapper.Components;
 using MangaScrapper.Features.ScrapperKomiku.Services;
 using MangaScrapper.Features.ScrapperKiryuu;
 using MangaScrapper.Features.ScrapperKiryuu.Services;
+using MangaScrapper.Features.UserLibrary.Services;
+using MangaScrapper.Features.UserProgression.Services;
+using FirebaseAdmin;
+using Google.Apis.Auth.OAuth2;
 using MangaScrapper.Infrastructure.Mongo;
 using MangaScrapper.Infrastructure.Mongo.Collections;
 using MangaScrapper.Infrastructure.Repositories;
@@ -53,6 +57,26 @@ builder.Services.AddAuthorization();
 builder.Services.AddFastEndpoints()
     .AddResponseCaching()
     .SwaggerDocument(o => o.AutoTagPathSegmentIndex = 2);
+
+try 
+{
+    var credentialPath = builder.Configuration["Firebase:CredentialPath"];
+    if (!string.IsNullOrEmpty(credentialPath) && File.Exists(credentialPath))
+    {
+        Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", credentialPath);
+        FirebaseApp.Create();
+        Console.WriteLine($"FirebaseApp initialized with credentials from: {credentialPath}");
+    }
+    else
+    {
+        FirebaseApp.Create();
+        Console.WriteLine("FirebaseApp initialized with default credentials.");
+    }
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"FirebaseApp initialization failed: {ex.Message}");
+}
 
 var keysFolder = Path.Combine(builder.Environment.ContentRootPath, "temp-keys");
 
@@ -107,7 +131,10 @@ builder.Services.AddSingleton(sp =>
     return new SemaphoreSlim(settings.MaxParallelDownloads);
 });
 builder.Services.AddScoped<IMangaRepository, MangaRepository>();
-
+builder.Services.AddScoped<IUserLibraryRepository, UserLibraryRepository>();
+builder.Services.AddScoped<IUserProgressionRepository, UserProgressionRepository>();
+builder.Services.AddScoped<IUserLibraryService, UserLibraryService>();
+builder.Services.AddScoped<IUserProgressionService, UserProgressionService>();
 
 
 // Configure Hangfire with MongoDB
@@ -198,6 +225,20 @@ using (var scope = app.Services.CreateScope())
     await mongoContext.Mangas.Indexes.CreateOneAsync(
         new CreateIndexModel<MangaDocument>(
             Builders<MangaDocument>.IndexKeys.Ascending(m => m.Title),
+            new CreateIndexOptions { Unique = true }
+        )
+    );
+
+    await mongoContext.UserLibraries.Indexes.CreateOneAsync(
+        new CreateIndexModel<UserLibraryDocument>(
+            Builders<UserLibraryDocument>.IndexKeys.Ascending(ul => ul.UserId).Ascending(ul => ul.MangaId),
+            new CreateIndexOptions { Unique = true }
+        )
+    );
+
+    await mongoContext.UserProgressions.Indexes.CreateOneAsync(
+        new CreateIndexModel<UserProgressionDocument>(
+            Builders<UserProgressionDocument>.IndexKeys.Ascending(up => up.UserId).Ascending(up => up.MangaId).Ascending(up => up.ChapterId),
             new CreateIndexOptions { Unique = true }
         )
     );

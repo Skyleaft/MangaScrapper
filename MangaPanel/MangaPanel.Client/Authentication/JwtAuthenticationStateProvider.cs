@@ -27,6 +27,7 @@ public class JwtAuthenticationStateProvider : AuthenticationStateProvider
 
             var claims = new List<Claim>
             {
+                new Claim(ClaimTypes.NameIdentifier, userInfo.UserId),
                 new Claim(ClaimTypes.Name, userInfo.Username),
                 new Claim("Username", userInfo.Username),
                 new Claim(ClaimTypes.Email,userInfo.Email)

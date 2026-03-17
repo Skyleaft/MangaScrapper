@@ -9,3 +9,5 @@ package-lock.json
 MangaScrapper.Shared/obj
 MangaScrapper/temp-keys
 .vs
+MangaScrapper/appsettings.Development.json
+MangaScrapper/secrets/mykomikid-firebase-adminsdk-fbsvc-74f8b57641.json

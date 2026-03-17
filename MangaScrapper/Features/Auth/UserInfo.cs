@@ -22,6 +22,7 @@ public class UserInfo : EndpointWithoutRequest<UserInfoResponse>
         await Send.OkAsync(new UserInfoResponse
         {
             IsAuthenticated = true,
+            UserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty,
             Username = User.FindFirst("Username")?.Value ?? string.Empty,
             Email = User.FindFirst(ClaimTypes.Email)?.Value ?? string.Empty,
             Roles = User.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList()
