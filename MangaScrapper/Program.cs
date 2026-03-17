@@ -17,6 +17,7 @@ using Google.Apis.Auth.OAuth2;
 using MangaScrapper.Infrastructure.Mongo;
 using MangaScrapper.Infrastructure.Mongo.Collections;
 using MangaScrapper.Infrastructure.Repositories;
+using MangaScrapper.Infrastructure.Security;
 using MangaScrapper.Infrastructure.Services;
 using MangaScrapper.Infrastructure.BackgroundJobs;
 using MangaScrapper.Infrastructure.Models;
@@ -40,9 +41,13 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveWebAssemblyComponents();
 
-builder.Services.AddAuthenticationJwtBearer(s => s.SigningKey = builder.Configuration["JwtSigningKey"] ?? "a_very_secret_key_that_is_at_least_32_chars_long!!");
-builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
-    .AddCookie(options =>
+builder.Services.AddAuthentication(o =>
+    {
+        o.DefaultScheme = "CustomAuth";
+        o.DefaultAuthenticateScheme = "CustomAuth";
+        o.DefaultChallengeScheme = "CustomAuth";
+    })
+    .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, options =>
     {
         options.ExpireTimeSpan = TimeSpan.FromDays(3);
         options.SlidingExpiration = true;
@@ -51,7 +56,8 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.LogoutPath = "/api/auth/logout";
         options.Cookie.SameSite = SameSiteMode.Lax;
         options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
-    });
+    })
+    .AddScheme<CustomAuthSchemeOptions, CustomAuthValidation>("CustomAuth", null);
 builder.Services.AddAuthorization();
 
 builder.Services.AddFastEndpoints()
