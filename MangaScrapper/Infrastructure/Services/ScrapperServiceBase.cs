@@ -15,7 +15,7 @@ using SixLabors.ImageSharp.Formats.Webp;
 
 namespace MangaScrapper.Infrastructure.Services;
 
-public abstract class ScrapperServiceBase
+public abstract class ScrapperServiceBase : IScrapperService
 {
     protected readonly HttpClient HttpClient;
     protected readonly IMangaRepository MangaRepository;
@@ -449,6 +449,23 @@ public abstract class ScrapperServiceBase
     }
 
     public abstract Task<List<SearchItem>> SearchManga(SearchRequest request, CancellationToken ct);
+
+    protected async Task EnrichSearchItemAsync(SearchItem item, CancellationToken ct)
+    {
+        if (string.IsNullOrEmpty(item.Title)) return;
+        
+        var searchmanga = await MeilisearchService.SearchTittleAsync(item.Title, ct);
+        if (searchmanga != null)
+        {
+            if (StringHelper.CalculateSimilarity(searchmanga.Title, item.Title) >= 0.8)
+            {
+                var currentManga = await MangaRepository.GetByIdAsync(Guid.Parse(searchmanga.Id), ct);
+                item.LatestScrapped = currentManga?.UpdatedAt;
+                item.CurrentChapterNumber = currentManga?.Chapters?.Any() == true ? currentManga.Chapters.Max(c => c.Number) : 0;
+                item.MangaId = currentManga?.Id;
+            }
+        }
+    }
 
     public async Task<List<ChapterDocument>> GetAllChapters(string url, CancellationToken ct = default)
     {

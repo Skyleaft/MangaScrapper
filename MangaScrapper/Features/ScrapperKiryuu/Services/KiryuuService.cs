@@ -175,23 +175,18 @@ public class KiryuuService : ScrapperServiceBase
                 var timeNode = card.SelectSingleNode(".//div[contains(@class,'group-data-[mode=horizontal]')]//a[1]//time");
                 var latestTimeText = timeNode?.InnerText.Trim();
 
-                var searchmanga = await MeilisearchService.SearchTittleAsync(title!,ct);
-                MangaDocument? currentManga = null;
-                if (searchmanga != null)
-                {
-                    if(StringHelper.CalculateSimilarity(searchmanga.Title,title)>=0.8)
-                        currentManga = await MangaRepository.GetByIdAsync(Guid.Parse(searchmanga.Id),ct);
-                }
-
-                data.Add(new SearchItem
+                var item = new SearchItem
                 {
                     Title = title,
                     DetailUrl = link,
                     Thumbnail = thumb,
                     LatestChapterNumber = chapterNumber,
-                    LastUpdateText = latestTimeText,
-                    LatestScrapped = currentManga?.UpdatedAt
-                });
+                    LastUpdateText = latestTimeText
+                };
+
+                await EnrichSearchItemAsync(item, ct);
+
+                data.Add(item);
             }
         }
 

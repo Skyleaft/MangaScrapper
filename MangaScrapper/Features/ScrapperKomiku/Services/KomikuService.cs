@@ -151,15 +151,7 @@ public class KomikuService : ScrapperServiceBase
                     }
                 }
 
-                var searchmanga = await MeilisearchService.SearchTittleAsync(item.Title!,ct);
-                MangaDocument? currentManga = null;
-                if (searchmanga != null)
-                {
-                    if(StringHelper.CalculateSimilarity(searchmanga.Title,item.Title)>=0.8)
-                        currentManga = await MangaRepository.GetByIdAsync(Guid.Parse(searchmanga.Id),ct);
-                }
-                
-                item.LatestScrapped = currentManga?.UpdatedAt ?? null;
+                await EnrichSearchItemAsync(item, ct);
 
                 results.Add(item);
             }

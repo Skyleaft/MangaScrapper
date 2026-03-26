@@ -10,4 +10,6 @@ public class SearchItem
     public string LastUpdateText { get; set; } = string.Empty;
     public double LatestChapterNumber { get; set; }
     public DateTime? LatestScrapped { get; set; }
+    public double CurrentChapterNumber { get; set; }
+    public Guid? MangaId { get; set; }
 }
