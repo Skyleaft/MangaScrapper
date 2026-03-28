@@ -195,6 +195,7 @@ public class MeilisearchService
             "totalview" => "totalView",
             "popularity" => "popularity",
             "rating" => "rating",
+            "releasedate"=>"releaseDate",
             _ => "updatedAtTimestamp" // default: updatedAt
         };
 
