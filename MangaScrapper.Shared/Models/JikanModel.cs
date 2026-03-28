@@ -1,11 +1,6 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 
-namespace MangaScrapper.Infrastructure.Models;
-
-public class JikanModel
-{
-    
-}
+namespace MangaScrapper.Shared.Models;
 
 public class JikanMangaSearchDto
 {
@@ -46,8 +41,9 @@ public class JikanMangaItem
 
     [JsonPropertyName("title_japanese")]
     public string? TitleJapanese { get; set; }
+    
     [JsonPropertyName("title_synonyms")]
-    public List<String>? TitleSynonyms { get; set; }
+    public List<string>? TitleSynonyms { get; set; }
 
     [JsonPropertyName("type")]
     public string? Type { get; set; }
@@ -78,8 +74,10 @@ public class JikanMangaItem
 
     [JsonPropertyName("published")]
     public JikanPublished? Published { get; set; }
+    
     [JsonPropertyName("popularity")]
     public int Popularity { get; set; }
+    
     [JsonPropertyName("members")]
     public int Members { get; set; }
 }
@@ -158,19 +156,4 @@ public class JikanPagination
 
     [JsonPropertyName("current_page")]
     public int CurrentPage { get; set; }
-
-    [JsonPropertyName("items")]
-    public JikanPaginationItems? Items { get; set; }
-}
-
-public class JikanPaginationItems
-{
-    [JsonPropertyName("count")]
-    public int Count { get; set; }
-
-    [JsonPropertyName("total")]
-    public int Total { get; set; }
-
-    [JsonPropertyName("per_page")]
-    public int PerPage { get; set; }
 }

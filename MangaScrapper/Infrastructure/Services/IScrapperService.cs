@@ -1,5 +1,6 @@
 using HtmlAgilityPack;
 using MangaScrapper.Infrastructure.Models;
+using MangaScrapper.Shared.Models;
 using MangaScrapper.Infrastructure.Mongo.Collections;
 
 namespace MangaScrapper.Infrastructure.Services;
@@ -17,6 +18,7 @@ public interface IScrapperService
     Task<ChapterDocument> GetChapterPage(string mangaTitle, ChapterDocument chapter, CancellationToken ct = default);
     Task QueueChapterScraping(Guid mangaId, string mangaTitle, ChapterDocument chapter);
     Task<List<SearchItem>> SearchManga(SearchRequest request, CancellationToken ct);
+    Task<List<JikanMangaItem>> SearchJikan(string title, CancellationToken ct = default);
     Task<List<ChapterDocument>> GetAllChapters(string url, CancellationToken ct = default);
     Task<List<PageDocument>> GetAllPages(string url, CancellationToken ct = default);
     Task<List<ScrapperProvider>> GetAllProvider();

@@ -5,6 +5,7 @@ using System.Web;
 using HtmlAgilityPack;
 using MangaScrapper.Infrastructure.BackgroundJobs;
 using MangaScrapper.Infrastructure.Models;
+using MangaScrapper.Shared.Models;
 using MangaScrapper.Infrastructure.Mongo.Collections;
 using MangaScrapper.Infrastructure.Repositories;
 using MangaScrapper.Infrastructure.Utils;
@@ -200,24 +201,30 @@ public abstract class ScrapperServiceBase : IScrapperService
         return string.Equals(Path.GetExtension(uri.AbsolutePath), ".webp", StringComparison.OrdinalIgnoreCase);
     }
 
-    public async Task<JikanMangaItem?> GetMangaInfo(string title, string type, CancellationToken ct = default)
+    public async Task<List<JikanMangaItem>> SearchJikan(string title, CancellationToken ct = default)
     {
         var query = HttpUtility.ParseQueryString(string.Empty);
         query["q"] = title;
-        query["type"] = type;
-        query["limit"] = "1";
+        query["limit"] = "10";
         
         var url = $"https://api.jikan.moe/v4/manga?{query}";
         try
         {
             var response = await HttpClient.GetFromJsonAsync<JikanMangaResponse>(url, ct);
-            return response?.Data?.FirstOrDefault();
+            return response?.Data ?? new List<JikanMangaItem>();
         }
         catch (Exception)
         {
-            return null;
+            return new List<JikanMangaItem>();
         }
     }
+
+    public async Task<JikanMangaItem?> GetMangaInfo(string title, string type, CancellationToken ct = default)
+    {
+        var results = await SearchJikan(title, ct);
+        return results.FirstOrDefault(x => string.Equals(x.Type, type, StringComparison.OrdinalIgnoreCase)) ?? results.FirstOrDefault();
+    }
+    
     public async Task<JikanMangaItem?> GetMangaInfoById(int malId, CancellationToken ct = default)
     {
         var url = $"https://api.jikan.moe/v4/manga/{malId}";

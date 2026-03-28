@@ -105,7 +105,12 @@
                                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
                                             <div class="space-y-1.5">
                                                 <label class="text-xs font-bold text-slate-600 dark:text-slate-400 ml-1">MAL ID</label>
-                                                <input type="number" @bind="EditModel.MalId" class="w-full px-4 py-2.5 bg-bg-app border border-border-main rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-400 text-sm text-text-main" placeholder="e.g. 123456" />
+                                                <div class="flex gap-2">
+                                                    <input type="number" @bind="EditModel.MalId" class="flex-grow px-4 py-2.5 bg-bg-app border border-border-main rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-400 text-sm text-text-main" placeholder="e.g. 123456" />
+                                                    <button @onclick="OpenJikanSearch" class="p-2.5 bg-primary/10 text-primary hover:bg-primary/20 rounded-xl transition-all" title="Search MyAnimeList">
+                                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                                                    </button>
+                                                </div>
                                             </div>
                                             <div class="space-y-1.5">
                                                 <label class="text-xs font-bold text-slate-600 dark:text-slate-400 ml-1">Author</label>
@@ -252,6 +257,72 @@
                 </button>
             </div>
         </div>
+
+        @if (_isSearchJikanOpen)
+        {
+            <div class="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-backdrop-in">
+                <div class="bg-surface rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col border border-border-main animate-modal-in z-[210]">
+                    <div class="px-6 py-4 border-b border-border-main flex items-center justify-between bg-surface">
+                        <h3 class="text-lg font-bold text-text-main">Search MyAnimeList</h3>
+                        <button @onclick="() => _isSearchJikanOpen = false" class="p-2 hover:bg-bg-app rounded-full transition-colors">
+                            <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div>
+                    
+                    <div class="p-4 bg-bg-app border-b border-border-main">
+                        <div class="relative">
+                            <input type="text" @bind="_jikanSearchQuery" @bind:event="oninput" @onkeyup="HandleJikanSearchKeyUp" class="w-full pl-10 pr-4 py-3 bg-surface border border-border-main rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm text-text-main" placeholder="Manga title..." />
+                            <svg class="absolute left-3.5 top-3.5 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                            @if (_isSearchingJikan)
+                            {
+                                <div class="absolute right-3.5 top-3.5 w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="flex-grow overflow-y-auto p-4 space-y-3">
+                        @if (!_jikanSearchResults.Any())
+                        {
+                            @if (_isSearchingJikan)
+                            {
+                                <div class="py-12 text-center text-slate-400">Searching Jikan...</div>
+                            }
+                            else
+                            {
+                                <div class="py-12 text-center text-slate-400 italic">No results found or search started</div>
+                            }
+                        }
+                        else
+                        {
+                            @foreach (var item in _jikanSearchResults)
+                            {
+                                <div class="flex gap-4 p-3 bg-surface border border-border-main rounded-xl hover:border-primary/50 transition-colors group">
+                                    <img src="@item.Images?.Jpg?.ImageUrl" class="w-16 h-24 object-cover rounded-lg shadow-sm" />
+                                    <div class="flex-grow min-w-0">
+                                        <h4 class="font-bold text-sm text-text-main truncate">@item.Title</h4>
+                                        <div class="text-[10px] text-slate-400 flex flex-wrap gap-2 mt-1">
+                                            <span>@item.Type</span>
+                                            <span>•</span>
+                                            <span>@item.Authors.FirstOrDefault()?.Name</span>
+                                            <span>•</span>
+                                            <span>@item.Status</span>
+                                            <span>•</span>
+                                            <span class="text-amber-500 font-bold">★ @item.Score</span>
+                                        </div>
+                                        <p class="text-[10px] text-slate-500 line-clamp-2 mt-1">@item.Synopsis</p>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <button @onclick="() => SyncJikanResult(item)" class="flex items-center gap-1.5 px-3 py-1.5 text-primary hover:bg-primary/10 font-bold text-xs rounded-xl transition-all" title="Sync this result">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+            </div>
+        }
     </div>
 @* End of modal *@
 
@@ -267,6 +338,11 @@
     private bool IsLoading { get; set; } = true;
     private bool IsSaving { get; set; } = false;
     private bool _isClosing = false;
+    
+    private bool _isSearchJikanOpen = false;
+    private string _jikanSearchQuery = "";
+    private List<JikanMangaItem> _jikanSearchResults = new();
+    private bool _isSearchingJikan = false;
 
 
     private string GenresString => EditModel.Genres != null ? string.Join(", ", EditModel.Genres) : "";
@@ -429,6 +505,82 @@
         StateHasChanged();
         await Task.Delay(300); // Wait for animation
         await OnClosed.InvokeAsync();
+    }
+
+    private void OpenJikanSearch()
+    {
+        _jikanSearchQuery = Manga?.Title ?? "";
+        _jikanSearchResults.Clear();
+        _isSearchJikanOpen = true;
+        if (!string.IsNullOrEmpty(_jikanSearchQuery))
+        {
+            _ = SearchJikan();
+        }
+    }
+
+    private async Task HandleJikanSearchKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await SearchJikan();
+        }
+    }
+
+    private async Task SearchJikan()
+    {
+        if (string.IsNullOrWhiteSpace(_jikanSearchQuery)) return;
+        
+        _isSearchingJikan = true;
+        StateHasChanged();
+        
+        try
+        {
+            var results = await Http.GetFromJsonAsync<List<JikanMangaItem>>($"/api/scrapper/jikan/search?title={Uri.EscapeDataString(_jikanSearchQuery)}");
+            _jikanSearchResults = results ?? new();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error searching Jikan: {ex.Message}");
+        }
+        finally
+        {
+            _isSearchingJikan = false;
+            StateHasChanged();
+        }
+    }
+
+    private void SyncJikanResult(JikanMangaItem item)
+    {
+        EditModel.MalId = item.MalId;
+        EditModel.Author = item.Authors.FirstOrDefault()?.Name ?? EditModel.Author;
+        EditModel.Rating = item.Score;
+        EditModel.ReleaseDate = item.Published?.From;
+        
+        EditModel.Status = item.Status switch
+        {
+            "Finished" => "Completed",
+            "Complete" => "Completed",
+            "Publishing" => "Ongoing",
+            "On Hiatus" => "On Hiatus",
+            "Hiatus" => "On Hiatus",
+            "Discontinued" => "Discontinued",
+            "Upcoming" => "Upcoming",
+            _ => item.Status
+        };
+
+
+        if (item.Genres != null)
+        {
+            EditModel.Genres = item.Genres.Select(x => x.Name).Where(x => x != null).Cast<string>().ToList();
+        }
+        
+        if (string.IsNullOrEmpty(EditModel.Description))
+        {
+            EditModel.Description = item.Synopsis;
+        }
+
+        _isSearchJikanOpen = false;
+        StateHasChanged();
     }
 
 
