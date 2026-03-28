@@ -9,7 +9,6 @@ public class Endpoint(IMangaRepository mangaRepository, MeilisearchService meili
     public override void Configure()
     {
         Put("/api/manga/{Id}");
-        AllowAnonymous();
     }
 
     public override async Task HandleAsync(Request r, CancellationToken ct)
@@ -31,6 +30,8 @@ public class Endpoint(IMangaRepository mangaRepository, MeilisearchService meili
         manga.ReleaseDate = r.ReleaseDate;
         manga.Status = r.Status;
         manga.TotalView = r.TotalView;
+        manga.Popularity = r.Popularity;
+        manga.Members = r.Members;
         manga.UpdatedAt = DateTime.UtcNow;
 
         await mangaRepository.UpdateAsync(manga, ct);

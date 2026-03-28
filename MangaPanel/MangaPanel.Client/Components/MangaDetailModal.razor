@@ -132,9 +132,17 @@
                                                 <label class="text-xs font-bold text-slate-600 dark:text-slate-400 ml-1">Release Date</label>
                                                 <input type="date" @bind="EditModel.ReleaseDate" class="w-full px-4 py-2.5 bg-bg-app border border-border-main rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm text-text-main" />
                                             </div>
-                                            <div class="space-y-1.5 lg:col-span-2">
+                                            <div class="space-y-1.5">
                                                 <label class="text-xs font-bold text-slate-600 dark:text-slate-400 ml-1">Total View</label>
-                                                <input type="number" @bind="Manga.TotalView" class="w-full px-4 py-2.5 bg-bg-app border border-border-main rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-400 text-sm text-text-main" />
+                                                <input type="number" @bind="EditModel.TotalView" class="w-full px-4 py-2.5 bg-bg-app border border-border-main rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-400 text-sm text-text-main" />
+                                            </div>
+                                            <div class="space-y-1.5">
+                                                <label class="text-xs font-bold text-slate-600 dark:text-slate-400 ml-1">Popularity</label>
+                                                <input type="number" @bind="EditModel.Popularity" class="w-full px-4 py-2.5 bg-bg-app border border-border-main rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-400 text-sm text-text-main" />
+                                            </div>
+                                            <div class="space-y-1.5">
+                                                <label class="text-xs font-bold text-slate-600 dark:text-slate-400 ml-1">Members</label>
+                                                <input type="number" @bind="EditModel.Members" class="w-full px-4 py-2.5 bg-bg-app border border-border-main rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-400 text-sm text-text-main" />
                                             </div>
 
                                         </div>
@@ -381,7 +389,9 @@
                     Rating = Manga.Rating,
                     ReleaseDate = Manga.ReleaseDate,
                     Status = Manga.Status,
-                    TotalView = Manga.TotalView
+                    TotalView = Manga.TotalView,
+                    Popularity = Manga.Popularity,
+                    Members = Manga.Members
                 };
             }
         }
@@ -413,9 +423,6 @@
         IsSaving = true;
         try
         {
-            // Sync TotalView from Manga object back to EditModel before saving
-            if (Manga != null) EditModel.TotalView = Manga.TotalView;
-
             var response = await Http.PutAsJsonAsync($"/api/manga/{MangaId}", EditModel);
             if (response.IsSuccessStatusCode)
             {
@@ -555,6 +562,8 @@
         EditModel.Author = item.Authors.FirstOrDefault()?.Name ?? EditModel.Author;
         EditModel.Rating = item.Score;
         EditModel.ReleaseDate = item.Published?.From;
+        EditModel.Popularity = item.Popularity;
+        EditModel.Members = item.Members;
         
         EditModel.Status = item.Status switch
         {
@@ -596,6 +605,8 @@
         public DateTime? ReleaseDate { get; set; }
         public string? Status { get; set; }
         public int TotalView { get; set; }
+        public int Popularity { get; set; }
+        public int Members { get; set; }
     }
 
     public class ChapterResponse

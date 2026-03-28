@@ -8,7 +8,6 @@ public class Endpoint(IMangaRepository mangaRepository) : Endpoint<Request, Resp
     public override void Configure()
     {
         Get("/api/manga/{MangaId}");
-        ResponseCache(60 * 60 * 3);
         AllowAnonymous();
     }
 

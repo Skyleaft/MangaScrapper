@@ -14,4 +14,6 @@ public class Request
     public DateTime? ReleaseDate { get; set; }
     public string? Status { get; set; }
     public int TotalView { get; set; }
+    public int Popularity { get; set; }
+    public int Members { get; set; }
 }

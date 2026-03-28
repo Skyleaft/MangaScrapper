@@ -12,6 +12,7 @@ public class MeiliMangaDocument
     public double? Rating { get; set; }
     public int Popularity { get; set; }
     public int TotalView { get; set; }
+    public long ReleaseDate { get; set; }
     public string? ImageUrl { get; set; } = string.Empty;
     public string? LocalImageUrl { get; set; }
     public int TotalChapters { get; set; }

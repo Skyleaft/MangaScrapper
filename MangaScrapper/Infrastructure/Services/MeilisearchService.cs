@@ -53,7 +53,8 @@ public class MeilisearchService
             "genres",
             "rating",
             "popularity",
-            "totalView"
+            "totalView",
+            "releaseDate"
         });
 
         await index.UpdateSortableAttributesAsync(new[]
@@ -62,6 +63,7 @@ public class MeilisearchService
             "rating",
             "popularity",
             "totalView",
+            "releaseDate",
             "createdAtTimestamp",
             "updatedAtTimestamp"
         });
@@ -131,19 +133,19 @@ public class MeilisearchService
         _logger.LogInformation("Deleted manga (ID: {Id}) from Meilisearch index.", id);
     }
 
-    public async Task<MeiliMangaDocument?> SearchTittleAsync(string title,CancellationToken ct = default)
+    public async Task<MeiliMangaDocument?> SearchTittleAsync(string title, CancellationToken ct = default)
     {
         var index = _client.Index(IndexName);
         var searchQuery = new SearchQuery
         {
-            AttributesToHighlight = new []{"title"},
+            AttributesToHighlight = new[] { "title" },
             ShowRankingScore = true,
             HitsPerPage = 1,
             Page = 1
         };
 
         var result = await index.SearchAsync<MeiliMangaDocument>(title, searchQuery, ct);
-        
+
         return result.Hits.FirstOrDefault()!;
     }
 
@@ -227,7 +229,8 @@ public class MeilisearchService
             Status = manga.Status,
             Rating = manga.Rating,
             Popularity = manga.Popularity,
-            TotalView = manga.TotalView,
+            TotalView = manga.TotalView + (manga.Chapters?.Sum(c => c.TotalView) ?? 0),
+            ReleaseDate = manga.ReleaseDate.HasValue ? ((DateTimeOffset)manga.ReleaseDate.Value.ToUniversalTime()).ToUnixTimeSeconds() : 0,
             ImageUrl = manga.ImageUrl,
             LocalImageUrl = manga.LocalImageUrl,
             TotalChapters = manga.Chapters?.Count ?? 0,
