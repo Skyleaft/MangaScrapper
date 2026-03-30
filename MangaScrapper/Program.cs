@@ -90,8 +90,10 @@ builder.Services.AddDataProtection()
     .PersistKeysToFileSystem(new DirectoryInfo(keysFolder))
     .SetApplicationName("MangaScrapper");
 
-// CORS configuration from appsettings.json (section: Cors)
-var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+// CORS configuration from appsettings.json or environment variables (section: Cors)
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() 
+                     ?? builder.Configuration.GetValue<string>("Cors:AllowedOrigins")?.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                     ?? Array.Empty<string>();
 var allowCredentials = builder.Configuration.GetValue<bool?>("Cors:AllowCredentials") ?? false;
 
 builder.Services.AddCors(options =>
@@ -250,6 +252,9 @@ using (var scope = app.Services.CreateScope())
     );
 }
 
+// Apply CORS policy before Authentication/Authorization and Endpoints
+app.UseCors("ConfiguredCors");
+
 app.UseAuthentication()
    .UseAuthorization();
 
@@ -261,9 +266,6 @@ app.MapHangfireDashboard("/hangfire",new DashboardOptions()
 
 
 app.UseResponseCaching().UseFastEndpoints();
-
-// Apply CORS policy
-app.UseCors("ConfiguredCors");
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
