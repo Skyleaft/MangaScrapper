@@ -309,6 +309,11 @@ public abstract class ScrapperServiceBase : IScrapperService
             var doc = await GetHtml(url, ct: ct);
             var mangaData = ExtractMangaMetadata(doc);
             mangaData.Url = url;
+
+            if (string.IsNullOrEmpty(mangaData.Title))
+            {
+                throw new ArgumentException("Missing Manga Title!");
+            }
             
             var searchmanga = await MeilisearchService.SearchTittleAsync(mangaData.Title, ct);
             MangaDocument? existingManga = null;

@@ -32,7 +32,7 @@ public class KomikuService : ScrapperServiceBase
 
     protected override MangaDocument ExtractMangaMetadata(HtmlDocument doc)
     {
-        return new MangaDocument
+        var mangaData = new MangaDocument
         {
             Title = HttpUtility.HtmlDecode(doc.DocumentNode.SelectSingleNode(Provider.MangaSelectors.Title)?.InnerText.Trim() ?? string.Empty),
             Author = doc.DocumentNode.SelectSingleNode(Provider.MangaSelectors.Author)?.InnerText.Trim() ?? string.Empty,
@@ -41,6 +41,17 @@ public class KomikuService : ScrapperServiceBase
             ImageUrl = doc.DocumentNode.SelectSingleNode(Provider.MangaSelectors.Thumbnail)?.GetAttributeValue("src", string.Empty),
             Genres = doc.DocumentNode.SelectNodes(Provider.MangaSelectors.Genres)?.Select(n => n.InnerText.Trim()).ToList()
         };
+        if (string.IsNullOrEmpty(mangaData.Title))
+        {
+            mangaData.Title =
+                HttpUtility.HtmlDecode(
+                    doc.DocumentNode.SelectSingleNode("//td[text()='Judul:']/following-sibling::td")?.InnerText.Trim() ?? string.Empty);
+            mangaData.Author = doc.DocumentNode.SelectSingleNode("//td[text()='Author:']/following-sibling::td")?.InnerText.Trim() ??
+                               string.Empty;
+            mangaData.Type = doc.DocumentNode.SelectSingleNode("//td[text()='Tipe:']/following-sibling::td")?.InnerText.Trim() ??
+                             string.Empty;
+        }
+        return mangaData;
     }
 
     protected override Task<List<ChapterDocument>> ExtractChapters(HtmlDocument doc, CancellationToken ct = default)
