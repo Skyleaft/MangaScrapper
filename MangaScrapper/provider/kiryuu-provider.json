@@ -1,7 +1,7 @@
 {
   "ProviderName": "Kiryuu",
-  "BaseUrl": "https://v2.kiryuu.to/",
-  "ProviderIcon": "https://v2.kiryuu.to/wp-content/uploads/2021/10/cropped-logo-icon-kiryuu-1-456248-udlqjluy-194445-3fNc9Wlc-192x192.png",
+  "BaseUrl": "https://v3.kiryuu.to/",
+  "ProviderIcon": "https://v3.kiryuu.to/wp-content/uploads/2021/10/cropped-logo-icon-kiryuu-1-456248-udlqjluy-194445-3fNc9Wlc-192x192.png",
   "MangaSelectors": {
     "Title": "//td[text()='Judul Komik']/following-sibling::td",
     "Author": "//td[text()='Pengarang']/following-sibling::td",
