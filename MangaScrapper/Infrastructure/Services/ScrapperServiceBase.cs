@@ -302,6 +302,18 @@ public abstract class ScrapperServiceBase : IScrapperService
         return mangaData;
     }
 
+    private void UpdateChapterViews(MangaDocument existingManga, List<ChapterDocument> chapterDocuments)
+    {
+        foreach (var item in existingManga.Chapters)
+        {
+            var chapIndex = chapterDocuments.FirstOrDefault(x => x.Number == item.Number);
+            if (chapIndex!=null &&item.TotalView < chapIndex.TotalView)
+            {
+                item.TotalView = chapIndex.TotalView;
+            }
+        }
+    }
+
     public async Task<MangaDocument> ExtractManga(string url, CancellationToken ct, bool scrapChapters = true)
     {
         try
@@ -346,6 +358,7 @@ public abstract class ScrapperServiceBase : IScrapperService
                 }
 
                 existingManga = await UpdateMangaDocument(existingManga, ct);
+                UpdateChapterViews(existingManga,chapters);
                 await MangaRepository.UpdateAsync(existingManga, ct);
                 await MeilisearchService.IndexMangaAsync(existingManga, ct);
                 await QdrantService.UpsertMangaAsync(existingManga, ct);

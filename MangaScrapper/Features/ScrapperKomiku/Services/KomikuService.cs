@@ -56,12 +56,58 @@ public class KomikuService : ScrapperServiceBase
         }
         return mangaData;
     }
+    
+    private static List<int> GenerateChapterViews(int totalViews, int chapterCount)
+    {
+        var rand = new Random();
+
+        // Step 1: generate weight (awal lebih besar)
+        var weights = new double[chapterCount];
+
+        for (int i = 0; i < chapterCount; i++)
+        {
+            // contoh: decreasing weight
+            var baseWeight = (chapterCount - i);
+
+            // tambahin randomness biar ga terlalu linear
+            weights[i] = baseWeight * (0.7 + rand.NextDouble() * 0.6);
+        }
+
+        var weightSum = weights.Sum();
+
+        // Step 2: convert ke view
+        var views = weights
+            .Select(w => (int)Math.Floor(w / weightSum * totalViews))
+            .ToList();
+
+        // Step 3: fix rounding (biar total pas)
+        var diff = totalViews - views.Sum();
+
+        // distribute sisa ke random chapter
+        for (int i = 0; i < diff; i++)
+        {
+            views[rand.Next(chapterCount)]++;
+        }
+
+        return views;
+    }
 
     protected override Task<List<ChapterDocument>> ExtractChaptersMetadata( CancellationToken ct = default)
     {
         var chapters = new List<ChapterDocument>();
         var chapterRows = doc.DocumentNode.SelectNodes(Provider.ChapterSelectors.Rows);
         if (chapterRows == null) return Task.FromResult(chapters);
+
+        var dViews =
+            HttpUtility.HtmlDecode(doc.DocumentNode.SelectSingleNode("//td[text()='Pembaca:']/following-sibling::td")?.InnerText.Trim() ??
+                                   string.Empty);
+        var total = int.Parse(
+            dViews.Split(',')[0] // "Total: 1462"
+                .Split(':')[1] // " 1462"
+                .Trim());
+
+        var viewsGenerated = GenerateChapterViews(total, chapterRows.Count);
+        var index = chapterRows.Count -1;
 
         foreach (var row in chapterRows)
         {
@@ -78,6 +124,12 @@ public class KomikuService : ScrapperServiceBase
             var uploadDate = DateTime.TryParseExact(dateText, "dd/MM/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date)
                 ? date
                 : DateTime.MinValue;
+
+            if (totalView == 0)
+            {
+                totalView = viewsGenerated[index];
+                index--;
+            }
 
             chapters.Add(new ChapterDocument
             {
