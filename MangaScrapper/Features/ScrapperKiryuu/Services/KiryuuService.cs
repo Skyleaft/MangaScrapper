@@ -31,8 +31,11 @@ public class KiryuuService : ScrapperServiceBase
         LoadProvider("kiryuu-provider.json");
     }
 
-    protected override MangaDocument ExtractMangaMetadata(HtmlDocument doc)
+    private HtmlDocument? doc;
+
+    protected override MangaDocument ExtractMangaMetadata(string url)
     {
+        doc = GetHtml(url).GetAwaiter().GetResult();
         var manga = new MangaDocument
         {
             Title = HttpUtility.HtmlDecode(doc.DocumentNode.SelectSingleNode("//h1[@itemprop='name']")?.InnerText.Trim() ?? string.Empty),
@@ -77,7 +80,7 @@ public class KiryuuService : ScrapperServiceBase
         return manga;
     }
 
-    protected override async Task<List<ChapterDocument>> ExtractChapters(HtmlDocument doc, CancellationToken ct = default)
+    protected override async Task<List<ChapterDocument>> ExtractChaptersMetadata( CancellationToken ct = default)
     {
         var hxNode = doc.DocumentNode.SelectSingleNode("//div[contains(@hx-get,'manga_id=')]");
         var hxGet = hxNode?.GetAttributeValue("hx-get", "");
@@ -87,8 +90,8 @@ public class KiryuuService : ScrapperServiceBase
         if (mangaId == 0) return new List<ChapterDocument>();
 
         var data = new List<ChapterDocument>();
-        var url = $"{Provider.BaseUrl}/wp-admin/admin-ajax.php?manga_id={mangaId}&page=1&action=chapter_list";
-        var chaptersDoc = await GetHtml(url, ct: ct);
+        var cUrl = $"{Provider.BaseUrl}/wp-admin/admin-ajax.php?manga_id={mangaId}&page=1&action=chapter_list";
+        var chaptersDoc = await GetHtml(cUrl, ct: ct);
 
         var chapterNodes = chaptersDoc.DocumentNode.SelectNodes(Provider.ChapterSelectors.Rows);
         if (chapterNodes == null) return data;
@@ -118,13 +121,7 @@ public class KiryuuService : ScrapperServiceBase
 
         return data;
     }
-
-    public async Task<List<ChapterDocument>> GetAllChaptersById(int mangaId)
-    {
-        var url = $"{Provider.BaseUrl}/wp-admin/admin-ajax.php?manga_id={mangaId}&page=1&action=chapter_list";
-        return await GetAllChapters(url);
-    }
-
+    
     public override async Task<List<SearchItem>> SearchManga(SearchRequest request, CancellationToken ct)
     {
         var url = $"{Provider.BaseUrl}/wp-admin/admin-ajax.php?action=advanced_search";

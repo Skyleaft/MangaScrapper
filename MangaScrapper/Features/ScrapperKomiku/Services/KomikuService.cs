@@ -30,8 +30,11 @@ public class KomikuService : ScrapperServiceBase
         LoadProvider("komiku-provider.json");
     }
 
-    protected override MangaDocument ExtractMangaMetadata(HtmlDocument doc)
+    private HtmlDocument? doc;
+
+    protected override MangaDocument ExtractMangaMetadata(string url)
     {
+        doc = GetHtml(url).GetAwaiter().GetResult();
         var mangaData = new MangaDocument
         {
             Title = HttpUtility.HtmlDecode(doc.DocumentNode.SelectSingleNode(Provider.MangaSelectors.Title)?.InnerText.Trim() ?? string.Empty),
@@ -54,7 +57,7 @@ public class KomikuService : ScrapperServiceBase
         return mangaData;
     }
 
-    protected override Task<List<ChapterDocument>> ExtractChapters(HtmlDocument doc, CancellationToken ct = default)
+    protected override Task<List<ChapterDocument>> ExtractChaptersMetadata( CancellationToken ct = default)
     {
         var chapters = new List<ChapterDocument>();
         var chapterRows = doc.DocumentNode.SelectNodes(Provider.ChapterSelectors.Rows);

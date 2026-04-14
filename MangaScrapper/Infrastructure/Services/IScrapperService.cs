@@ -19,7 +19,6 @@ public interface IScrapperService
     Task QueueChapterScraping(Guid mangaId, string mangaTitle, ChapterDocument chapter);
     Task<List<SearchItem>> SearchManga(SearchRequest request, CancellationToken ct);
     Task<List<JikanMangaItem>> SearchJikan(string title, CancellationToken ct = default);
-    Task<List<ChapterDocument>> GetAllChapters(string url, CancellationToken ct = default);
     Task<List<PageDocument>> GetAllPages(string url, CancellationToken ct = default);
     Task<List<ScrapperProvider>> GetAllProvider();
 }

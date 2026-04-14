@@ -306,8 +306,7 @@ public abstract class ScrapperServiceBase : IScrapperService
     {
         try
         {
-            var doc = await GetHtml(url, ct: ct);
-            var mangaData = ExtractMangaMetadata(doc);
+            var mangaData = ExtractMangaMetadata(url);
             mangaData.Url = url;
 
             if (string.IsNullOrEmpty(mangaData.Title))
@@ -323,7 +322,7 @@ public abstract class ScrapperServiceBase : IScrapperService
                     existingManga = await MangaRepository.GetByIdAsync(Guid.Parse(searchmanga.Id),ct);
             }
 
-            var chapters = await ExtractChapters(doc, ct);
+            var chapters = await ExtractChaptersMetadata(ct);
 
             if (existingManga != null)
             {
@@ -382,8 +381,8 @@ public abstract class ScrapperServiceBase : IScrapperService
         }
     }
 
-    protected abstract MangaDocument ExtractMangaMetadata(HtmlDocument doc);
-    protected abstract Task<List<ChapterDocument>> ExtractChapters(HtmlDocument doc, CancellationToken ct = default);
+    protected abstract MangaDocument ExtractMangaMetadata(string url);
+    protected abstract Task<List<ChapterDocument>> ExtractChaptersMetadata(CancellationToken ct = default);
 
     public async Task<ChapterDocument> GetChapterPage(string mangaTitle, ChapterDocument chapter, CancellationToken ct = default)
     {
@@ -478,13 +477,7 @@ public abstract class ScrapperServiceBase : IScrapperService
             }
         }
     }
-
-    public async Task<List<ChapterDocument>> GetAllChapters(string url, CancellationToken ct = default)
-    {
-        var doc = await GetHtml(url, ct: ct);
-        return await ExtractChapters(doc, ct);
-    }
-
+    
     public async Task<List<PageDocument>> GetAllPages(string url, CancellationToken ct = default)
     {
         var chapter = new ChapterDocument { Link = url };

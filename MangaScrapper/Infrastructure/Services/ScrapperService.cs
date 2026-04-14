@@ -24,12 +24,12 @@ public class ScrapperService : ScrapperServiceBase
     {
     }
 
-    protected override MangaDocument ExtractMangaMetadata(HtmlDocument doc)
+    protected override MangaDocument ExtractMangaMetadata(string url)
     {
         throw new NotImplementedException();
     }
 
-    protected override Task<List<ChapterDocument>> ExtractChapters(HtmlDocument doc, CancellationToken ct = default)
+    protected override Task<List<ChapterDocument>> ExtractChaptersMetadata( CancellationToken ct = default)
     {
         throw new NotImplementedException();
     }
