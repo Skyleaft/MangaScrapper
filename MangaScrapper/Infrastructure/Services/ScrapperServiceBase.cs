@@ -340,8 +340,9 @@ public abstract class ScrapperServiceBase : IScrapperService
             {
                 existingManga = await UpdateThumbnail(existingManga,mangaData.ImageUrl, ct);
 
-                var maxExistingChapter = existingManga.Chapters.Any() ? existingManga.Chapters.Max(c => c.Number) : 0;
-                var newChapters = chapters.Where(c => c.Number > maxExistingChapter).ToList();
+                existingManga.Chapters ??= new List<ChapterDocument>();
+                var existingChapterNumbers = existingManga.Chapters.Select(c => c.Number).ToHashSet();
+                var newChapters = chapters.Where(c => !existingChapterNumbers.Contains(c.Number)).ToList();
 
                 if (newChapters.Any())
                 {
