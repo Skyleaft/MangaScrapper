@@ -101,10 +101,9 @@ public class KomikuService : ScrapperServiceBase
         var dViews =
             HttpUtility.HtmlDecode(doc.DocumentNode.SelectSingleNode("//td[text()='Pembaca:']/following-sibling::td")?.InnerText.Trim() ??
                                    string.Empty);
-        var total = int.Parse(
-            dViews.Split(',')[0] // "Total: 1462"
-                .Split(':')[1] // " 1462"
-                .Trim());
+        var totalMatch = Regex.Match(dViews, @"Total:\s*([\d\.]+)");
+        var totalText = totalMatch.Groups[1].Value.Replace(".", "");
+        var total = int.TryParse(totalText, out var t) ? t : 0;
 
         var viewsGenerated = GenerateChapterViews(total, chapterRows.Count);
         var index = chapterRows.Count -1;
