@@ -20,7 +20,7 @@ public class UserLibraryRepository : IUserLibraryRepository
 
     public async Task<List<UserLibraryDocument>> GetByUserAsync(Guid userId, CancellationToken ct)
     {
-        return await _collection.Find(x => x.UserId == userId).ToListAsync(ct);
+        return await _collection.Find(x => x.UserId == userId).SortBy(x=>x.AddedAt).ToListAsync(ct);
     }
 
     public async Task<UserLibraryDocument> CreateAsync(UserLibraryDocument document, CancellationToken ct)
