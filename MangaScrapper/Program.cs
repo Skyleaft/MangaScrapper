@@ -191,6 +191,20 @@ builder.Services.AddHttpClient<KiryuuService>(HttpConfig.ConfigureClient)
 builder.Services.AddHttpClient<KomikcastService>(HttpConfig.ConfigureClient)
     .ConfigurePrimaryHttpMessageHandler(HttpConfig.CreateHandler);
 
+// Named client for the image proxy endpoint – spoofs a browser User-Agent
+// so external providers (Komiku, etc.) don't reject the server-side request.
+builder.Services.AddHttpClient("ImageProxy", client =>
+{
+    client.DefaultRequestHeaders.Add("User-Agent",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36");
+    client.DefaultRequestHeaders.Add("Accept", "image/avif,image/webp,image/apng,image/*,*/*;q=0.8");
+    client.Timeout = TimeSpan.FromSeconds(15);
+}).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+{
+    AllowAutoRedirect = true,
+    MaxAutomaticRedirections = 5,
+});
+
 
 builder.Services.AddOpenTelemetry()
     .ConfigureResource(resource => resource.AddService(
