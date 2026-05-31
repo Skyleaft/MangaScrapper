@@ -19,8 +19,9 @@ public class ScrapperService : ScrapperServiceBase
         IOptions<ScrapperSettings> settings, 
         SemaphoreSlim semaphore,
         MeilisearchService meilisearchService,
-        QdrantService qdrantService) 
-        : base(httpClient, mangaRepository, jobClient, scopeFactory, settings, semaphore, meilisearchService, qdrantService)
+        QdrantService qdrantService,
+        ILoggerFactory loggerFactory) 
+        : base(httpClient, mangaRepository, jobClient, scopeFactory, settings, semaphore, meilisearchService, qdrantService, loggerFactory)
     {
     }
 

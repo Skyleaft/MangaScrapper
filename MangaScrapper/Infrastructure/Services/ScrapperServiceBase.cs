@@ -10,6 +10,7 @@ using MangaScrapper.Infrastructure.Mongo.Collections;
 using MangaScrapper.Infrastructure.Repositories;
 using MangaScrapper.Infrastructure.Utils;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SkiaSharp;
 
@@ -26,6 +27,7 @@ public abstract class ScrapperServiceBase : IScrapperService
     protected readonly string ImageStoragePath;
     protected readonly MeilisearchService MeilisearchService;
     protected readonly QdrantService QdrantService;
+    protected readonly ILogger Logger;
     private ScrapperProvider? _provider;
 
     protected ScrapperServiceBase(
@@ -36,7 +38,8 @@ public abstract class ScrapperServiceBase : IScrapperService
         IOptions<ScrapperSettings> settings,
         SemaphoreSlim semaphore,
         MeilisearchService meilisearchService,
-        QdrantService qdrantService)
+        QdrantService qdrantService,
+        ILoggerFactory loggerFactory)
     {
         HttpClient = httpClient;
         MangaRepository = mangaRepository;
@@ -46,6 +49,7 @@ public abstract class ScrapperServiceBase : IScrapperService
         Semaphore = semaphore;
         MeilisearchService = meilisearchService;
         QdrantService = qdrantService;
+        Logger = loggerFactory.CreateLogger(GetType());
         ImageStoragePath = Path.IsPathRooted(_settings.ImageStoragePath) 
             ? _settings.ImageStoragePath 
             : Path.Combine(Directory.GetCurrentDirectory(), _settings.ImageStoragePath);
@@ -456,6 +460,7 @@ public abstract class ScrapperServiceBase : IScrapperService
             }
             catch (Exception ex)
             {
+                Logger.LogWarning(ex, "Failed to download/convert image at index {Index} for {MangaTitle}", index, mangaTitle);
                 return (Index: index, Page: null as PageDocument);
             }
             finally

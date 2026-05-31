@@ -11,6 +11,7 @@ using MangaScrapper.Infrastructure.Repositories;
 using MangaScrapper.Infrastructure.Services;
 using MangaScrapper.Infrastructure.Utils;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace MangaScrapper.Features.ScrapperKiryuu.Services;
@@ -25,8 +26,9 @@ public class KiryuuService : ScrapperServiceBase
         IOptions<ScrapperSettings> settings,
         SemaphoreSlim semaphore,
         MeilisearchService meilisearchService,
-        QdrantService qdrantService)
-        : base(httpClient, mangaRepository, jobClient, scopeFactory, settings, semaphore, meilisearchService, qdrantService)
+        QdrantService qdrantService,
+        ILoggerFactory loggerFactory)
+        : base(httpClient, mangaRepository, jobClient, scopeFactory, settings, semaphore, meilisearchService, qdrantService, loggerFactory)
     {
         LoadProvider("kiryuu-provider.json");
     }

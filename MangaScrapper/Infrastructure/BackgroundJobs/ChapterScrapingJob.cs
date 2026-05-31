@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Hangfire;
 using MangaScrapper.Infrastructure.Mongo.Collections;
 using MangaScrapper.Infrastructure.Repositories;
@@ -45,6 +45,6 @@ public class ChapterScrapingJob(
         var processedChapter = await scopedScrapper.GetChapterPage(mangaTitle, chapter, ct);
         await scopedRepo.UpdateChapterPagesAsync(mangaId, guidChapterId, processedChapter.Pages, ct);
         
-        logger.LogInformation("Finished scraping for {MangaTitle} - Chapter {ChapterNumber}", mangaTitle, chapterNumber);
+        logger.LogInformation("Finished scraping for {MangaTitle} - Chapter {ChapterNumber}. Pages saved: {PageCount}", mangaTitle, chapterNumber, processedChapter.Pages.Count);
     }
 }

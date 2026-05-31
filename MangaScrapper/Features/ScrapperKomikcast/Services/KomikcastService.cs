@@ -11,6 +11,7 @@ using MangaScrapper.Infrastructure.Services;
 using MangaScrapper.Infrastructure.Utils;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace MangaScrapper.Features.ScrapperKomikcast.Services;
@@ -25,8 +26,9 @@ public class KomikcastService : ScrapperServiceBase
         IOptions<ScrapperSettings> settings,
         SemaphoreSlim semaphore,
         MeilisearchService meilisearchService,
-        QdrantService qdrantService)
-        : base(httpClient, mangaRepository, jobClient, scopeFactory, settings, semaphore, meilisearchService, qdrantService)
+        QdrantService qdrantService,
+        ILoggerFactory loggerFactory)
+        : base(httpClient, mangaRepository, jobClient, scopeFactory, settings, semaphore, meilisearchService, qdrantService, loggerFactory)
     {
         LoadProvider("komikcast-provider.json");
     }
@@ -107,8 +109,9 @@ public class KomikcastService : ScrapperServiceBase
                     Size = result.size
                 });
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Logger.LogWarning(ex, "Failed to download/convert image at index {Index} for {MangaTitle} (Komikcast)", index, mangaTitle);
                 return (Index: index, Page: null as PageDocument);
             }
             finally
