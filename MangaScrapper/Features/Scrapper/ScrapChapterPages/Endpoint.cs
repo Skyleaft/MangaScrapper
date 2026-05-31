@@ -23,7 +23,8 @@ public class Endpoint(KomikuService komikuService,KiryuuService kiryuuService,Ko
             return;
         }
 
-        foreach (var chapter in manga.Chapters)
+        var index = 0;
+        foreach (var chapter in manga.Chapters.OrderBy(x=>x.Number))
         {
             if (chapter.ChapterProvider == "Komiku" && chapter.Pages.Count ==0)
             {
@@ -37,8 +38,10 @@ public class Endpoint(KomikuService komikuService,KiryuuService kiryuuService,Ko
             {
                 await komikcastService.QueueChapterScraping(manga.Id, manga.Title, chapter);
             }
+
+            index++;
         }
 
-        await Send.OkAsync(new { Message = "Scraping jobs queued for missing chapters." }, ct);
+        await Send.OkAsync(new { Message = $"Scraping {index} jobs queued for missing chapters." }, ct);
     }
 }
