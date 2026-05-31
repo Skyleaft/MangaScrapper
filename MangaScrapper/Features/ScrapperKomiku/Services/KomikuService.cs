@@ -177,7 +177,12 @@ public class KomikuService : ScrapperServiceBase
                 }
 
                 var imgNode = node.SelectSingleNode(".//div[@class='bgei']//img");
-                item.Thumbnail = imgNode?.GetAttributeValue("src", "") ?? "";
+                var thumbnail = imgNode?.GetAttributeValue("src", "") ?? "";
+                if (thumbnail.Contains('?'))
+                {
+                    thumbnail = thumbnail.Split('?')[0];
+                }
+                item.Thumbnail = thumbnail;
 
                 var typeNode = node.SelectSingleNode(".//div[contains(@class,'tpe1_inf')]/b");
                 var genreNode = node.SelectSingleNode(".//div[contains(@class,'tpe1_inf')]");
