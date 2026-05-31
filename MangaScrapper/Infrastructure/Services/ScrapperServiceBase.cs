@@ -398,7 +398,7 @@ public abstract class ScrapperServiceBase : IScrapperService
     protected abstract MangaDocument ExtractMangaMetadata(string url);
     protected abstract Task<List<ChapterDocument>> ExtractChaptersMetadata(CancellationToken ct = default);
 
-    public async Task<ChapterDocument> GetChapterPage(string mangaTitle, ChapterDocument chapter, CancellationToken ct = default)
+    public virtual async Task<ChapterDocument> GetChapterPage(string mangaTitle, ChapterDocument chapter, CancellationToken ct = default)
     {
         var url = chapter.Link;
         if (string.IsNullOrWhiteSpace(url)) return chapter;

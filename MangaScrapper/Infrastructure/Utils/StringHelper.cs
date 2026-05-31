@@ -78,4 +78,12 @@ public static class StringHelper
         return text.Trim();
     }
     
+    public static string CapitalizeFirst(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+            return input;
+
+        return char.ToUpper(input[0]) + input.Substring(1);
+    }
+    
 }

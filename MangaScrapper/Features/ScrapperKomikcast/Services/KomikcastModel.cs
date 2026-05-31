@@ -1,4 +1,4 @@
-﻿namespace MangaScrapper.Features.ScrapperKomikcast.Services;
+namespace MangaScrapper.Features.ScrapperKomikcast.Services;
 
 public class KomikcastModel
 {
@@ -58,7 +58,7 @@ public class KomikcastChapters
     public int Id { get; set; }
     public DateTime CreatedAt { get; set; }
     public KomikcastChapterData Data { get; set; } = new();
-    public double ChapterIndex { get; set; }
+    public double? ChapterIndex { get; set; }
     public KomikcastChapterStats? Views { get; set; }
 
 }
@@ -73,4 +73,18 @@ public class KomikcastChapterStats
     public int Analytics { get; set; }
     public int History { get; set; }
     public int Total { get; set; }
+}
+
+public class KomikcastChapterDetails
+{
+    public long Id { get; set; }
+    public KomikcastChapterDetailsData Data { get; set; } = new();
+    public double ChapterIndex { get; set; }
+}
+
+public class KomikcastChapterDetailsData
+{
+    public string? Slug { get; set; }
+    public string? Title { get; set; }
+    public List<string> Images { get; set; } = new();
 }
