@@ -164,12 +164,22 @@ public abstract class ScrapperServiceBase : IScrapperService
 
     private async Task<(string path, long size)> SaveImageAsync(string imageUrl, string subDir, string fileName, string relativePath, CancellationToken ct)
     {
+        // Reject relative URLs early — HttpClient requires an absolute URI
+        if (!Uri.TryCreate(imageUrl, UriKind.Absolute, out _))
+        {
+            throw new ArgumentException($"Image URL must be absolute. Got: {imageUrl}", nameof(imageUrl));
+        }
+
         return await ExecuteWithRetryAsync(async (token) =>
         {
             using var response = await HttpClient.GetAsync(imageUrl, HttpCompletionOption.ResponseHeadersRead, token);
             response.EnsureSuccessStatusCode();
 
-            await using var imageStream = await response.Content.ReadAsStreamAsync(token);
+            // Buffer into MemoryStream: SkiaSharp requires a fully readable (seekable) stream;
+            // raw HTTP network streams are forward-only and can cause SKData.Create to fail.
+            using var memStream = new MemoryStream();
+            await response.Content.CopyToAsync(memStream, token);
+            memStream.Position = 0;
 
             Directory.CreateDirectory(subDir);
             var filePath = Path.Combine(subDir, fileName);
@@ -177,13 +187,14 @@ public abstract class ScrapperServiceBase : IScrapperService
             if (IsWebpUrl(imageUrl))
             {
                 await using var output = File.Create(filePath);
-                await imageStream.CopyToAsync(output, token);
+                await memStream.CopyToAsync(output, token);
                 var size = new FileInfo(filePath).Length;
                 return (relativePath.Replace("\\", "/"), size);
             }
 
-            using var imageData = SKData.Create(imageStream);
-            using var skImage = SKImage.FromEncodedData(imageData);
+            using var imageData = SKData.Create(memStream);
+            using var skImage = SKImage.FromEncodedData(imageData)
+                ?? throw new InvalidOperationException($"SkiaSharp could not decode image from: {imageUrl}");
             using var encoded = skImage.Encode(SKEncodedImageFormat.Webp, 90);
             await Task.Run(() =>
             {
