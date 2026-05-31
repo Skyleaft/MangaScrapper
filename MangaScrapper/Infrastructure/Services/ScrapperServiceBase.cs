@@ -11,8 +11,7 @@ using MangaScrapper.Infrastructure.Repositories;
 using MangaScrapper.Infrastructure.Utils;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Webp;
+using SkiaSharp;
 
 namespace MangaScrapper.Infrastructure.Services;
 
@@ -183,8 +182,14 @@ public abstract class ScrapperServiceBase : IScrapperService
                 return (relativePath.Replace("\\", "/"), size);
             }
 
-            using var image = await Image.LoadAsync(imageStream, token);
-            await image.SaveAsync(filePath, new WebpEncoder(), token);
+            using var imageData = SKData.Create(imageStream);
+            using var skImage = SKImage.FromEncodedData(imageData);
+            using var encoded = skImage.Encode(SKEncodedImageFormat.Webp, 90);
+            await Task.Run(() =>
+            {
+                using var output = File.Create(filePath);
+                encoded.SaveTo(output);
+            }, token);
             var finalSize = new FileInfo(filePath).Length;
 
             return (relativePath.Replace("\\", "/"), finalSize);

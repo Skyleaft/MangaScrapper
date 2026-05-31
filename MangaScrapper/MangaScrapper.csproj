@@ -8,33 +8,33 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="FastEndpoints" Version="8.0.1" />
-        <PackageReference Include="FastEndpoints.Security" Version="8.0.1" />
-        <PackageReference Include="FastEndpoints.Swagger" Version="8.0.1" />
-        <PackageReference Include="FirebaseAdmin" Version="3.4.0" />
-        <PackageReference Include="Google.Apis.Auth" Version="1.73.0" />
+        <PackageReference Include="FastEndpoints" Version="8.1.0" />
+        <PackageReference Include="FastEndpoints.Security" Version="8.1.0" />
+        <PackageReference Include="FastEndpoints.Swagger" Version="8.1.0" />
+        <PackageReference Include="FirebaseAdmin" Version="3.5.0" />
+        <PackageReference Include="Google.Apis.Auth" Version="1.74.0" />
         <PackageReference Include="Hangfire.AspNetCore" Version="1.8.23" />
         <PackageReference Include="Hangfire.Core" Version="1.8.23" />
-        <PackageReference Include="Hangfire.Mongo" Version="1.13.1" />
+        <PackageReference Include="Hangfire.Mongo" Version="1.15.0" />
         <PackageReference Include="HtmlAgilityPack" Version="1.12.4" />
         <PackageReference Include="Isopoh.Cryptography.Argon2" Version="2.0.0" />
         <PackageReference Include="MeiliSearch" Version="0.18.0" />
         <PackageReference Include="Microsoft.AspNetCore.App.Internal.Assets" Version="10.0.4" />
-        <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.4" />
-        <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.3"/>
-        <PackageReference Include="Microsoft.Playwright" Version="1.58.0" />
-        <PackageReference Include="MongoDB.Driver" Version="3.6.0" />
+        <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.8" />
+        <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.8" />
+        <PackageReference Include="Microsoft.Playwright" Version="1.60.0" />
+        <PackageReference Include="MongoDB.Driver" Version="3.9.0" />
         <PackageReference Include="OpenTelemetry.Instrumentation.Process" Version="1.15.0-beta.1" />
-        <PackageReference Include="Qdrant.Client" Version="1.17.0" />
-        <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
-        <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.15.0" />
+        <PackageReference Include="Qdrant.Client" Version="1.18.1" />
+        <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.15.3" />
         <PackageReference Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" Version="1.11.0-beta.1" />
-        <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.15.0" />
-        <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.15.0" />
-        <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.15.0" />
-        <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" Version="1.15.0" />
+        <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.15.3" />
+        <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.15.2" />
+        <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.15.1" />
+        <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" Version="1.15.1" />
         <PackageReference Include="MongoDB.Driver.Core.Extensions.DiagnosticSources" Version="3.0.0" />
-        <PackageReference Include="System.Diagnostics.DiagnosticSource" Version="10.0.3" />
+        <PackageReference Include="SkiaSharp" Version="3.119.4" />
+        <PackageReference Include="System.Diagnostics.DiagnosticSource" Version="10.0.8" />
     </ItemGroup>
 
     <ItemGroup>
