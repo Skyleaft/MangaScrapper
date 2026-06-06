@@ -176,7 +176,12 @@ public abstract class ScrapperServiceBase : IScrapperService
 
         return await ExecuteWithRetryAsync(async (token) =>
         {
-            using var response = await HttpClient.GetAsync(imageUrl, HttpCompletionOption.ResponseHeadersRead, token);
+            using var request = new HttpRequestMessage(HttpMethod.Get, imageUrl);
+            if (_provider != null)
+            {
+                request.Headers.Referrer = new Uri(_provider.BaseUrl);
+            }
+            using var response = await HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token);
             response.EnsureSuccessStatusCode();
 
             // Buffer into MemoryStream: SkiaSharp requires a fully readable (seekable) stream;
@@ -460,8 +465,8 @@ public abstract class ScrapperServiceBase : IScrapperService
             }
             catch (Exception ex)
             {
-                Logger.LogWarning(ex, "Failed to download/convert image at index {Index} for {MangaTitle}", index, mangaTitle);
-                return (Index: index, Page: null as PageDocument);
+                Logger.LogError(ex, "Failed to download/convert image at index {Index} for {MangaTitle}", index, mangaTitle);
+                throw;
             }
             finally
             {

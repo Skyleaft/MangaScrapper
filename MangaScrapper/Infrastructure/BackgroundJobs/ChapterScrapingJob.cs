@@ -43,6 +43,10 @@ public class ChapterScrapingJob(
         }
 
         var processedChapter = await scopedScrapper.GetChapterPage(mangaTitle, chapter, ct);
+        if (processedChapter.Pages == null || processedChapter.Pages.Count == 0)
+        {
+            throw new Exception($"Scraping failed: No pages found for chapter {chapterNumber} of manga {mangaTitle}.");
+        }
         await scopedRepo.UpdateChapterPagesAsync(mangaId, guidChapterId, processedChapter.Pages, ct);
         
         logger.LogInformation("Finished scraping for {MangaTitle} - Chapter {ChapterNumber}. Pages saved: {PageCount}", mangaTitle, chapterNumber, processedChapter.Pages.Count);

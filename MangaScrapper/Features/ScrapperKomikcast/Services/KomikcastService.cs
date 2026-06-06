@@ -111,8 +111,8 @@ public class KomikcastService : ScrapperServiceBase
             }
             catch (Exception ex)
             {
-                Logger.LogWarning(ex, "Failed to download/convert image at index {Index} for {MangaTitle} (Komikcast)", index, mangaTitle);
-                return (Index: index, Page: null as PageDocument);
+                Logger.LogError(ex, "Failed to download/convert image at index {Index} for {MangaTitle} (Komikcast)", index, mangaTitle);
+                throw;
             }
             finally
             {
