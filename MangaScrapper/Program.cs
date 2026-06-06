@@ -65,7 +65,7 @@ builder.Services.AddFastEndpoints()
     .AddResponseCaching()
     .SwaggerDocument(o => o.AutoTagPathSegmentIndex = 2);
 
-try 
+try
 {
     var credentialPath = builder.Configuration["Firebase:CredentialPath"];
     if (!string.IsNullOrEmpty(credentialPath) && File.Exists(credentialPath))
@@ -76,8 +76,40 @@ try
     }
     else
     {
-        FirebaseApp.Create();
-        Console.WriteLine("FirebaseApp initialized with default credentials.");
+        string? fallbackPath = null;
+        if (!string.IsNullOrEmpty(credentialPath))
+        {
+            var directory = Path.GetDirectoryName(credentialPath);
+            if (!string.IsNullOrEmpty(directory) && Directory.Exists(directory))
+            {
+                fallbackPath = Directory.GetFiles(directory, "*.json").FirstOrDefault();
+            }
+        }
+
+        if (!string.IsNullOrEmpty(fallbackPath) && File.Exists(fallbackPath))
+        {
+            Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", fallbackPath);
+            FirebaseApp.Create();
+            Console.WriteLine($"FirebaseApp initialized with fallback credentials from: {fallbackPath}");
+        }
+        else
+        {
+            // Do not call FirebaseApp.Create() blindly if running locally without GCP credentials,
+            // as it will block/hang trying to retrieve credentials from the GCE metadata server (169.254.169.254).
+            var hasGcpDefault = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS")) ||
+                                !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("GAE_INSTANCE")) ||
+                                !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("K_SERVICE"));
+
+            if (hasGcpDefault)
+            {
+                FirebaseApp.Create();
+                Console.WriteLine("FirebaseApp initialized with GCP default credentials.");
+            }
+            else
+            {
+                Console.WriteLine("FirebaseApp was NOT initialized: No credentials file found and not running on GCP.");
+            }
+        }
     }
 }
 catch (Exception ex)
@@ -92,7 +124,7 @@ builder.Services.AddDataProtection()
     .SetApplicationName("MangaScrapper");
 
 // CORS configuration from appsettings.json or environment variables (section: Cors)
-var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() 
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
                      ?? builder.Configuration.GetValue<string>("Cors:AllowedOrigins")?.Split(',', StringSplitOptions.RemoveEmptyEntries)
                      ?? Array.Empty<string>();
 var allowCredentials = builder.Configuration.GetValue<bool?>("Cors:AllowCredentials") ?? false;
@@ -134,7 +166,7 @@ builder.Services.Configure<MeiliConfig>(builder.Configuration.GetSection("MeiliS
 builder.Services.Configure<QdrantConfig>(builder.Configuration.GetSection("QdrantSettings"));
 builder.Services.Configure<EmbeddingConfig>(builder.Configuration.GetSection("EmbeddingSettings"));
 builder.Services.AddSingleton<MongoContext>();
-builder.Services.AddSingleton(sp => 
+builder.Services.AddSingleton(sp =>
 {
     var settings = sp.GetRequiredService<IOptions<ScrapperSettings>>().Value;
     return new SemaphoreSlim(settings.MaxParallelDownloads);
@@ -206,6 +238,9 @@ builder.Services.AddHttpClient("ImageProxy", client =>
 });
 
 
+var otelEndpoint = builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"] ?? Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT");
+var enableOtlp = !string.IsNullOrEmpty(otelEndpoint);
+
 builder.Services.AddOpenTelemetry()
     .ConfigureResource(resource => resource.AddService(
             serviceName: "MangaScrapper",
@@ -216,24 +251,42 @@ builder.Services.AddOpenTelemetry()
             { "host.name", Environment.MachineName }
         })
     )
-    .WithTracing(tracing => tracing
-        .AddSource("MongoDB.Driver.Core.Extensions.DiagnosticSources")
-        .AddAspNetCoreInstrumentation()
-        .AddHttpClientInstrumentation()
-        .AddOtlpExporter())
-    .WithMetrics(metrics => metrics
-        .AddAspNetCoreInstrumentation()
-        .AddHttpClientInstrumentation()
-        .AddRuntimeInstrumentation()
-        .AddProcessInstrumentation()
-        .AddOtlpExporter()
-        .AddPrometheusExporter());
+    .WithTracing(tracing =>
+    {
+        tracing
+            .AddSource("MongoDB.Driver.Core.Extensions.DiagnosticSources")
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation();
 
-builder.Logging.AddOpenTelemetry(logging => 
+        if (enableOtlp)
+        {
+            tracing.AddOtlpExporter();
+        }
+    })
+    .WithMetrics(metrics =>
+    {
+        metrics
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddRuntimeInstrumentation()
+            .AddProcessInstrumentation()
+            .AddPrometheusExporter();
+
+        if (enableOtlp)
+        {
+            metrics.AddOtlpExporter();
+        }
+    });
+
+builder.Logging.AddOpenTelemetry(logging =>
 {
     logging.IncludeFormattedMessage = true;
     logging.IncludeScopes = true;
-    logging.AddOtlpExporter();
+
+    if (enableOtlp)
+    {
+        logging.AddOtlpExporter();
+    }
 });
 
 
@@ -277,9 +330,9 @@ app.UseAuthentication()
    .UseAuthorization();
 
 // Note: Hangfire Dashboard URL will be available if Hangfire.Dashboard is installed
-app.MapHangfireDashboard("/hangfire",new DashboardOptions()
+app.MapHangfireDashboard("/hangfire", new DashboardOptions()
 {
-    Authorization = new[]{new HangfireAuthFillter()}
+    Authorization = new[] { new HangfireAuthFillter() }
 }).RequireAuthorization();
 
 
@@ -309,8 +362,8 @@ app.MapStaticAssets();
 app.UseStaticFiles(new StaticFileOptions
 {
     FileProvider = new PhysicalFileProvider(
-        Path.IsPathRooted(builder.Configuration["ScrapperSettings:ImageStoragePath"]) 
-            ? builder.Configuration["ScrapperSettings:ImageStoragePath"]! 
+        Path.IsPathRooted(builder.Configuration["ScrapperSettings:ImageStoragePath"])
+            ? builder.Configuration["ScrapperSettings:ImageStoragePath"]!
             : Path.Combine(builder.Environment.ContentRootPath, builder.Configuration["ScrapperSettings:ImageStoragePath"] ?? "images")),
     RequestPath = "/images"
 });
