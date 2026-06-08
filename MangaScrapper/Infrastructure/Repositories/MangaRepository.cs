@@ -89,7 +89,7 @@ public class MangaRepository : IMangaRepository
             "latestchapter" => orderBy == "asc"
                 ? sortBuilder.Ascending("Chapters.UploadDate")
                 : sortBuilder.Descending("Chapters.UploadDate"),
-            "totalview"=> orderBy == "asc"
+            "totalview" => orderBy == "asc"
                 ? sortBuilder.Ascending("Chapters.TotalView")
                 : sortBuilder.Descending("Chapters.TotalView"),
             _ => orderBy == "asc"
@@ -193,7 +193,7 @@ public class MangaRepository : IMangaRepository
         var totalUnavailableMangaChapter = await _collection
             .Find(m => m.Chapters.Any(c => c.Pages == null || c.Pages.Count == 0))
             .CountDocumentsAsync(ct);
-        
+
         // Calculate TotalStorageUsed
         var thumbnailResult = await _collection.Aggregate()
             .Group(new BsonDocument { { "_id", BsonNull.Value }, { "total", new BsonDocument("$sum", "$thumbnailSize") } })
@@ -201,13 +201,14 @@ public class MangaRepository : IMangaRepository
         var totalThumbnailSize = thumbnailResult != null && thumbnailResult.Contains("total") ? thumbnailResult["total"].ToInt64() : 0;
 
         var pagesResult = await _collection.Aggregate()
-            .Project(m => new {
+            .Project(m => new
+            {
                 totalSize = m.Chapters.Sum(c => c.Pages.Sum(p => p.Size))
             })
-            .Group(new BsonDocument 
-            { 
-                { "_id", BsonNull.Value }, 
-                { "total", new BsonDocument("$sum", "$totalSize") } 
+            .Group(new BsonDocument
+            {
+                { "_id", BsonNull.Value },
+                { "total", new BsonDocument("$sum", "$totalSize") }
             })
             .FirstOrDefaultAsync(ct);
         var totalPagesSize = pagesResult != null && pagesResult.Contains("total") ? pagesResult["total"].ToInt64() : 0;
@@ -248,12 +249,12 @@ public class MangaRepository : IMangaRepository
     }
 
     public async Task<(List<MangaDocument> Items, long TotalCount)> GetTrendingAsync(
-        string? search, 
-        List<string>? genres, 
-        string? status, 
+        string? search,
+        List<string>? genres,
+        string? status,
         string? type,
-        int page, 
-        int pageSize, 
+        int page,
+        int pageSize,
         CancellationToken ct)
     {
         var builder = Builders<MangaDocument>.Filter;
@@ -288,8 +289,8 @@ public class MangaRepository : IMangaRepository
         pipeline.Add(matchStage);
 
         // 2. AddFields stage to calculate TrendingViews
-        var addFieldsStage = new BsonDocument("$addFields", new BsonDocument("TrendingViews", 
-            new BsonDocument("$sum", 
+        var addFieldsStage = new BsonDocument("$addFields", new BsonDocument("TrendingViews",
+            new BsonDocument("$sum",
                 new BsonDocument("$map", new BsonDocument
                 {
                     { "input", new BsonDocument("$filter", new BsonDocument
@@ -319,7 +320,7 @@ public class MangaRepository : IMangaRepository
                     new BsonDocument("$sort", new BsonDocument { { "TrendingViews", -1 }, { "updatedAt", -1 } }),
                     new BsonDocument("$skip", (page - 1) * pageSize),
                     new BsonDocument("$limit", pageSize),
-                    new BsonDocument("$project", new BsonDocument("chapters.pages", 0))
+                    new BsonDocument("$project", new BsonDocument { { "chapters.pages", 0 }, { "TrendingViews", 0 } })
                 }
             }
         });
@@ -335,7 +336,7 @@ public class MangaRepository : IMangaRepository
             var totalCountArray = aggregationResult["totalCount"].AsBsonArray;
             if (totalCountArray.Count > 0)
             {
-                totalCount = totalCountArray[0]["count"].AsInt64;
+                totalCount = totalCountArray[0]["count"].AsInt32;
             }
 
             var dataArray = aggregationResult["data"].AsBsonArray;
