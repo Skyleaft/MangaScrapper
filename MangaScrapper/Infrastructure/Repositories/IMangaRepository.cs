@@ -27,4 +27,13 @@ public interface IMangaRepository
     Task<List<string>> GetAllTypesAsync(CancellationToken ct);
     Task DeleteAsync(Guid id, CancellationToken ct);
     Task<DashboardStatistic> GetStatisticsAsync(CancellationToken ct);
+    Task<(List<MangaDocument> Items, long TotalCount)> GetTrendingAsync(
+        string? search, 
+        List<string>? genres, 
+        string? status, 
+        string? type,
+        int page, 
+        int pageSize, 
+        CancellationToken ct);
 }
+

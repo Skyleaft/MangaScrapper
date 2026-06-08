@@ -247,8 +247,111 @@ public class MangaRepository : IMangaRepository
         };
     }
 
+    public async Task<(List<MangaDocument> Items, long TotalCount)> GetTrendingAsync(
+        string? search, 
+        List<string>? genres, 
+        string? status, 
+        string? type,
+        int page, 
+        int pageSize, 
+        CancellationToken ct)
+    {
+        var builder = Builders<MangaDocument>.Filter;
+        var filter = builder.Empty;
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            filter &= builder.Regex(m => m.Title, new BsonRegularExpression(search, "i"));
+        }
+
+        if (genres != null && genres.Any())
+        {
+            filter &= builder.All(m => m.Genres, genres);
+        }
+
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            filter &= builder.Eq(m => m.Status, status);
+        }
+
+        if (!string.IsNullOrWhiteSpace(type))
+        {
+            filter &= builder.Eq(m => m.Type, type);
+        }
+
+        var twoWeeksAgo = DateTime.UtcNow.AddDays(-14);
+
+        var pipeline = new List<BsonDocument>();
+
+        // 1. Match base filter
+        var matchStage = new BsonDocument("$match", filter.Render(new RenderArgs<MangaDocument>(_collection.DocumentSerializer, _collection.Settings.SerializerRegistry)));
+        pipeline.Add(matchStage);
+
+        // 2. AddFields stage to calculate TrendingViews
+        var addFieldsStage = new BsonDocument("$addFields", new BsonDocument("TrendingViews", 
+            new BsonDocument("$sum", 
+                new BsonDocument("$map", new BsonDocument
+                {
+                    { "input", new BsonDocument("$filter", new BsonDocument
+                        {
+                            { "input", "$chapters" },
+                            { "as", "c" },
+                            { "cond", new BsonDocument("$gte", new BsonArray { "$$c.uploadDate", twoWeeksAgo }) }
+                        })
+                    },
+                    { "as", "c" },
+                    { "in", "$$c.totalView" }
+                })
+            )
+        ));
+        pipeline.Add(addFieldsStage);
+
+        // 3. Match only documents with TrendingViews > 0
+        var matchTrending = new BsonDocument("$match", new BsonDocument("TrendingViews", new BsonDocument("$gt", 0)));
+        pipeline.Add(matchTrending);
+
+        // 4. Facet for count and paginated data
+        var facetStage = new BsonDocument("$facet", new BsonDocument
+        {
+            { "totalCount", new BsonArray { new BsonDocument("$count", "count") } },
+            { "data", new BsonArray
+                {
+                    new BsonDocument("$sort", new BsonDocument { { "TrendingViews", -1 }, { "updatedAt", -1 } }),
+                    new BsonDocument("$skip", (page - 1) * pageSize),
+                    new BsonDocument("$limit", pageSize),
+                    new BsonDocument("$project", new BsonDocument("chapters.pages", 0))
+                }
+            }
+        });
+        pipeline.Add(facetStage);
+
+        var aggregationResult = await _collection.Aggregate<BsonDocument>(pipeline, cancellationToken: ct).FirstOrDefaultAsync(ct);
+
+        long totalCount = 0;
+        var items = new List<MangaDocument>();
+
+        if (aggregationResult != null)
+        {
+            var totalCountArray = aggregationResult["totalCount"].AsBsonArray;
+            if (totalCountArray.Count > 0)
+            {
+                totalCount = totalCountArray[0]["count"].AsInt64;
+            }
+
+            var dataArray = aggregationResult["data"].AsBsonArray;
+            foreach (var doc in dataArray)
+            {
+                var mangaDoc = MongoDB.Bson.Serialization.BsonSerializer.Deserialize<MangaDocument>(doc.AsBsonDocument);
+                items.Add(mangaDoc);
+            }
+        }
+
+        return (items, totalCount);
+    }
+
     private class ChapterDocumentUnwound
     {
         public ChapterDocument Chapters { get; set; } = null!;
     }
 }
+
