@@ -15,6 +15,7 @@ using MangaScrapper.Features.UserProgression.Services;
 using FirebaseAdmin;
 using Google.Apis.Auth.OAuth2;
 using MangaScrapper.Features.ScrapperKomikcast.Services;
+using MangaScrapper.Features.ScrapperMangadex.Services;
 using MangaScrapper.Infrastructure.Mongo;
 using MangaScrapper.Infrastructure.Mongo.Collections;
 using MangaScrapper.Infrastructure.Repositories;
@@ -221,6 +222,9 @@ builder.Services.AddHttpClient<KiryuuService>(HttpConfig.ConfigureClient)
     .ConfigurePrimaryHttpMessageHandler(HttpConfig.CreateHandler);
 
 builder.Services.AddHttpClient<KomikcastService>(HttpConfig.ConfigureClient)
+    .ConfigurePrimaryHttpMessageHandler(HttpConfig.CreateHandler);
+
+builder.Services.AddHttpClient<MangaDexService>(HttpConfig.ConfigureClient)
     .ConfigurePrimaryHttpMessageHandler(HttpConfig.CreateHandler);
 
 // Named client for the image proxy endpoint – spoofs a browser User-Agent
