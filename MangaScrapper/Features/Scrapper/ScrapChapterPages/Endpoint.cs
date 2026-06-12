@@ -2,11 +2,12 @@ using FastEndpoints;
 using MangaScrapper.Features.ScrapperKiryuu.Services;
 using MangaScrapper.Features.ScrapperKomikcast.Services;
 using MangaScrapper.Features.ScrapperKomiku.Services;
+using MangaScrapper.Features.ScrapperMangadex.Services;
 using MangaScrapper.Infrastructure.Repositories;
 
 namespace MangaScrapper.Features.Scrapper.ScrapChapterPages;
 
-public class Endpoint(KomikuService komikuService,KiryuuService kiryuuService,KomikcastService komikcastService, IMangaRepository mangaRepository) : Endpoint<Request>
+public class Endpoint(KomikuService komikuService,KiryuuService kiryuuService,KomikcastService komikcastService,MangaDexService mangaDexService, IMangaRepository mangaRepository) : Endpoint<Request>
 {
     public override void Configure()
     {
@@ -37,6 +38,10 @@ public class Endpoint(KomikuService komikuService,KiryuuService kiryuuService,Ko
             else if (chapter.ChapterProvider == "Komikcast" && chapter.Pages.Count ==0)
             {
                 await komikcastService.QueueChapterScraping(manga.Id, manga.Title, chapter);
+            }
+            else if (chapter.ChapterProvider == "MangaDex" && chapter.Pages.Count == 0)
+            {
+                await mangaDexService.QueueChapterScraping(manga.Id, manga.Title, chapter);
             }
 
             index++;
