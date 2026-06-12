@@ -70,6 +70,7 @@ public class KomikcastService : ScrapperServiceBase
                 Link = $"{chaptersUrl}/{item.Data.Index}",
                 ChapterProvider = Provider.ProviderName,
                 ChapterProviderIcon = Provider.ProviderIcon,
+                Language = DefaultIndonesianLanguage,
                 TotalView = item.Views?.Total ?? 0,
                 UploadDate = item.CreatedAt
             });

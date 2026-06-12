@@ -18,6 +18,8 @@ namespace MangaScrapper.Infrastructure.Services;
 
 public abstract class ScrapperServiceBase : IScrapperService
 {
+    protected const string DefaultIndonesianLanguage = "id";
+
     protected readonly HttpClient HttpClient;
     protected readonly IMangaRepository MangaRepository;
     protected readonly IBackgroundJobClient JobClient;

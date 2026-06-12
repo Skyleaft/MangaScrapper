@@ -139,6 +139,7 @@ public class KomikuService : ScrapperServiceBase
                 Link = link,
                 ChapterProvider = Provider.ProviderName,
                 ChapterProviderIcon = Provider.ProviderIcon,
+                Language = DefaultIndonesianLanguage,
                 TotalView = totalView,
                 UploadDate = uploadDate
             });

@@ -117,6 +117,7 @@ public class KiryuuService : ScrapperServiceBase
                 Link = path,
                 ChapterProvider = Provider.ProviderName,
                 ChapterProviderIcon = Provider.ProviderIcon,
+                Language = DefaultIndonesianLanguage,
                 UploadDate = DateTime.TryParse(time, out var parsedDate) ? parsedDate : DateTime.MinValue,
                 TotalView = IntHelper.ParseCount(views ?? string.Empty)
             });

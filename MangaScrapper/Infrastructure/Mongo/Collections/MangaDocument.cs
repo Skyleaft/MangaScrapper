@@ -56,6 +56,7 @@ public class ChapterDocument
     public string? Link { get; set; }
     public string? ChapterProvider { get; set; }
     public string? ChapterProviderIcon { get; set; }
+    public string Language { get; set; } = string.Empty;
     public int TotalView { get; set; }
     [BsonDateTimeOptions(Kind = DateTimeKind.Utc)]
     public DateTime UploadDate { get; set; }
