@@ -59,7 +59,22 @@ public class MangaDexService : ScrapperServiceBase
         if (response.Data == null)
             throw new InvalidOperationException($"MangaDex manga '{_mangaId}' was not found.");
 
-        return MapMangaToDocument(response.Data);
+        double? rating = null;
+        try
+        {
+            var statsUrl = $"{BaseApi}/statistics/manga/{_mangaId}";
+            var statsResponse = GetFromJsonAsync<MangaDexStatisticsResponse>(statsUrl).GetAwaiter().GetResult();
+            if (statsResponse?.Statistics != null && statsResponse.Statistics.TryGetValue(_mangaId, out var stats))
+            {
+                rating = stats.Rating?.Average;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Failed to fetch MangaDex statistics for manga '{MangaId}'", _mangaId);
+        }
+
+        return MapMangaToDocument(response.Data, rating);
     }
 
     protected override async Task<List<ChapterDocument>> ExtractChaptersMetadata(CancellationToken ct = default)
@@ -132,12 +147,12 @@ public class MangaDexService : ScrapperServiceBase
         return allChapters;
     }
 
-    private static MangaDocument MapMangaToDocument(MangaDexManga manga)
+    private static MangaDocument MapMangaToDocument(MangaDexManga manga, double? rating = null)
     {
         var attrs = manga.Attributes;
         var coverRel = manga.Relationships.FirstOrDefault(r => r.Type == "cover_art");
         var imageUrl = coverRel?.Attributes?.FileName != null
-            ? $"{CoverBaseUrl}/{manga.Id}/{coverRel.Attributes.FileName}.512.jpg"
+            ? $"{CoverBaseUrl}/{manga.Id}/{coverRel.Attributes.FileName}"
             : null;
 
         var authors = manga.Relationships
@@ -161,6 +176,7 @@ public class MangaDexService : ScrapperServiceBase
             Genres = genres,
             Status = MapMangaStatus(attrs.Status),
             Url = $"https://mangadex.org/title/{manga.Id}",
+            Rating = rating,
         };
     }
 

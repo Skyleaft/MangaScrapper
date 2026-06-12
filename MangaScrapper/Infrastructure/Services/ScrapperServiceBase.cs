@@ -201,7 +201,8 @@ public abstract class ScrapperServiceBase : IScrapperService
             .Union(new[] { '?', '*', ':', '|', '<', '>', '"' })
             .ToArray();
 
-        return string.Concat(title.Split(invalidChars));
+        var cleaned = string.Concat(title.Split(invalidChars)).TrimEnd('.', ' ');
+        return string.IsNullOrEmpty(cleaned) ? "manga" : cleaned;
     }
 
     private async Task<(string path, long size)> SaveImageAsync(string imageUrl, string subDir, string fileName, string relativePath, CancellationToken ct)

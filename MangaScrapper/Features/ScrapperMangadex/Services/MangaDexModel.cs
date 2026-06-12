@@ -202,3 +202,27 @@ public class MangaDexAtHomeChapter
     [JsonPropertyName("dataSaver")]
     public List<string> DataSaver { get; set; } = new();
 }
+
+// ─── Statistics ─────────────────────────────────────────────────────────────
+
+public class MangaDexStatisticsResponse
+{
+    [JsonPropertyName("result")]
+    public string Result { get; set; } = string.Empty;
+
+    [JsonPropertyName("statistics")]
+    public Dictionary<string, MangaDexMangaStatistics> Statistics { get; set; } = new();
+}
+
+public class MangaDexMangaStatistics
+{
+    [JsonPropertyName("rating")]
+    public MangaDexRating? Rating { get; set; }
+}
+
+public class MangaDexRating
+{
+    [JsonPropertyName("average")]
+    public double? Average { get; set; }
+}
+

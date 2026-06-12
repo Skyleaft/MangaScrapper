@@ -55,6 +55,7 @@ public class Endpoint(IMangaRepository mangaRepository, IOptions<ScrapperSetting
             .Union(new[] { '?', '*', ':', '|', '<', '>', '"' })
             .ToArray();
 
-        return string.Concat(title.Split(invalidChars));
+        var cleaned = string.Concat(title.Split(invalidChars)).TrimEnd('.', ' ');
+        return string.IsNullOrEmpty(cleaned) ? "manga" : cleaned;
     }
 }

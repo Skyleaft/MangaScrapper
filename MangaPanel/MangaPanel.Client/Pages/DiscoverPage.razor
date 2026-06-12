@@ -254,102 +254,217 @@
         <div class="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"></div>
 
         <!-- Modal Card -->
-        <div class="relative z-10 w-full max-w-md bg-surface rounded-2xl border border-border-main shadow-2xl overflow-hidden animate-in zoom-in-95 fade-in duration-200"
+        <div class="relative z-10 w-full max-w-3xl bg-surface rounded-2xl border border-border-main shadow-2xl overflow-hidden animate-in zoom-in-95 fade-in duration-200"
              @onclick:stopPropagation="true">
 
-            <!-- Thumbnail Header -->
-            <div class="relative h-36 bg-bg-app overflow-hidden">
-                @if (!string.IsNullOrEmpty(selectedItem.Thumbnail))
-                {
-                    <img src="@ProxyThumbnail(selectedItem.Thumbnail)" alt="@selectedItem.Title"
-                         class="w-full h-full object-cover" />
-                }
-                <div class="absolute inset-0 bg-gradient-to-t from-surface via-surface/40 to-transparent"></div>
+            <!-- Close Button -->
+            <button @onclick="CloseModal"
+                    class="absolute top-3 right-3 z-20 w-8 h-8 bg-black/40 hover:bg-black/60 backdrop-blur-sm rounded-full flex items-center justify-center text-white transition-all">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
 
-                <!-- Close Button -->
-                <button @onclick="CloseModal"
-                        class="absolute top-3 right-3 w-8 h-8 bg-black/40 hover:bg-black/60 backdrop-blur-sm rounded-full flex items-center justify-center text-white transition-all">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
-            </div>
+            <div class="grid grid-cols-1 md:grid-cols-5 h-[85vh] md:h-[620px]">
+                
+                <!-- Left Column: Details & Actions (Grid col-span 3) -->
+                <div class="md:col-span-3 flex flex-col h-full border-r border-border-main/50 overflow-y-auto">
+                    <!-- Thumbnail Header -->
+                    <div class="relative h-40 bg-bg-app overflow-hidden flex-shrink-0">
+                        @if (detailManga != null && !string.IsNullOrEmpty(detailManga.ImageUrl))
+                        {
+                            <img src="@ProxyThumbnail(detailManga.ImageUrl)" alt="@selectedItem.Title"
+                                 class="w-full h-full object-cover" />
+                        }
+                        else if (!string.IsNullOrEmpty(selectedItem.Thumbnail))
+                        {
+                            <img src="@ProxyThumbnail(selectedItem.Thumbnail)" alt="@selectedItem.Title"
+                                 class="w-full h-full object-cover" />
+                        }
+                        <div class="absolute inset-0 bg-gradient-to-t from-surface via-surface/40 to-transparent"></div>
+                    </div>
 
-            <!-- Content -->
-            <div class="px-6 pb-6 -mt-6 relative">
-                <!-- Title & Meta -->
-                <div class="mb-5">
-                    <h2 class="text-lg font-bold text-text-main leading-snug line-clamp-2">@selectedItem.Title</h2>
-                    <div class="flex flex-wrap gap-2 mt-2">
-                        @if (!string.IsNullOrEmpty(selectedItem.Type))
+                    <!-- Left Content -->
+                    <div class="px-6 pb-6 -mt-6 relative flex-grow">
+                        <!-- Title & Meta -->
+                        <div class="mb-5">
+                            <h2 class="text-lg font-bold text-text-main leading-snug line-clamp-2">@selectedItem.Title</h2>
+                            <div class="flex flex-wrap gap-2 mt-2">
+                                @if (!string.IsNullOrEmpty(selectedItem.Type))
+                                {
+                                    <span class="px-2 py-0.5 bg-primary/10 text-primary text-[11px] font-bold rounded-md uppercase">@selectedItem.Type</span>
+                                }
+                                @if (selectedItem.LatestChapterNumber > 0)
+                                {
+                                    <span class="px-2 py-0.5 bg-secondary/10 text-secondary text-[11px] font-bold rounded-md">Ch. @selectedItem.LatestChapterNumber</span>
+                                }
+                                @if (!string.IsNullOrEmpty(selectedItem.Genre))
+                                {
+                                    <span class="px-2 py-0.5 bg-bg-app border border-border-main text-slate-400 text-[11px] rounded-md line-clamp-1 max-w-[12rem]">@selectedItem.Genre</span>
+                                }
+                            </div>
+                            <p class="text-xs text-slate-400 mt-2 break-all">@selectedItem.DetailUrl</p>
+                        </div>
+
+                        <!-- Manga Detail Fetch State -->
+                        @if (isDetailLoading)
                         {
-                            <span class="px-2 py-0.5 bg-primary/10 text-primary text-[11px] font-bold rounded-md uppercase">@selectedItem.Type</span>
+                            <div class="flex flex-col items-center justify-center py-6 border-t border-border-main mb-5">
+                                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2"></div>
+                                <p class="text-xs text-slate-500">Loading details from @selectedProvider...</p>
+                            </div>
                         }
-                        @if (selectedItem.LatestChapterNumber > 0)
+                        else if (detailManga != null)
                         {
-                            <span class="px-2 py-0.5 bg-secondary/10 text-secondary text-[11px] font-bold rounded-md">Ch. @selectedItem.LatestChapterNumber</span>
+                            <div class="space-y-4 mb-5 text-sm text-text-main animate-in fade-in duration-200 border-t border-border-main pt-4">
+                                <div class="grid grid-cols-2 gap-3 bg-bg-app/40 p-3 rounded-xl border border-border-main/50">
+                                    <div>
+                                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Author</span>
+                                        <span class="text-xs font-semibold text-text-main line-clamp-1">@(string.IsNullOrWhiteSpace(detailManga.Author) ? "Unknown" : detailManga.Author)</span>
+                                    </div>
+                                    <div>
+                                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Rating</span>
+                                        <span class="text-xs font-semibold text-text-main flex items-center gap-1">
+                                            @if (detailManga.Rating.HasValue)
+                                            {
+                                                <svg class="w-3.5 h-3.5 text-amber-500 fill-amber-500" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                                </svg>
+                                                <span>@detailManga.Rating.Value.ToString("F1")/10</span>
+                                            }
+                                            else
+                                            {
+                                                <span>N/A</span>
+                                            }
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Status</span>
+                                        <span class="text-xs font-semibold text-text-main">@(string.IsNullOrWhiteSpace(detailManga.Status) ? "Unknown" : detailManga.Status)</span>
+                                    </div>
+                                    <div>
+                                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Chapters</span>
+                                        <span class="text-xs font-semibold text-text-main">@detailManga.Chapters.Count</span>
+                                    </div>
+                                </div>
+
+                                @if (detailManga.Genres != null && detailManga.Genres.Any())
+                                {
+                                    <div>
+                                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Genres</span>
+                                        <div class="flex flex-wrap gap-1">
+                                            @foreach (var genre in detailManga.Genres)
+                                            {
+                                                <span class="px-2 py-0.5 bg-bg-app border border-border-main text-slate-500 dark:text-slate-400 text-[10px] rounded-md font-medium">@genre</span>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+
+                                @if (!string.IsNullOrWhiteSpace(detailManga.Description))
+                                {
+                                    <div>
+                                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Synopsis</span>
+                                        <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed max-h-24 overflow-y-auto pr-1">@detailManga.Description</p>
+                                    </div>
+                                }
+                            </div>
                         }
-                        @if (!string.IsNullOrEmpty(selectedItem.Genre))
+
+                        <!-- Divider -->
+                        <div class="border-t border-border-main mb-5"></div>
+
+                        <!-- Action Buttons -->
+                        <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">Scrape Action</p>
+
+                        <div class="space-y-3">
+                            <!-- Scrap Metadata -->
+                            <button @onclick="ScrapMetadata" disabled="@isScrapLoading"
+                                    class="w-full flex items-center gap-4 p-4 bg-bg-app hover:bg-primary/5 border border-border-main hover:border-primary/40 rounded-xl transition-all group disabled:opacity-50 disabled:cursor-not-allowed">
+                                <div class="w-10 h-10 bg-primary/10 group-hover:bg-primary/20 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors">
+                                    <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                </div>
+                                <div class="text-left">
+                                    <p class="text-sm font-bold text-text-main group-hover:text-primary transition-colors">Scrap Metadata Only</p>
+                                    <p class="text-xs text-slate-500 dark:text-slate-400">Fetch title, genre, cover, and description</p>
+                                </div>
+                            </button>
+
+                            <!-- Scrap All Chapters -->
+                            <button @onclick="ScrapAllChapters" disabled="@isScrapLoading"
+                                    class="w-full flex items-center gap-4 p-4 bg-bg-app hover:bg-secondary/5 border border-border-main hover:border-secondary/40 rounded-xl transition-all group disabled:opacity-50 disabled:cursor-not-allowed">
+                                <div class="w-10 h-10 bg-secondary/10 group-hover:bg-secondary/20 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors">
+                                    <svg class="w-5 h-5 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                    </svg>
+                                </div>
+                                <div class="text-left">
+                                    <p class="text-sm font-bold text-text-main group-hover:text-secondary transition-colors">Scrap All Chapters</p>
+                                    <p class="text-xs text-slate-500 dark:text-slate-400">Download and index all available chapters</p>
+                                </div>
+                            </button>
+                        </div>
+
+                        <!-- Scrap Loading / Result -->
+                        @if (isScrapLoading)
                         {
-                            <span class="px-2 py-0.5 bg-bg-app border border-border-main text-slate-400 text-[11px] rounded-md line-clamp-1 max-w-[12rem]">@selectedItem.Genre</span>
+                            <div class="mt-4 flex items-center gap-3 p-3 bg-primary/5 border border-primary/20 rounded-xl">
+                                <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-primary flex-shrink-0"></div>
+                                <p class="text-xs font-medium text-primary">Processing request...</p>
+                            </div>
+                        }
+                        else if (!string.IsNullOrEmpty(scrapResultMessage))
+                        {
+                            <div class="mt-4 p-3 @(scrapResultIsError ? "bg-red-500/10 border-red-500/30 text-red-400" : "bg-green-500/10 border-green-500/30 text-green-400") border rounded-xl">
+                                <p class="text-xs font-medium">@scrapResultMessage</p>
+                            </div>
                         }
                     </div>
-                    <p class="text-xs text-slate-400 mt-2 break-all">@selectedItem.DetailUrl</p>
                 </div>
 
-                <!-- Divider -->
-                <div class="border-t border-border-main mb-5"></div>
-
-                <!-- Action Buttons -->
-                <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">Scrape Action</p>
-
-                <div class="space-y-3">
-                    <!-- Scrap Metadata -->
-                    <button @onclick="ScrapMetadata" disabled="@isScrapLoading"
-                            class="w-full flex items-center gap-4 p-4 bg-bg-app hover:bg-primary/5 border border-border-main hover:border-primary/40 rounded-xl transition-all group disabled:opacity-50 disabled:cursor-not-allowed">
-                        <div class="w-10 h-10 bg-primary/10 group-hover:bg-primary/20 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors">
-                            <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                        </div>
-                        <div class="text-left">
-                            <p class="text-sm font-bold text-text-main group-hover:text-primary transition-colors">Scrap Metadata Only</p>
-                            <p class="text-xs text-slate-500 dark:text-slate-400">Fetch title, genre, cover, and description</p>
-                        </div>
-                    </button>
-
-                    <!-- Scrap All Chapters -->
-                    <button @onclick="ScrapAllChapters" disabled="@isScrapLoading"
-                            class="w-full flex items-center gap-4 p-4 bg-bg-app hover:bg-secondary/5 border border-border-main hover:border-secondary/40 rounded-xl transition-all group disabled:opacity-50 disabled:cursor-not-allowed">
-                        <div class="w-10 h-10 bg-secondary/10 group-hover:bg-secondary/20 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors">
-                            <svg class="w-5 h-5 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                            </svg>
-                        </div>
-                        <div class="text-left">
-                            <p class="text-sm font-bold text-text-main group-hover:text-secondary transition-colors">Scrap All Chapters</p>
-                            <p class="text-xs text-slate-500 dark:text-slate-400">Download and index all available chapters</p>
-                        </div>
-                    </button>
+                <!-- Right Column: Chapters List (Grid col-span 2) -->
+                <div class="md:col-span-2 flex flex-col h-full bg-bg-app/20 p-5 overflow-hidden">
+                    <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3 flex-shrink-0">Chapters List</p>
+                    
+                    <div class="flex-grow overflow-y-auto space-y-2 pr-1">
+                        @if (isDetailLoading)
+                        {
+                            <div class="flex flex-col items-center justify-center h-full text-slate-500">
+                                <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mb-2"></div>
+                                <p class="text-xs">Fetching chapters...</p>
+                            </div>
+                        }
+                        else if (detailManga == null || !detailManga.Chapters.Any())
+                        {
+                            <div class="flex items-center justify-center h-full text-xs text-slate-500 dark:text-slate-400">
+                                No chapters available
+                            </div>
+                        }
+                        else
+                        {
+                            @foreach (var chapter in detailManga.Chapters)
+                            {
+                                <div class="p-3 bg-surface hover:bg-bg-app border border-border-main rounded-xl flex items-center justify-between gap-3 transition-all">
+                                    <div class="overflow-hidden">
+                                        <p class="text-sm font-bold text-text-main truncate">Chapter @chapter.Number</p>
+                                        <p class="text-[10px] text-slate-400 mt-0.5">@chapter.UploadDate.ToString("yyyy-MM-dd")</p>
+                                    </div>
+                                    @if (!string.IsNullOrEmpty(chapter.Language))
+                                    {
+                                        <span class="px-1.5 py-0.5 bg-bg-app border border-border-main text-[9px] font-bold text-slate-500 dark:text-slate-400 rounded uppercase">@chapter.Language</span>
+                                    }
+                                </div>
+                            }
+                        }
+                    </div>
                 </div>
 
-                <!-- Scrap Loading / Result -->
-                @if (isScrapLoading)
-                {
-                    <div class="mt-4 flex items-center gap-3 p-3 bg-primary/5 border border-primary/20 rounded-xl">
-                        <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-primary flex-shrink-0"></div>
-                        <p class="text-xs font-medium text-primary">Processing request...</p>
-                    </div>
-                }
-                else if (!string.IsNullOrEmpty(scrapResultMessage))
-                {
-                    <div class="mt-4 p-3 @(scrapResultIsError ? "bg-red-500/10 border-red-500/30 text-red-400" : "bg-green-500/10 border-green-500/30 text-green-400") border rounded-xl">
-                        <p class="text-xs font-medium">@scrapResultMessage</p>
-                    </div>
-                }
             </div>
+
         </div>
     </div>
 }
@@ -396,6 +511,40 @@
         public bool ScrapChapters { get; set; }
     }
 
+    private class ChapterInfo
+    {
+        [JsonPropertyName("number")]
+        public double Number { get; set; }
+        [JsonPropertyName("link")]
+        public string? Link { get; set; }
+        [JsonPropertyName("language")]
+        public string Language { get; set; } = string.Empty;
+        [JsonPropertyName("uploadDate")]
+        public DateTime UploadDate { get; set; }
+    }
+
+    private class MangaDetailDto
+    {
+        [JsonPropertyName("title")]
+        public string Title { get; set; } = string.Empty;
+        [JsonPropertyName("author")]
+        public string Author { get; set; } = string.Empty;
+        [JsonPropertyName("type")]
+        public string Type { get; set; } = string.Empty;
+        [JsonPropertyName("rating")]
+        public double? Rating { get; set; }
+        [JsonPropertyName("genres")]
+        public List<string>? Genres { get; set; }
+        [JsonPropertyName("description")]
+        public string? Description { get; set; }
+        [JsonPropertyName("imageUrl")]
+        public string? ImageUrl { get; set; }
+        [JsonPropertyName("status")]
+        public string? Status { get; set; }
+        [JsonPropertyName("chapters")]
+        public List<ChapterInfo> Chapters { get; set; } = new();
+    }
+
     // ── State ────────────────────────────────────────────────────────────────
     private List<ProviderInfo> providers = new();
 
@@ -422,6 +571,8 @@
     private bool isScrapLoading = false;
     private string scrapResultMessage = "";
     private bool scrapResultIsError = false;
+    private bool isDetailLoading = false;
+    private MangaDetailDto? detailManga = null;
 
     // ── Lifecycle ────────────────────────────────────────────────────────────
     protected override async Task OnInitializedAsync()
@@ -556,19 +707,40 @@
     }
 
     // ── Modal ────────────────────────────────────────────────────────────────
-    private void OpenScrapModal(SearchItem item)
+    private async Task OpenScrapModal(SearchItem item)
     {
         selectedItem = item;
         scrapResultMessage = "";
         scrapResultIsError = false;
         isScrapLoading = false;
+
+        detailManga = null;
+        isDetailLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            var providerEscaped = Uri.EscapeDataString(selectedProvider);
+            var urlEscaped = Uri.EscapeDataString(item.DetailUrl);
+            var detailUrl = $"/api/scrapper/{providerEscaped}/manga/detail?mangaUrl={urlEscaped}";
+            detailManga = await Http.GetFromJsonAsync<MangaDetailDto>(detailUrl);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error fetching manga detail: {ex.Message}");
+        }
+        finally
+        {
+            isDetailLoading = false;
+        }
     }
 
     private void CloseModal()
     {
-        if (isScrapLoading) return;
+        if (isScrapLoading || isDetailLoading) return;
         selectedItem = null;
         scrapResultMessage = "";
+        detailManga = null;
     }
 
     private async Task ScrapMetadata()
