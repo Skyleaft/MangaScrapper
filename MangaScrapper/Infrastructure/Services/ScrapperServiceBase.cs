@@ -212,43 +212,80 @@ public abstract class ScrapperServiceBase : IScrapperService
 
         return await ExecuteWithRetryAsync(async (token) =>
         {
-            using var request = new HttpRequestMessage(HttpMethod.Get, imageUrl);
-            if (_provider != null)
+            Stream? imageStream = null;
+            try
             {
-                request.Headers.Referrer = new Uri(_provider.BaseUrl);
+                using var request = new HttpRequestMessage(HttpMethod.Get, imageUrl);
+                if (_provider != null)
+                {
+                    request.Headers.Referrer = new Uri(_provider.BaseUrl);
+                }
+                var response = await HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token);
+                response.EnsureSuccessStatusCode();
+                imageStream = await response.Content.ReadAsStreamAsync(token);
             }
-            using var response = await HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token);
-            response.EnsureSuccessStatusCode();
-
-            // Buffer into MemoryStream: SkiaSharp requires a fully readable (seekable) stream;
-            // raw HTTP network streams are forward-only and can cause SKData.Create to fail.
-            using var memStream = new MemoryStream();
-            await response.Content.CopyToAsync(memStream, token);
-            memStream.Position = 0;
-
-            Directory.CreateDirectory(subDir);
-            var filePath = Path.Combine(subDir, fileName);
-
-            if (IsWebpUrl(imageUrl))
+            catch (Exception) when (FlareSolverrService != null && FlareSolverrService.IsEnabled)
             {
-                await using var output = File.Create(filePath);
-                await memStream.CopyToAsync(output, token);
-                var size = new FileInfo(filePath).Length;
-                return (relativePath.Replace("\\", "/"), size);
+                await FlareSolverrService.EnsureSessionAsync(imageUrl, token);
+                if (Uri.TryCreate(imageUrl, UriKind.Absolute, out var uri) &&
+                    FlareSolverrService.TryGetSession(uri.Host, out var userAgent, out var cookieHeader))
+                {
+                    using var request = new HttpRequestMessage(HttpMethod.Get, imageUrl);
+                    if (_provider != null)
+                    {
+                        request.Headers.Referrer = new Uri(_provider.BaseUrl);
+                    }
+                    if (!string.IsNullOrEmpty(userAgent))
+                    {
+                        request.Headers.UserAgent.Clear();
+                        request.Headers.TryAddWithoutValidation("User-Agent", userAgent);
+                    }
+                    if (!string.IsNullOrEmpty(cookieHeader))
+                    {
+                        request.Headers.TryAddWithoutValidation("Cookie", cookieHeader);
+                    }
+                    var response = await HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token);
+                    response.EnsureSuccessStatusCode();
+                    imageStream = await response.Content.ReadAsStreamAsync(token);
+                }
+                else
+                {
+                    throw;
+                }
             }
 
-            using var imageData = SKData.Create(memStream);
-            using var skImage = SKImage.FromEncodedData(imageData)
-                ?? throw new InvalidOperationException($"SkiaSharp could not decode image from: {imageUrl}");
-            using var encoded = skImage.Encode(SKEncodedImageFormat.Webp, 90);
-            await Task.Run(() =>
+            using (imageStream)
             {
-                using var output = File.Create(filePath);
-                encoded.SaveTo(output);
-            }, token);
-            var finalSize = new FileInfo(filePath).Length;
+                // Buffer into MemoryStream: SkiaSharp requires a fully readable (seekable) stream;
+                // raw HTTP network streams are forward-only and can cause SKData.Create to fail.
+                using var memStream = new MemoryStream();
+                await imageStream.CopyToAsync(memStream, token);
+                memStream.Position = 0;
 
-            return (relativePath.Replace("\\", "/"), finalSize);
+                Directory.CreateDirectory(subDir);
+                var filePath = Path.Combine(subDir, fileName);
+
+                if (IsWebpUrl(imageUrl))
+                {
+                    await using var output = File.Create(filePath);
+                    await memStream.CopyToAsync(output, token);
+                    var size = new FileInfo(filePath).Length;
+                    return (relativePath.Replace("\\", "/"), size);
+                }
+
+                using var imageData = SKData.Create(memStream);
+                using var skImage = SKImage.FromEncodedData(imageData)
+                    ?? throw new InvalidOperationException($"SkiaSharp could not decode image from: {imageUrl}");
+                using var encoded = skImage.Encode(SKEncodedImageFormat.Webp, 90);
+                await Task.Run(() =>
+                {
+                    using var output = File.Create(filePath);
+                    encoded.SaveTo(output);
+                }, token);
+                var finalSize = new FileInfo(filePath).Length;
+
+                return (relativePath.Replace("\\", "/"), finalSize);
+            }
         }, ct);
     }
 
