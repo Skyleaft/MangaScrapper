@@ -236,6 +236,79 @@ public class MangaDexService : ScrapperServiceBase
         _ => "Unknown",
     };
 
+    // ─── Chapter pages ───────────────────────────────────────────────────────
+
+    public override async Task<ChapterDocument> GetChapterPage(string mangaTitle, ChapterDocument chapter, CancellationToken ct = default)
+    {
+        var url = chapter.Link;
+        if (string.IsNullOrWhiteSpace(url))
+            return chapter;
+
+        var chapterId = ExtractChapterIdFromUrl(url);
+        var atHomeUrl = $"{BaseApi}/at-home/server/{chapterId}";
+        var response = await GetFromJsonAsync<MangaDexAtHomeResponse>(atHomeUrl, ct);
+
+        if (response?.Chapter?.Data == null || response.Chapter.Data.Count == 0)
+            return chapter;
+
+        var imageUrls = response.Chapter.Data
+            .Select(fileName => $"{response.BaseUrl}/data/{response.Chapter.Hash}/{fileName}")
+            .ToList();
+
+        var downloadTasks = imageUrls.Select(async (imageUrl, index) =>
+        {
+            if (string.IsNullOrWhiteSpace(imageUrl))
+                return (Index: index, Page: null as PageDocument);
+
+            await Semaphore.WaitAsync(ct);
+            try
+            {
+                var result = await DownloadAndConvertToWebP(
+                    mangaTitle,
+                    chapter.Number.ToString(CultureInfo.InvariantCulture),
+                    imageUrl,
+                    index + 1,
+                    ct);
+
+                return (Index: index, Page: new PageDocument
+                {
+                    ImageUrl = imageUrl,
+                    LocalImageUrl = result.path,
+                    Size = result.size
+                });
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Failed to download/convert image at index {Index} for {MangaTitle} (MangaDex)", index, mangaTitle);
+                throw;
+            }
+            finally
+            {
+                Semaphore.Release();
+            }
+        });
+
+        var results = await Task.WhenAll(downloadTasks);
+
+        var orderedPages = results
+            .OrderBy(r => r.Index)
+            .Where(r => r.Page != null)
+            .Select(r => r.Page!)
+            .ToList();
+
+        chapter.Pages.AddRange(orderedPages);
+        return chapter;
+    }
+
+    private static string ExtractChapterIdFromUrl(string url)
+    {
+        var match = MangaIdRegex.Match(url);
+        if (!match.Success)
+            throw new ArgumentException($"Could not extract MangaDex chapter id from url: {url}");
+
+        return match.Value;
+    }
+
     // ─── Search ──────────────────────────────────────────────────────────────
 
     /// <summary>

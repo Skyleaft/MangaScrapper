@@ -176,3 +176,29 @@ public class MangaDexMangaAttributes
     [JsonPropertyName("updatedAt")]
     public DateTime UpdatedAt { get; set; }
 }
+
+// ─── At-home server (chapter pages) ─────────────────────────────────────────
+
+public class MangaDexAtHomeResponse
+{
+    [JsonPropertyName("result")]
+    public string Result { get; set; } = string.Empty;
+
+    [JsonPropertyName("baseUrl")]
+    public string BaseUrl { get; set; } = string.Empty;
+
+    [JsonPropertyName("chapter")]
+    public MangaDexAtHomeChapter Chapter { get; set; } = new();
+}
+
+public class MangaDexAtHomeChapter
+{
+    [JsonPropertyName("hash")]
+    public string Hash { get; set; } = string.Empty;
+
+    [JsonPropertyName("data")]
+    public List<string> Data { get; set; } = new();
+
+    [JsonPropertyName("dataSaver")]
+    public List<string> DataSaver { get; set; } = new();
+}
