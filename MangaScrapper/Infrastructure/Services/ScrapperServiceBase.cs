@@ -78,6 +78,9 @@ public abstract class ScrapperServiceBase : IScrapperService
         {
             if (FlareSolverrService != null && FlareSolverrService.IsEnabled)
             {
+                // EnsureSessionAsync guarantees only one FlareSolverr challenge-solve happens per
+                // host at a time — concurrent requests wait and share the solved session.
+                await FlareSolverrService.EnsureSessionAsync(url, token);
                 var html = await FlareSolverrService.GetHtmlAsync(url, formData, token);
                 var doc = new HtmlDocument();
                 doc.LoadHtml(html);

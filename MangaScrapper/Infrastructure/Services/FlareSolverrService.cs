@@ -1,23 +1,151 @@
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Options;
+using System.Net.Http;
 
 namespace MangaScrapper.Infrastructure.Services;
 
 public class FlareSolverrService
 {
     private readonly HttpClient _httpClient;
+    private readonly IHttpClientFactory _httpClientFactory;
     private readonly FlareSolverrSettings _settings;
 
-    public FlareSolverrService(HttpClient httpClient, IOptions<FlareSolverrSettings> settings)
+    public FlareSolverrService(HttpClient httpClient, IHttpClientFactory httpClientFactory, IOptions<FlareSolverrSettings> settings)
     {
         _httpClient = httpClient;
+        _httpClientFactory = httpClientFactory;
         _settings = settings.Value;
     }
 
     public bool IsEnabled => _settings.Enabled;
 
+    // Cached solved sessions: host -> (userAgent, cookies)
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, (string UserAgent, List<FlareSolverrCookie> Cookies)> _sessionCache = new();
+
+    // Per-host lock to prevent concurrent challenge-solve requests — only one request per host
+    // goes to FlareSolverr at a time; others wait and share the result.
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, SemaphoreSlim> _hostLocks = new();
+
+    private static SemaphoreSlim GetHostLock(string host)
+        => _hostLocks.GetOrAdd(host, _ => new SemaphoreSlim(1, 1));
+
+    public bool TryGetSession(string host, out string userAgent, out string cookieHeader)
+    {
+        userAgent = string.Empty;
+        cookieHeader = string.Empty;
+        if (_sessionCache.TryGetValue(host, out var session))
+        {
+            userAgent = session.UserAgent;
+            cookieHeader = string.Join("; ", session.Cookies.Select(c => $"{c.Name}={c.Value}"));
+            return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Ensures a valid session exists for the given host, solving the Cloudflare challenge if needed.
+    /// Concurrent calls for the same host are coalesced — only one actual FlareSolverr request is made.
+    /// </summary>
+    public async Task EnsureSessionAsync(string url, CancellationToken ct = default)
+    {
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)) return;
+        var host = uri.Host;
+
+        // Fast path: session already cached
+        if (_sessionCache.ContainsKey(host)) return;
+
+        var hostLock = GetHostLock(host);
+        await hostLock.WaitAsync(ct);
+        try
+        {
+            // Double-check after acquiring the lock — another thread may have already solved it
+            if (_sessionCache.ContainsKey(host)) return;
+
+            // Send a GET to the base host to trigger Cloudflare challenge solve
+            await SendThroughFlareSolverr($"{uri.Scheme}://{host}", null, ct, host);
+        }
+        finally
+        {
+            hostLock.Release();
+        }
+    }
+
     public async Task<string> GetHtmlAsync(string url, HttpContent? content = default, CancellationToken ct = default)
+    {
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+            throw new ArgumentException($"Invalid URL: {url}", nameof(url));
+
+        var host = uri.Host;
+
+        if (_sessionCache.ContainsKey(host))
+        {
+            // Use host lock to ensure we don't race against an ongoing session refresh
+            var hostLock = GetHostLock(host);
+            await hostLock.WaitAsync(ct);
+            try
+            {
+                if (TryGetSession(host, out var userAgent, out var cookieHeader))
+                {
+                    try
+                    {
+                        var client = _httpClientFactory.CreateClient();
+                        using var request = new HttpRequestMessage(content != null ? HttpMethod.Post : HttpMethod.Get, url);
+                        if (content != null)
+                        {
+                            request.Content = content;
+                        }
+
+                        if (!string.IsNullOrEmpty(userAgent))
+                        {
+                            request.Headers.UserAgent.Clear();
+                            request.Headers.TryAddWithoutValidation("User-Agent", userAgent);
+                        }
+                        if (!string.IsNullOrEmpty(cookieHeader))
+                        {
+                            request.Headers.TryAddWithoutValidation("Cookie", cookieHeader);
+                        }
+
+                        using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
+                        if (response.IsSuccessStatusCode)
+                        {
+                            return await response.Content.ReadAsStringAsync(ct);
+                        }
+                    }
+                    catch
+                    {
+                        // Ignore and fall back to FlareSolverr
+                    }
+
+                    // Direct request failed (possibly session expired/invalidated).
+                    // Evict from cache so FlareSolverr solves it again.
+                    _sessionCache.TryRemove(host, out _);
+                }
+
+                return await SendThroughFlareSolverr(url, content, ct, host);
+            }
+            finally
+            {
+                hostLock.Release();
+            }
+        }
+
+        // No cached session — acquire host lock so only one challenge-solve runs at a time
+        var lockSlim = GetHostLock(host);
+        await lockSlim.WaitAsync(ct);
+        try
+        {
+            // Double-check: if another request solved the challenge while we were waiting,
+            // we can still go through FlareSolverr but the cookies will be refreshed.
+            return await SendThroughFlareSolverr(url, content, ct, host);
+        }
+        finally
+        {
+            lockSlim.Release();
+        }
+    }
+
+    private async Task<string> SendThroughFlareSolverr(string url, HttpContent? content, CancellationToken ct, string host)
     {
         var requestBody = new FlareSolverrRequest
         {
@@ -42,6 +170,11 @@ public class FlareSolverrService
         if (result == null || result.Status != "ok" || result.Solution == null)
         {
             throw new HttpRequestException($"FlareSolverr request failed: {result?.Message ?? "Unknown error"}");
+        }
+
+        if (result.Solution.Cookies != null)
+        {
+            _sessionCache[host] = (result.Solution.UserAgent, result.Solution.Cookies);
         }
 
         return result.Solution.Response;

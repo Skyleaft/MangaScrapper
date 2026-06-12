@@ -1,5 +1,6 @@
 using FastEndpoints;
 using Microsoft.AspNetCore.StaticFiles;
+using System.Net.Http;
 
 namespace MangaScrapper.Features.Images;
 
@@ -12,7 +13,7 @@ public class ProxyRequest
 /// Proxies an external image URL through the server so the browser never
 /// makes a direct cross-origin request (avoids ERR_BLOCKED_BY_ORB / CORS issues).
 /// </summary>
-public class ProxyEndpoint(IHttpClientFactory httpClientFactory) : Endpoint<ProxyRequest>
+public class ProxyEndpoint(IHttpClientFactory httpClientFactory, MangaScrapper.Infrastructure.Services.FlareSolverrService flareSolverrService) : Endpoint<ProxyRequest>
 {
     public override void Configure()
     {
@@ -38,7 +39,28 @@ public class ProxyEndpoint(IHttpClientFactory httpClientFactory) : Endpoint<Prox
         try
         {
             var client = httpClientFactory.CreateClient("ImageProxy");
-            using var response = await client.GetAsync(r.Url, HttpCompletionOption.ResponseHeadersRead, ct);
+            using var request = new System.Net.Http.HttpRequestMessage(System.Net.Http.HttpMethod.Get, r.Url);
+
+            if (flareSolverrService.IsEnabled)
+            {
+                // EnsureSessionAsync coalesces concurrent challenge-solve requests —
+                // only one FlareSolverr round-trip happens per host; others wait and reuse.
+                try { await flareSolverrService.EnsureSessionAsync(r.Url, ct); } catch { /* Ignore, proceed without session */ }
+
+                flareSolverrService.TryGetSession(uri.Host, out var userAgent, out var cookieHeader);
+
+                if (!string.IsNullOrEmpty(userAgent))
+                {
+                    request.Headers.UserAgent.Clear();
+                    request.Headers.TryAddWithoutValidation("User-Agent", userAgent);
+                }
+                if (!string.IsNullOrEmpty(cookieHeader))
+                {
+                    request.Headers.TryAddWithoutValidation("Cookie", cookieHeader);
+                }
+            }
+
+            using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
 
             if (!response.IsSuccessStatusCode)
             {

@@ -224,8 +224,6 @@ public class KomikuService : ScrapperServiceBase
                     }
                 }
 
-                await EnrichSearchItemAsync(item, ct);
-
                 results.Add(item);
             }
             catch
@@ -233,6 +231,8 @@ public class KomikuService : ScrapperServiceBase
                 // skip item error biar tidak crash
             }
         }
+
+        await Task.WhenAll(results.Select(item => EnrichSearchItemAsync(item, ct)));
 
         return results;
     }

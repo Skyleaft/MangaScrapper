@@ -186,11 +186,11 @@ public class KiryuuService : ScrapperServiceBase
                     LastUpdateText = latestTimeText
                 };
 
-                await EnrichSearchItemAsync(item, ct);
-
                 data.Add(item);
             }
         }
+
+        await Task.WhenAll(data.Select(item => EnrichSearchItemAsync(item, ct)));
 
         return data;
     }
