@@ -7,7 +7,7 @@ namespace MangaScrapper.Infrastructure.Services;
 
 public interface IScrapperService
 {
-    Task<HtmlDocument> GetHtml(string url, string? query = null, MultipartFormDataContent? formData = null, CancellationToken ct = default);
+    Task<HtmlDocument> GetHtml(string url, string? query = null, HttpContent? formData = null, CancellationToken ct = default);
     Task<(string path, long size)> DownloadAndConvertToWebP(string mangaTitle, string chapterNumber, string imageUrl, int index, CancellationToken ct = default);
     Task<(string path, long size)> DownloadThumbnailAndConvertToWebP(string mangaTitle, string imageUrl, CancellationToken ct = default);
     string GetCleanTitle(string title);

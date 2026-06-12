@@ -54,7 +54,7 @@ public class KiryuuService : ScrapperServiceBase
         {
             manga.Genres = genreNodes.Select(g => g.InnerText.Trim()).ToList();
         }
-        
+
         var typeNode = doc.DocumentNode.SelectSingleNode(
             "//h4/span[normalize-space()='Type']/ancestor::div[contains(@class,'flex')][1]//p"
         );
@@ -82,7 +82,7 @@ public class KiryuuService : ScrapperServiceBase
         return manga;
     }
 
-    protected override async Task<List<ChapterDocument>> ExtractChaptersMetadata( CancellationToken ct = default)
+    protected override async Task<List<ChapterDocument>> ExtractChaptersMetadata(CancellationToken ct = default)
     {
         var hxNode = doc.DocumentNode.SelectSingleNode("//div[contains(@hx-get,'manga_id=')]");
         var hxGet = hxNode?.GetAttributeValue("hx-get", "");
@@ -104,9 +104,9 @@ public class KiryuuService : ScrapperServiceBase
             var link = node.SelectSingleNode(".//a")?.GetAttributeValue("href", string.Empty);
             var time = node.SelectSingleNode(".//time")?.GetAttributeValue("datetime", "");
             var views = node.SelectSingleNode(Provider.ChapterSelectors.Views)?.InnerText.Trim();
-            
+
             if (string.IsNullOrWhiteSpace(link)) continue;
-            
+
             var uri = new Uri(link);
             var path = uri.PathAndQuery;
 
@@ -123,36 +123,38 @@ public class KiryuuService : ScrapperServiceBase
 
         return data;
     }
-    
+
     public override async Task<List<SearchItem>> SearchManga(SearchRequest request, CancellationToken ct)
     {
-        var url = $"{Provider.BaseUrl}/wp-admin/admin-ajax.php?action=advanced_search";
-        var formData = new MultipartFormDataContent();
+        var baseUrlClean = Provider.BaseUrl.TrimEnd('/');
+        var url = $"{baseUrlClean}/wp-admin/admin-ajax.php?action=advanced_search";
+        var parameters = new List<KeyValuePair<string, string>>();
 
         if (!string.IsNullOrEmpty(request.Keyword))
-            formData.Add(new StringContent(request.Keyword), "query");
+            parameters.Add(new KeyValuePair<string, string>("query", request.Keyword));
 
         if (!string.IsNullOrEmpty(request.Status))
         {
             var statuses = new List<string> { request.Status };
-            formData.Add(new StringContent(JsonSerializer.Serialize(statuses)), "status");
+            parameters.Add(new KeyValuePair<string, string>("status", JsonSerializer.Serialize(statuses)));
         }
 
         if (!string.IsNullOrEmpty(request.Type))
         {
             var types = new List<string> { request.Type };
-            formData.Add(new StringContent(JsonSerializer.Serialize(types)), "type");
+            parameters.Add(new KeyValuePair<string, string>("type", JsonSerializer.Serialize(types)));
         }
 
-        formData.Add(new StringContent("updated"), "orderby");
-        formData.Add(new StringContent(request.Page.ToString()), "page");
+        parameters.Add(new KeyValuePair<string, string>("orderby", "updated"));
+        parameters.Add(new KeyValuePair<string, string>("page", request.Page.ToString()));
 
         if (request.Genres != null && request.Genres.Any())
         {
             var genresJson = JsonSerializer.Serialize(request.Genres);
-            formData.Add(new StringContent(genresJson), "genre");
+            parameters.Add(new KeyValuePair<string, string>("genre", genresJson));
         }
 
+        using var formData = new FormUrlEncodedContent(parameters);
         var doc = await GetHtml(url, null, formData, ct: ct);
         var data = new List<SearchItem>();
 

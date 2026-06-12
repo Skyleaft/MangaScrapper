@@ -69,7 +69,7 @@ public abstract class ScrapperServiceBase : IScrapperService
         }
     }
     
-    public async Task<HtmlDocument> GetHtml(string url, string? query = null, MultipartFormDataContent? formData = null, CancellationToken ct = default)
+    public async Task<HtmlDocument> GetHtml(string url, string? query = null, HttpContent? formData = null, CancellationToken ct = default)
     {
         return await ExecuteWithRetryAsync(async (token) =>
         {
@@ -418,6 +418,20 @@ public abstract class ScrapperServiceBase : IScrapperService
         {
             throw;
         }
+    }
+
+    public async Task<MangaDocument> GetDetail(string url, CancellationToken ct)
+    {
+        var mangaData = ExtractMangaMetadata(url);
+        if (string.IsNullOrEmpty(mangaData.Title))
+        {
+            throw new ArgumentException("Missing Manga Title!");
+        }
+        var chapters = await ExtractChaptersMetadata(ct);
+        mangaData.Chapters = chapters;
+        if (mangaData.Type.Contains("-"))
+            mangaData.Type = "Manga";
+        return mangaData;
     }
 
     protected abstract MangaDocument ExtractMangaMetadata(string url);

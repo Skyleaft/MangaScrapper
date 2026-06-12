@@ -8,3 +8,8 @@ public class SearchRequest
     public string? Type { get; set; }
     public int Page { get; set; } = 1; 
 }
+
+public class DetailRequest
+{
+    public string MangaUrl { get; set; } = string.Empty;
+}
