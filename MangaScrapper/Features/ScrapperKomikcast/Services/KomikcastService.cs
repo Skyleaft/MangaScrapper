@@ -50,9 +50,9 @@ public class KomikcastService : ScrapperServiceBase
             Description = seriesData.Data.Data.Synopsis,
             Type = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(seriesData.Data.Data.Format),
             ImageUrl = seriesData.Data.Data.CoverImage,
-            Genres = seriesData.Data.Data.Genres.Select(x=>x.Data.Name).ToList(),
+            Genres = seriesData.Data.Data.Genres.Select(x => x.Data.Name).ToList(),
             Rating = seriesData.Data.Data.Rating,
-            Status =  CultureInfo.CurrentCulture.TextInfo.ToTitleCase(seriesData.Data.Data.Status),
+            Status = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(seriesData.Data.Data.Status),
         };
         return mangaData;
     }
@@ -70,7 +70,7 @@ public class KomikcastService : ScrapperServiceBase
                 Link = $"{chaptersUrl}/{item.Data.Index}",
                 ChapterProvider = Provider.ProviderName,
                 ChapterProviderIcon = Provider.ProviderIcon,
-                TotalView = item.Views?.Total??0,
+                TotalView = item.Views?.Total ?? 0,
                 UploadDate = item.CreatedAt
             });
         }
@@ -102,7 +102,7 @@ public class KomikcastService : ScrapperServiceBase
                     imageUrl,
                     index + 1,
                     ct);
-                
+
                 return (Index: index, Page: new PageDocument
                 {
                     ImageUrl = imageUrl,
@@ -135,7 +135,7 @@ public class KomikcastService : ScrapperServiceBase
 
     public override async Task<List<SearchItem>> SearchManga(SearchRequest request, CancellationToken ct)
     {
-        
+
         var queryParams = new List<KeyValuePair<string, string?>>
         {
             new("takeChapter", "1"),
@@ -147,16 +147,16 @@ public class KomikcastService : ScrapperServiceBase
         };
         if (!string.IsNullOrEmpty(request.Keyword))
         {
-            queryParams.Add(new("filter",$"title=like={request.Keyword}"));
+            queryParams.Add(new("filter", $"title=like=\"{request.Keyword}\",nativeTitle=like=\"{request.Keyword}\""));
         }
-        if(request.Genres!=null && request.Genres.Count>0)
+        if (request.Genres != null && request.Genres.Count > 0)
         {
             foreach (var genre in request.Genres)
             {
                 queryParams.Add(new("genreIds", genre));
             }
         }
-        
+
         var fullUrl = QueryHelpers.AddQueryString(BaseUrl, queryParams);
 
         var data = await GetFromJsonAsync<KomikcastResponse<List<KomikcastModel>>>(fullUrl, cancellationToken: ct);
@@ -167,13 +167,13 @@ public class KomikcastService : ScrapperServiceBase
         {
             var sItem = new SearchItem();
             sItem.Title = item.Data.Title;
-            sItem.LatestChapterNumber = item.Chapters.First().ChapterIndex??0;
+            sItem.LatestChapterNumber = item.Chapters.First().ChapterIndex ?? 0;
             sItem.Thumbnail = item.Data.CoverImage;
             sItem.DetailUrl = item.Data.Slug;
             sItem.Type = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(item.Data.Format);
-            sItem.Genre = string.Join(",",item.Data.Genres.Select(x => x.Data.Name));
+            sItem.Genre = string.Join(",", item.Data.Genres.Select(x => x.Data.Name));
             sItem.LastUpdateText = item.Chapters.First().CreatedAt.ToTimeAgo();
-            
+
             await EnrichSearchItemAsync(sItem, ct);
             resp.Add(sItem);
         }
