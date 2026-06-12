@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.RegularExpressions;
 using Hangfire;
 using MangaScrapper.Infrastructure.Models;
 using MangaScrapper.Infrastructure.Mongo.Collections;
@@ -15,6 +16,12 @@ public class MangaDexService : ScrapperServiceBase
 {
     private const string BaseApi = "https://api.mangadex.org";
     private const string CoverBaseUrl = "https://uploads.mangadex.org/covers";
+    private static readonly string[] ChapterLanguagePriority = ["id", "en"];
+    private static readonly Regex MangaIdRegex = new(
+        @"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    private string _mangaId = string.Empty;
 
     public MangaDexService(
         HttpClient httpClient,
@@ -32,13 +39,202 @@ public class MangaDexService : ScrapperServiceBase
         LoadProvider("mangadex-provider.json");
     }
 
-    // ─── Abstract overrides (not used for API-based scraper) ─────────────────
+    // ─── Detail ──────────────────────────────────────────────────────────────
 
     protected override MangaDocument ExtractMangaMetadata(string url)
-        => throw new NotSupportedException("MangaDex uses a REST API — HTML scraping is not applicable.");
+    {
+        _mangaId = ExtractMangaIdFromUrl(url);
 
-    protected override Task<List<ChapterDocument>> ExtractChaptersMetadata(CancellationToken ct = default)
-        => throw new NotSupportedException("MangaDex uses a REST API — HTML scraping is not applicable.");
+        var queryParams = new List<KeyValuePair<string, string?>>
+        {
+            new("includes[]", "cover_art"),
+            new("includes[]", "author"),
+            new("includes[]", "artist"),
+        };
+
+        var mangaUrl = QueryHelpers.AddQueryString($"{BaseApi}/manga/{_mangaId}", queryParams);
+        var response = GetFromJsonAsync<MangaDexResponse<MangaDexManga>>(mangaUrl).GetAwaiter().GetResult()
+            ?? throw new InvalidOperationException($"Failed to fetch MangaDex manga '{_mangaId}'.");
+
+        if (response.Data == null)
+            throw new InvalidOperationException($"MangaDex manga '{_mangaId}' was not found.");
+
+        return MapMangaToDocument(response.Data);
+    }
+
+    protected override async Task<List<ChapterDocument>> ExtractChaptersMetadata(CancellationToken ct = default)
+    {
+        if (string.IsNullOrEmpty(_mangaId))
+            return new List<ChapterDocument>();
+
+        var feedChapters = await FetchAllMangaChaptersAsync(_mangaId, ct);
+        if (feedChapters.Count == 0)
+            return new List<ChapterDocument>();
+
+        var chapters = new List<ChapterDocument>();
+
+        foreach (var group in feedChapters.GroupBy(GetChapterNumber).Where(g => g.Key >= 0))
+        {
+            var selected = SelectChapterByLanguagePriority(group);
+            chapters.Add(MapChapterToDocument(selected));
+        }
+
+        return chapters
+            .OrderByDescending(c => c.Number)
+            .ToList();
+    }
+
+    private async Task<List<MangaDexChapter>> FetchAllMangaChaptersAsync(string mangaId, CancellationToken ct)
+    {
+        const int pageSize = 500;
+        var offset = 0;
+        var allChapters = new List<MangaDexChapter>();
+
+        while (true)
+        {
+            var queryParams = new List<KeyValuePair<string, string?>>
+            {
+                new("limit", pageSize.ToString()),
+                new("offset", offset.ToString()),
+                new("translatedLanguage[]", "id"),
+                new("translatedLanguage[]", "en"),
+                new("order[chapter]", "desc"),
+                new("contentRating[]", "safe"),
+                new("contentRating[]", "suggestive"),
+                new("contentRating[]", "erotica"),
+                new("contentRating[]", "pornographic"),
+            };
+
+            var feedUrl = QueryHelpers.AddQueryString($"{BaseApi}/manga/{mangaId}/feed", queryParams);
+            MangaDexResponse<List<MangaDexChapter>>? response;
+
+            try
+            {
+                response = await GetFromJsonAsync<MangaDexResponse<List<MangaDexChapter>>>(feedUrl, ct);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Failed to fetch MangaDex chapter feed for manga '{MangaId}'", mangaId);
+                break;
+            }
+
+            if (response?.Data == null || response.Data.Count == 0)
+                break;
+
+            allChapters.AddRange(response.Data);
+
+            if (offset + response.Data.Count >= response.Total)
+                break;
+
+            offset += pageSize;
+        }
+
+        return allChapters;
+    }
+
+    private static MangaDocument MapMangaToDocument(MangaDexManga manga)
+    {
+        var attrs = manga.Attributes;
+        var coverRel = manga.Relationships.FirstOrDefault(r => r.Type == "cover_art");
+        var imageUrl = coverRel?.Attributes?.FileName != null
+            ? $"{CoverBaseUrl}/{manga.Id}/{coverRel.Attributes.FileName}.512.jpg"
+            : null;
+
+        var authors = manga.Relationships
+            .Where(r => r.Type == "author")
+            .Select(r => r.Attributes?.Name)
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .ToList();
+
+        var genres = attrs.Tags
+            .Select(t => t.Attributes.Name.TryGetValue("en", out var n) ? n : string.Empty)
+            .Where(n => !string.IsNullOrEmpty(n))
+            .ToList();
+
+        return new MangaDocument
+        {
+            Title = ResolveTitle(attrs.Title),
+            Author = string.Join(", ", authors),
+            Description = ResolveDescription(attrs.Description),
+            Type = MapOriginalLanguageToType(attrs.OriginalLanguage),
+            ImageUrl = imageUrl,
+            Genres = genres,
+            Status = MapMangaStatus(attrs.Status),
+            Url = $"https://mangadex.org/title/{manga.Id}",
+        };
+    }
+
+    private ChapterDocument MapChapterToDocument(MangaDexChapter chapter)
+    {
+        return new ChapterDocument
+        {
+            Number = GetChapterNumber(chapter),
+            Link = $"https://mangadex.org/chapter/{chapter.Id}",
+            ChapterProvider = Provider.ProviderName,
+            ChapterProviderIcon = Provider.ProviderIcon,
+            Language = chapter.Attributes.TranslatedLanguage,
+            UploadDate = chapter.Attributes.ReadableAt,
+        };
+    }
+
+    private static MangaDexChapter SelectChapterByLanguagePriority(IEnumerable<MangaDexChapter> chapters)
+    {
+        var list = chapters.ToList();
+
+        foreach (var lang in ChapterLanguagePriority)
+        {
+            var match = list.FirstOrDefault(c =>
+                string.Equals(c.Attributes.TranslatedLanguage, lang, StringComparison.OrdinalIgnoreCase));
+
+            if (match != null)
+                return match;
+        }
+
+        return list[0];
+    }
+
+    private static double GetChapterNumber(MangaDexChapter chapter)
+    {
+        return double.TryParse(
+            chapter.Attributes.Chapter,
+            NumberStyles.Float,
+            CultureInfo.InvariantCulture,
+            out var number)
+            ? number
+            : -1;
+    }
+
+    private static string ExtractMangaIdFromUrl(string url)
+    {
+        var match = MangaIdRegex.Match(url);
+        if (!match.Success)
+            throw new ArgumentException($"Could not extract MangaDex manga id from url: {url}");
+
+        return match.Value;
+    }
+
+    private static string ResolveDescription(Dictionary<string, string>? descriptionMap)
+    {
+        if (descriptionMap == null || descriptionMap.Count == 0)
+            return string.Empty;
+
+        foreach (var lang in new[] { "en", "id", "ja-ro", "ja" })
+        {
+            if (descriptionMap.TryGetValue(lang, out var description) && !string.IsNullOrWhiteSpace(description))
+                return description;
+        }
+
+        return descriptionMap.Values.FirstOrDefault(d => !string.IsNullOrWhiteSpace(d)) ?? string.Empty;
+    }
+
+    private static string MapMangaStatus(string status) => status.ToLowerInvariant() switch
+    {
+        "ongoing" => "Ongoing",
+        "completed" => "Completed",
+        "hiatus" => "On Hiatus",
+        "cancelled" => "Discontinued",
+        _ => "Unknown",
+    };
 
     // ─── Search ──────────────────────────────────────────────────────────────
 
