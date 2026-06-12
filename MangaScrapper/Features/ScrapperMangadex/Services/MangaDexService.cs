@@ -25,8 +25,9 @@ public class MangaDexService : ScrapperServiceBase
         SemaphoreSlim semaphore,
         MeilisearchService meilisearchService,
         QdrantService qdrantService,
-        ILoggerFactory loggerFactory)
-        : base(httpClient, mangaRepository, jobClient, scopeFactory, settings, semaphore, meilisearchService, qdrantService, loggerFactory)
+        ILoggerFactory loggerFactory,
+        FlareSolverrService flareSolverrService)
+        : base(httpClient, mangaRepository, jobClient, scopeFactory, settings, semaphore, meilisearchService, qdrantService, loggerFactory, flareSolverrService)
     {
         LoadProvider("mangadex-provider.json");
     }
@@ -87,7 +88,7 @@ public class MangaDexService : ScrapperServiceBase
         MangaDexResponse<List<MangaDexChapter>>? feedResponse;
         try
         {
-            feedResponse = await HttpClient.GetFromJsonAsync<MangaDexResponse<List<MangaDexChapter>>>(feedUrl, ct);
+            feedResponse = await GetFromJsonAsync<MangaDexResponse<List<MangaDexChapter>>>(feedUrl, ct);
         }
         catch (Exception ex)
         {
@@ -135,7 +136,7 @@ public class MangaDexService : ScrapperServiceBase
             var mangaUrl = QueryHelpers.AddQueryString($"{BaseApi}/manga", mangaQueryParams);
             try
             {
-                var mangaResponse = await HttpClient.GetFromJsonAsync<MangaDexResponse<List<MangaDexManga>>>(mangaUrl, ct);
+                var mangaResponse = await GetFromJsonAsync<MangaDexResponse<List<MangaDexManga>>>(mangaUrl, ct);
                 if (mangaResponse?.Data != null)
                 {
                     foreach (var manga in mangaResponse.Data)
@@ -201,7 +202,7 @@ public class MangaDexService : ScrapperServiceBase
         MangaDexResponse<List<MangaDexManga>>? searchResponse;
         try
         {
-            searchResponse = await HttpClient.GetFromJsonAsync<MangaDexResponse<List<MangaDexManga>>>(searchUrl, ct);
+            searchResponse = await GetFromJsonAsync<MangaDexResponse<List<MangaDexManga>>>(searchUrl, ct);
         }
         catch (Exception ex)
         {

@@ -163,6 +163,7 @@ BsonSerializer.RegisterSerializer(new GuidSerializer(GuidRepresentation.Standard
 
 builder.Services.Configure<MongoSettings>(builder.Configuration.GetSection("MongoSettings"));
 builder.Services.Configure<ScrapperSettings>(builder.Configuration.GetSection("ScrapperSettings"));
+builder.Services.Configure<FlareSolverrSettings>(builder.Configuration.GetSection("FlareSolverrSettings"));
 builder.Services.Configure<MeiliConfig>(builder.Configuration.GetSection("MeiliSettings"));
 builder.Services.Configure<QdrantConfig>(builder.Configuration.GetSection("QdrantSettings"));
 builder.Services.Configure<EmbeddingConfig>(builder.Configuration.GetSection("EmbeddingSettings"));
@@ -212,6 +213,12 @@ builder.Services.AddScoped<QdrantService>();
 builder.Services.AddScoped<StorageSyncService>();
 
 //setting httpclient
+builder.Services.AddHttpClient<FlareSolverrService>((sp, client) =>
+{
+    var settings = sp.GetRequiredService<IOptions<FlareSolverrSettings>>().Value;
+    client.BaseAddress = new Uri(settings.Host);
+});
+
 builder.Services.AddHttpClient<ScrapperService>(HttpConfig.ConfigureClient)
     .ConfigurePrimaryHttpMessageHandler(HttpConfig.CreateHandler);
 

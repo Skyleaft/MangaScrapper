@@ -27,8 +27,9 @@ public class KiryuuService : ScrapperServiceBase
         SemaphoreSlim semaphore,
         MeilisearchService meilisearchService,
         QdrantService qdrantService,
-        ILoggerFactory loggerFactory)
-        : base(httpClient, mangaRepository, jobClient, scopeFactory, settings, semaphore, meilisearchService, qdrantService, loggerFactory)
+        ILoggerFactory loggerFactory,
+        FlareSolverrService flareSolverrService)
+        : base(httpClient, mangaRepository, jobClient, scopeFactory, settings, semaphore, meilisearchService, qdrantService, loggerFactory, flareSolverrService)
     {
         LoadProvider("kiryuu-provider.json");
     }

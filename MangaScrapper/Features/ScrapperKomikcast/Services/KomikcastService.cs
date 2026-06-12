@@ -27,8 +27,9 @@ public class KomikcastService : ScrapperServiceBase
         SemaphoreSlim semaphore,
         MeilisearchService meilisearchService,
         QdrantService qdrantService,
-        ILoggerFactory loggerFactory)
-        : base(httpClient, mangaRepository, jobClient, scopeFactory, settings, semaphore, meilisearchService, qdrantService, loggerFactory)
+        ILoggerFactory loggerFactory,
+        FlareSolverrService flareSolverrService)
+        : base(httpClient, mangaRepository, jobClient, scopeFactory, settings, semaphore, meilisearchService, qdrantService, loggerFactory, flareSolverrService)
     {
         LoadProvider("komikcast-provider.json");
     }
@@ -41,7 +42,7 @@ public class KomikcastService : ScrapperServiceBase
         _fullUrl = url.StartsWith("http", StringComparison.OrdinalIgnoreCase)
             ? url
             : $"{BaseUrl}/{url.TrimStart('/')}";
-        var seriesData = HttpClient.GetFromJsonAsync<KomikcastResponse<KomikcastModel>>(_fullUrl).GetAwaiter().GetResult();
+        var seriesData = GetFromJsonAsync<KomikcastResponse<KomikcastModel>>(_fullUrl).GetAwaiter().GetResult();
         var mangaData = new MangaDocument
         {
             Title = seriesData.Data.Data.Title,
@@ -59,7 +60,7 @@ public class KomikcastService : ScrapperServiceBase
     protected override async Task<List<ChapterDocument>> ExtractChaptersMetadata(CancellationToken ct = default)
     {
         var chaptersUrl = _fullUrl.EndsWith("/chapters") ? _fullUrl : $"{_fullUrl}/chapters";
-        var chapterData = await HttpClient.GetFromJsonAsync<KomikcastResponse<List<KomikcastChapters>>>(chaptersUrl, cancellationToken: ct);
+        var chapterData = await GetFromJsonAsync<KomikcastResponse<List<KomikcastChapters>>>(chaptersUrl, cancellationToken: ct);
         var chapters = new List<ChapterDocument>();
         foreach (var item in chapterData.Data)
         {
@@ -81,7 +82,7 @@ public class KomikcastService : ScrapperServiceBase
         var url = chapter.Link;
         if (string.IsNullOrWhiteSpace(url)) return chapter;
 
-        var response = await HttpClient.GetFromJsonAsync<KomikcastResponse<KomikcastChapterDetails>>(url, cancellationToken: ct);
+        var response = await GetFromJsonAsync<KomikcastResponse<KomikcastChapterDetails>>(url, cancellationToken: ct);
         if (response?.Data?.Data?.Images == null)
         {
             return chapter;
@@ -158,7 +159,7 @@ public class KomikcastService : ScrapperServiceBase
         
         var fullUrl = QueryHelpers.AddQueryString(BaseUrl, queryParams);
 
-        var data = await HttpClient.GetFromJsonAsync<KomikcastResponse<List<KomikcastModel>>>(fullUrl, cancellationToken: ct);
+        var data = await GetFromJsonAsync<KomikcastResponse<List<KomikcastModel>>>(fullUrl, cancellationToken: ct);
 
         var resp = new List<SearchItem>();
 

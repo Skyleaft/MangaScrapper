@@ -28,6 +28,7 @@ public abstract class ScrapperServiceBase : IScrapperService
     protected readonly MeilisearchService MeilisearchService;
     protected readonly QdrantService QdrantService;
     protected readonly ILogger Logger;
+    protected readonly FlareSolverrService FlareSolverrService;
     private ScrapperProvider? _provider;
 
     protected ScrapperServiceBase(
@@ -39,7 +40,8 @@ public abstract class ScrapperServiceBase : IScrapperService
         SemaphoreSlim semaphore,
         MeilisearchService meilisearchService,
         QdrantService qdrantService,
-        ILoggerFactory loggerFactory)
+        ILoggerFactory loggerFactory,
+        FlareSolverrService flareSolverrService)
     {
         HttpClient = httpClient;
         MangaRepository = mangaRepository;
@@ -50,8 +52,9 @@ public abstract class ScrapperServiceBase : IScrapperService
         MeilisearchService = meilisearchService;
         QdrantService = qdrantService;
         Logger = loggerFactory.CreateLogger(GetType());
-        ImageStoragePath = Path.IsPathRooted(_settings.ImageStoragePath) 
-            ? _settings.ImageStoragePath 
+        FlareSolverrService = flareSolverrService;
+        ImageStoragePath = Path.IsPathRooted(_settings.ImageStoragePath)
+            ? _settings.ImageStoragePath
             : Path.Combine(Directory.GetCurrentDirectory(), _settings.ImageStoragePath);
         Directory.CreateDirectory(ImageStoragePath);
     }
@@ -68,11 +71,19 @@ public abstract class ScrapperServiceBase : IScrapperService
             _provider = System.Text.Json.JsonSerializer.Deserialize<ScrapperProvider>(json);
         }
     }
-    
+
     public async Task<HtmlDocument> GetHtml(string url, string? query = null, HttpContent? formData = null, CancellationToken ct = default)
     {
         return await ExecuteWithRetryAsync(async (token) =>
         {
+            if (FlareSolverrService != null && FlareSolverrService.IsEnabled)
+            {
+                var html = await FlareSolverrService.GetHtmlAsync(url, formData, token);
+                var doc = new HtmlDocument();
+                doc.LoadHtml(html);
+                return doc;
+            }
+
             if (formData != null)
             {
                 var responseForm = await HttpClient.PostAsync(url, formData, token);
@@ -109,6 +120,28 @@ public abstract class ScrapperServiceBase : IScrapperService
         }, ct);
     }
 
+    protected async Task<T?> GetFromJsonAsync<T>(string url, CancellationToken cancellationToken = default)
+    {
+        return await ExecuteWithRetryAsync<T?>(async (token) =>
+        {
+            if (FlareSolverrService != null && FlareSolverrService.IsEnabled)
+            {
+                var jsonText = await FlareSolverrService.GetHtmlAsync(url, ct: token);
+                if (jsonText.TrimStart().StartsWith("<"))
+                {
+                    var doc = new HtmlDocument();
+                    doc.LoadHtml(jsonText);
+                    var rawJson = doc.DocumentNode.SelectSingleNode("//pre")?.InnerText
+                                  ?? doc.DocumentNode.SelectSingleNode("//body")?.InnerText
+                                  ?? doc.DocumentNode.InnerText;
+                    jsonText = HtmlEntity.DeEntitize(rawJson).Trim();
+                }
+                return JsonSerializer.Deserialize<T>(jsonText, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            }
+            return await HttpClient.GetFromJsonAsync<T>(url, token);
+        }, cancellationToken);
+    }
+
     protected async Task<T> ExecuteWithRetryAsync<T>(Func<CancellationToken, Task<T>> action, CancellationToken ct, int maxRetries = 3)
     {
         for (var i = 0; i < maxRetries; i++)
@@ -130,13 +163,13 @@ public abstract class ScrapperServiceBase : IScrapperService
 
         throw new Exception("Retry failed");
     }
-    
+
     public async Task<(string path, long size)> DownloadAndConvertToWebP(string mangaTitle, string chapterNumber, string imageUrl, int index, CancellationToken ct = default)
     {
         var cleanTitle = GetCleanTitle(mangaTitle);
         var subDir = Path.Combine(ImageStoragePath, cleanTitle, chapterNumber);
         var fileName = $"{index}.webp";
-        
+
         return await SaveImageAsync(imageUrl, subDir, fileName, $"{cleanTitle}/{chapterNumber}/{fileName}", ct);
     }
 
@@ -162,7 +195,7 @@ public abstract class ScrapperServiceBase : IScrapperService
         var invalidChars = Path.GetInvalidFileNameChars()
             .Union(new[] { '?', '*', ':', '|', '<', '>', '"' })
             .ToArray();
-        
+
         return string.Concat(title.Split(invalidChars));
     }
 
@@ -231,7 +264,7 @@ public abstract class ScrapperServiceBase : IScrapperService
         var query = HttpUtility.ParseQueryString(string.Empty);
         query["q"] = title;
         query["limit"] = "10";
-        
+
         var url = $"https://api.jikan.moe/v4/manga?{query}";
         try
         {
@@ -249,7 +282,7 @@ public abstract class ScrapperServiceBase : IScrapperService
         var results = await SearchJikan(title, ct);
         return results.FirstOrDefault(x => string.Equals(x.Type, type, StringComparison.OrdinalIgnoreCase)) ?? results.FirstOrDefault();
     }
-    
+
     public async Task<JikanMangaItem?> GetMangaInfoById(int malId, CancellationToken ct = default)
     {
         var url = $"https://api.jikan.moe/v4/manga/{malId}";
@@ -263,7 +296,7 @@ public abstract class ScrapperServiceBase : IScrapperService
             return null;
         }
     }
-    
+
     public async Task<MangaDocument> UpdateMangaDocument(MangaDocument manga, CancellationToken ct = default)
     {
         JikanMangaItem? mangaInfo;
@@ -275,16 +308,16 @@ public abstract class ScrapperServiceBase : IScrapperService
         {
             mangaInfo = await GetMangaInfo(manga.Title, manga.Type, ct);
         }
-        
-        if (mangaInfo!=null)
+
+        if (mangaInfo != null)
         {
             if (mangaInfo.TitleSynonyms != null)
             {
                 var combinedTittleSynonym = string.Join(" ", mangaInfo.TitleSynonyms);
-                if (StringHelper.IsSimilar(mangaInfo.Title,manga.Title)||
-                    StringHelper.IsSimilar(mangaInfo.TitleEnglish,manga.Title)||
-                    StringHelper.IsSimilar(combinedTittleSynonym,manga.Title)||
-                    StringHelper.IsSimilar(mangaInfo.TitleJapanese,manga.Title) ||
+                if (StringHelper.IsSimilar(mangaInfo.Title, manga.Title) ||
+                    StringHelper.IsSimilar(mangaInfo.TitleEnglish, manga.Title) ||
+                    StringHelper.IsSimilar(combinedTittleSynonym, manga.Title) ||
+                    StringHelper.IsSimilar(mangaInfo.TitleJapanese, manga.Title) ||
                     mangaInfo.MalId == manga.MalID
                    )
                 {
@@ -296,14 +329,14 @@ public abstract class ScrapperServiceBase : IScrapperService
                     manga.Status = mangaInfo.Status switch
                     {
                         "Complete" => "Completed",
-                        "Finished"=> "Completed",
+                        "Finished" => "Completed",
                         "Publishing" => "Ongoing",
-                        "Hiatus"=> "On Hiatus",
-                        "Discontinued"=>"Discontinued",
+                        "Hiatus" => "On Hiatus",
+                        "Discontinued" => "Discontinued",
                         "Upcoming" => "Upcoming",
                         _ => "Unknown"
                     };
-                    if(string.IsNullOrEmpty(manga.Author))
+                    if (string.IsNullOrEmpty(manga.Author))
                     {
                         manga.Author = mangaInfo.Authors.FirstOrDefault()?.Name ?? manga.Author;
                     }
@@ -314,7 +347,7 @@ public abstract class ScrapperServiceBase : IScrapperService
         return manga;
     }
 
-    private async Task<MangaDocument> UpdateThumbnail(MangaDocument mangaData,string? imageUrl, CancellationToken ct = default)
+    private async Task<MangaDocument> UpdateThumbnail(MangaDocument mangaData, string? imageUrl, CancellationToken ct = default)
     {
         if (!string.IsNullOrWhiteSpace(imageUrl))
         {
@@ -332,7 +365,7 @@ public abstract class ScrapperServiceBase : IScrapperService
         foreach (var item in existingManga.Chapters)
         {
             var chapIndex = chapterDocuments.FirstOrDefault(x => x.Number == item.Number);
-            if (chapIndex!=null &&item.TotalView < chapIndex.TotalView)
+            if (chapIndex != null && item.TotalView < chapIndex.TotalView)
             {
                 item.TotalView = chapIndex.TotalView;
             }
@@ -350,20 +383,20 @@ public abstract class ScrapperServiceBase : IScrapperService
             {
                 throw new ArgumentException("Missing Manga Title!");
             }
-            
+
             var searchmanga = await MeilisearchService.SearchTittleAsync(mangaData.Title, ct);
             MangaDocument? existingManga = null;
             if (searchmanga is not null)
             {
-                if(StringHelper.CalculateSimilarity(searchmanga.Title,mangaData.Title)>=0.8)
-                    existingManga = await MangaRepository.GetByIdAsync(Guid.Parse(searchmanga.Id),ct);
+                if (StringHelper.CalculateSimilarity(searchmanga.Title, mangaData.Title) >= 0.8)
+                    existingManga = await MangaRepository.GetByIdAsync(Guid.Parse(searchmanga.Id), ct);
             }
 
             var chapters = await ExtractChaptersMetadata(ct);
 
             if (existingManga != null)
             {
-                existingManga = await UpdateThumbnail(existingManga,mangaData.ImageUrl, ct);
+                existingManga = await UpdateThumbnail(existingManga, mangaData.ImageUrl, ct);
 
                 existingManga.Chapters ??= new List<ChapterDocument>();
                 var existingChapterNumbers = existingManga.Chapters.Select(c => c.Number).ToHashSet();
@@ -384,14 +417,14 @@ public abstract class ScrapperServiceBase : IScrapperService
                 }
 
                 existingManga = await UpdateMangaDocument(existingManga, ct);
-                UpdateChapterViews(existingManga,chapters);
+                UpdateChapterViews(existingManga, chapters);
                 await MangaRepository.UpdateAsync(existingManga, ct);
                 await MeilisearchService.IndexMangaAsync(existingManga, ct);
                 await QdrantService.UpsertMangaAsync(existingManga, ct);
 
                 return existingManga;
             }
-            mangaData = await UpdateThumbnail(mangaData,mangaData.ImageUrl, ct);
+            mangaData = await UpdateThumbnail(mangaData, mangaData.ImageUrl, ct);
             mangaData.Chapters = chapters;
             mangaData.CreatedAt = chapters.OrderBy(x => x.UploadDate).FirstOrDefault()?.UploadDate ?? DateTime.MinValue;
             mangaData.UpdatedAt = DateTime.UtcNow;
@@ -469,7 +502,7 @@ public abstract class ScrapperServiceBase : IScrapperService
                     imageUrl,
                     index + 1,
                     ct);
-                
+
                 return (Index: index, Page: new PageDocument
                 {
                     ImageUrl = imageUrl,
@@ -509,7 +542,7 @@ public abstract class ScrapperServiceBase : IScrapperService
             chapter.Id.ToString(),
             this.GetType().AssemblyQualifiedName!,
             CancellationToken.None));
-        
+
         await Task.CompletedTask;
     }
 
@@ -518,7 +551,7 @@ public abstract class ScrapperServiceBase : IScrapperService
     protected async Task EnrichSearchItemAsync(SearchItem item, CancellationToken ct)
     {
         if (string.IsNullOrEmpty(item.Title)) return;
-        
+
         var searchmanga = await MeilisearchService.SearchTittleAsync(item.Title, ct);
         if (searchmanga != null)
         {
@@ -531,33 +564,33 @@ public abstract class ScrapperServiceBase : IScrapperService
             }
         }
     }
-    
+
     public async Task<List<PageDocument>> GetAllPages(string url, CancellationToken ct = default)
     {
         var chapter = new ChapterDocument { Link = url };
         var processedChapter = await GetChapterPage("temp", chapter, ct);
         return processedChapter.Pages;
     }
-    
+
     public async Task<List<ScrapperProvider>> GetAllProvider()
     {
         var providers = new List<ScrapperProvider>();
         var providerFolder = Path.Combine(Directory.GetCurrentDirectory(), "provider");
-        
+
         if (!Directory.Exists(providerFolder))
         {
             return providers;
         }
 
         var jsonFiles = Directory.GetFiles(providerFolder, "*.json");
-        
+
         foreach (var file in jsonFiles)
         {
             try
             {
                 var jsonContent = await File.ReadAllTextAsync(file);
                 var provider = JsonSerializer.Deserialize<ScrapperProvider>(jsonContent);
-                
+
                 if (provider != null)
                 {
                     providers.Add(provider);
