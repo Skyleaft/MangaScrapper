@@ -457,6 +457,15 @@ public abstract class ScrapperServiceBase : IScrapperService
                             await QueueChapterScraping(existingManga.Id, existingManga.Title, chapter);
                         }
                     }
+
+                    using (var scope = ScopeFactory.CreateScope())
+                    {
+                        var webhookService = scope.ServiceProvider.GetService<DiscordWebhookService>();
+                        if (webhookService != null)
+                        {
+                            await webhookService.SendNewChaptersNotificationAsync(existingManga, newChapters, ct);
+                        }
+                    }
                 }
 
                 existingManga = await UpdateMangaDocument(existingManga, ct);
@@ -485,6 +494,15 @@ public abstract class ScrapperServiceBase : IScrapperService
                 foreach (var chapter in chapters)
                 {
                     await QueueChapterScraping(manga.Id, manga.Title, chapter);
+                }
+            }
+
+            using (var scope = ScopeFactory.CreateScope())
+            {
+                var webhookService = scope.ServiceProvider.GetService<DiscordWebhookService>();
+                if (webhookService != null)
+                {
+                    await webhookService.SendNewMangaNotificationAsync(manga, chapters, ct);
                 }
             }
 

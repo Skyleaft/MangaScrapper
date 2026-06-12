@@ -167,6 +167,8 @@ builder.Services.Configure<FlareSolverrSettings>(builder.Configuration.GetSectio
 builder.Services.Configure<MeiliConfig>(builder.Configuration.GetSection("MeiliSettings"));
 builder.Services.Configure<QdrantConfig>(builder.Configuration.GetSection("QdrantSettings"));
 builder.Services.Configure<EmbeddingConfig>(builder.Configuration.GetSection("EmbeddingSettings"));
+builder.Services.Configure<DiscordWebhookSettings>(builder.Configuration.GetSection("DiscordWebhookSettings"));
+builder.Services.AddHttpClient<DiscordWebhookService>();
 builder.Services.AddSingleton<MongoContext>();
 builder.Services.AddSingleton(sp =>
 {
