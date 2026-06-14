@@ -51,7 +51,11 @@ public class DiscordWebhookService
                 ? string.Join(", ", chapters.OrderByDescending(c => c.Number).Take(5).Select(c => $"Ch. {c.Number}"))
                 : "No chapters loaded yet.";
 
-            var mangaThumb = string.IsNullOrWhiteSpace(manga.LocalImageUrl) ? null : new { url = $"{_domainSettings.DomainUrl}/api/images/{manga.LocalImageUrl}" };
+            var encodedPath = string.Join('/',
+                manga.LocalImageUrl
+                    .Split('/')
+                    .Select(Uri.EscapeDataString));
+            var mangaThumb = string.IsNullOrWhiteSpace(manga.LocalImageUrl) ? null : new { url = $"{_domainSettings.DomainUrl}/api/images/{encodedPath}" };
 
             var embed = new
             {
@@ -110,8 +114,11 @@ public class DiscordWebhookService
             {
                 chaptersListText += $"\n*and {newChapters.Count - 10} more chapters...*";
             }
-            
-            var mangaThumb = string.IsNullOrWhiteSpace(manga.LocalImageUrl) ? null : new { url = $"{_domainSettings.DomainUrl}/api/images/{manga.LocalImageUrl}" };
+            var encodedPath = string.Join('/',
+                manga.LocalImageUrl
+                    .Split('/')
+                    .Select(Uri.EscapeDataString));
+            var mangaThumb = string.IsNullOrWhiteSpace(manga.LocalImageUrl) ? null : new { url = $"{_domainSettings.DomainUrl}/api/images/{encodedPath}" };
 
             var embed = new
             {
