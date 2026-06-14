@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using MangaScrapper.Infrastructure.Models;
 using MangaScrapper.Infrastructure.Mongo.Collections;
 using Microsoft.Extensions.Logging;
@@ -13,6 +14,11 @@ public class DiscordWebhookService
     private readonly DiscordWebhookSettings _settings;
     private readonly DomainSettings _domainSettings;
     private readonly ILogger<DiscordWebhookService> _logger;
+
+    private static readonly JsonSerializerOptions SerializerOptions = new()
+    {
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+    };
 
     public DiscordWebhookService(
         HttpClient httpClient,
@@ -45,7 +51,7 @@ public class DiscordWebhookService
                 ? string.Join(", ", chapters.OrderByDescending(c => c.Number).Take(5).Select(c => $"Ch. {c.Number}"))
                 : "No chapters loaded yet.";
 
-            var mangaThumb = string.IsNullOrWhiteSpace(manga.LocalImageUrl) ? null : new { url = $"{_domainSettings.DomainUrl}/images/{manga.LocalImageUrl}" };
+            var mangaThumb = string.IsNullOrWhiteSpace(manga.LocalImageUrl) ? null : new { url = $"{_domainSettings.DomainUrl}/api/images/{manga.LocalImageUrl}" };
 
             var embed = new
             {
@@ -71,7 +77,7 @@ public class DiscordWebhookService
                 embeds = new[] { embed }
             };
 
-            var response = await _httpClient.PostAsJsonAsync(_settings.WebhookUrl, payload, ct);
+            var response = await _httpClient.PostAsJsonAsync(_settings.WebhookUrl, payload, SerializerOptions, ct);
             if (!response.IsSuccessStatusCode)
             {
                 var responseContent = await response.Content.ReadAsStringAsync(ct);
@@ -105,7 +111,7 @@ public class DiscordWebhookService
                 chaptersListText += $"\n*and {newChapters.Count - 10} more chapters...*";
             }
             
-            var mangaThumb = string.IsNullOrWhiteSpace(manga.LocalImageUrl) ? null : new { url = $"{_domainSettings.DomainUrl}/images/{manga.LocalImageUrl}" };
+            var mangaThumb = string.IsNullOrWhiteSpace(manga.LocalImageUrl) ? null : new { url = $"{_domainSettings.DomainUrl}/api/images/{manga.LocalImageUrl}" };
 
             var embed = new
             {
@@ -127,7 +133,7 @@ public class DiscordWebhookService
                 embeds = new[] { embed }
             };
 
-            var response = await _httpClient.PostAsJsonAsync(_settings.WebhookUrl, payload, ct);
+            var response = await _httpClient.PostAsJsonAsync(_settings.WebhookUrl, payload, SerializerOptions, ct);
             if (!response.IsSuccessStatusCode)
             {
                 var responseContent = await response.Content.ReadAsStringAsync(ct);
