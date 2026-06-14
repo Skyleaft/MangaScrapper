@@ -47,6 +47,7 @@ public class KomikuService : ScrapperServiceBase
             ImageUrl = doc.DocumentNode.SelectSingleNode(Provider.MangaSelectors.Thumbnail)?.GetAttributeValue("src", string.Empty),
             Genres = doc.DocumentNode.SelectNodes(Provider.MangaSelectors.Genres)?.Select(n => n.InnerText.Trim()).ToList()
         };
+        mangaData.ImageUrl = ThumbnailHelper.RemoveQueryString(mangaData.ImageUrl);
         if (string.IsNullOrEmpty(mangaData.Title))
         {
             mangaData.Title =

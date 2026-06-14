@@ -19,4 +19,20 @@ public static class ThumbnailHelper
 
         return url;
     }
+    
+    public static string RemoveQueryString(string url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+            return url;
+
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+            return url;
+
+        var builder = new UriBuilder(uri)
+        {
+            Query = string.Empty
+        };
+
+        return builder.Uri.ToString();
+    }
 }

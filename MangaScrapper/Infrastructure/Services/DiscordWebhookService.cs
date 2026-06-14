@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using System.Text.Json;
+using MangaScrapper.Infrastructure.Models;
 using MangaScrapper.Infrastructure.Mongo.Collections;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -10,16 +11,18 @@ public class DiscordWebhookService
 {
     private readonly HttpClient _httpClient;
     private readonly DiscordWebhookSettings _settings;
+    private readonly DomainSettings _domainSettings;
     private readonly ILogger<DiscordWebhookService> _logger;
 
     public DiscordWebhookService(
         HttpClient httpClient,
         IOptions<DiscordWebhookSettings> settings,
-        ILogger<DiscordWebhookService> logger)
+        ILogger<DiscordWebhookService> logger, IOptions<DomainSettings> domainSettings)
     {
         _httpClient = httpClient;
         _settings = settings.Value;
         _logger = logger;
+        _domainSettings = domainSettings.Value;
     }
 
     public async Task SendNewMangaNotificationAsync(MangaDocument manga, List<ChapterDocument> chapters, CancellationToken ct = default)
@@ -42,13 +45,15 @@ public class DiscordWebhookService
                 ? string.Join(", ", chapters.OrderByDescending(c => c.Number).Take(5).Select(c => $"Ch. {c.Number}"))
                 : "No chapters loaded yet.";
 
+            var mangaThumb = string.IsNullOrWhiteSpace(manga.LocalImageUrl) ? null : new { url = $"{_domainSettings.DomainUrl}/images/{manga.LocalImageUrl}" };
+
             var embed = new
             {
                 title = $"🆕 New {manga.Type} Added: {manga.Title}",
                 description = truncatedDescription ?? "No description available.",
-                url = manga.Url,
+                url = $"{_domainSettings.DomainUrl}/manga/{manga.Id}",
                 color = 3066993, // Green (Emerald)
-                thumbnail = string.IsNullOrWhiteSpace(manga.ImageUrl) ? null : new { url = manga.ImageUrl },
+                thumbnail = mangaThumb,
                 fields = new[]
                 {
                     new { name = "Author", value = string.IsNullOrWhiteSpace(manga.Author) ? "Unknown" : manga.Author, inline = true },
@@ -99,14 +104,16 @@ public class DiscordWebhookService
             {
                 chaptersListText += $"\n*and {newChapters.Count - 10} more chapters...*";
             }
+            
+            var mangaThumb = string.IsNullOrWhiteSpace(manga.LocalImageUrl) ? null : new { url = $"{_domainSettings.DomainUrl}/images/{manga.LocalImageUrl}" };
 
             var embed = new
             {
                 title = $"⚡ New Chapters Available: {manga.Title}",
                 description = $"New chapters have been scraped/updated for **{manga.Title}**.",
-                url = manga.Url,
+                url = $"{_domainSettings.DomainUrl}/manga/{manga.Id}",
                 color = 15105570, // Orange
-                thumbnail = string.IsNullOrWhiteSpace(manga.ImageUrl) ? null : new { url = manga.ImageUrl },
+                thumbnail = mangaThumb,
                 fields = new[]
                 {
                     new { name = "New Chapters", value = chaptersListText, inline = false }

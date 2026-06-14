@@ -168,6 +168,7 @@ builder.Services.Configure<MeiliConfig>(builder.Configuration.GetSection("MeiliS
 builder.Services.Configure<QdrantConfig>(builder.Configuration.GetSection("QdrantSettings"));
 builder.Services.Configure<EmbeddingConfig>(builder.Configuration.GetSection("EmbeddingSettings"));
 builder.Services.Configure<DiscordWebhookSettings>(builder.Configuration.GetSection("DiscordWebhookSettings"));
+builder.Services.Configure<DomainSettings>(builder.Configuration.GetSection("DomainSettings"));
 builder.Services.AddHttpClient<DiscordWebhookService>();
 builder.Services.AddSingleton<MongoContext>();
 builder.Services.AddSingleton(sp =>
