@@ -173,7 +173,8 @@ public abstract class ScrapperServiceBase : IScrapperService
     {
         var cleanTitle = GetCleanTitle(mangaTitle);
         var subDir = Path.Combine(ImageStoragePath, cleanTitle, chapterNumber);
-        var fileName = $"{index}.webp";
+        var ext = IsAvifUrl(imageUrl) ? ".avif" : ".webp";
+        var fileName = $"{index}{ext}";
 
         return await SaveImageAsync(imageUrl, subDir, fileName, $"{cleanTitle}/{chapterNumber}/{fileName}", ct);
     }
@@ -184,7 +185,8 @@ public abstract class ScrapperServiceBase : IScrapperService
         {
             var cleanTitle = GetCleanTitle(mangaTitle);
             var subDir = Path.Combine(ImageStoragePath, cleanTitle);
-            var fileName = "thumbnail.webp";
+            var ext = IsAvifUrl(imageUrl) ? ".avif" : ".webp";
+            var fileName = $"thumbnail{ext}";
 
             return await SaveImageAsync(imageUrl, subDir, fileName, $"{cleanTitle}/{fileName}", ct);
         }
@@ -276,7 +278,7 @@ public abstract class ScrapperServiceBase : IScrapperService
                 Directory.CreateDirectory(subDir);
                 var filePath = Path.Combine(subDir, fileName);
 
-                if (IsWebpUrl(imageUrl))
+                if (IsWebpUrl(imageUrl) || IsAvifUrl(imageUrl))
                 {
                     await using var output = File.Create(filePath);
                     await memStream.CopyToAsync(output, token);
@@ -284,18 +286,31 @@ public abstract class ScrapperServiceBase : IScrapperService
                     return (relativePath.Replace("\\", "/"), size);
                 }
 
-                using var imageData = SKData.Create(memStream);
-                using var skImage = SKImage.FromEncodedData(imageData)
-                    ?? throw new InvalidOperationException($"SkiaSharp could not decode image from: {imageUrl}");
-                using var encoded = skImage.Encode(SKEncodedImageFormat.Webp, 90);
-                await Task.Run(() =>
+                try
                 {
-                    using var output = File.Create(filePath);
-                    encoded.SaveTo(output);
-                }, token);
-                var finalSize = new FileInfo(filePath).Length;
+                    using var imageData = SKData.Create(memStream);
+                    using var skImage = SKImage.FromEncodedData(imageData)
+                        ?? throw new InvalidOperationException($"SkiaSharp could not decode image from: {imageUrl}");
+                    using var encoded = skImage.Encode(SKEncodedImageFormat.Webp, 90);
+                    await Task.Run(() =>
+                    {
+                        using var output = File.Create(filePath);
+                        encoded.SaveTo(output);
+                    }, token);
+                    var finalSize = new FileInfo(filePath).Length;
 
-                return (relativePath.Replace("\\", "/"), finalSize);
+                    return (relativePath.Replace("\\", "/"), finalSize);
+                }
+                catch (Exception ex)
+                {
+                    // Fallback to saving original image stream directly if SkiaSharp decoding fails
+                    Logger.LogWarning(ex, "SkiaSharp failed to decode image from: {ImageUrl}. Saving raw stream instead.", imageUrl);
+                    memStream.Position = 0;
+                    await using var output = File.Create(filePath);
+                    await memStream.CopyToAsync(output, token);
+                    var size = new FileInfo(filePath).Length;
+                    return (relativePath.Replace("\\", "/"), size);
+                }
             }
         }, ct);
     }
@@ -308,6 +323,16 @@ public abstract class ScrapperServiceBase : IScrapperService
         }
 
         return string.Equals(Path.GetExtension(uri.AbsolutePath), ".webp", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsAvifUrl(string imageUrl)
+    {
+        if (!Uri.TryCreate(imageUrl, UriKind.Absolute, out var uri))
+        {
+            return imageUrl.Contains(".avif", StringComparison.OrdinalIgnoreCase);
+        }
+
+        return string.Equals(Path.GetExtension(uri.AbsolutePath), ".avif", StringComparison.OrdinalIgnoreCase);
     }
 
     public async Task<List<JikanMangaItem>> SearchJikan(string title, CancellationToken ct = default)

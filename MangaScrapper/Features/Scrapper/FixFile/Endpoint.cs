@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.IO;
 using FastEndpoints;
 using MangaScrapper.Infrastructure.Mongo.Collections;
@@ -92,7 +92,9 @@ public class Endpoint(IMangaRepository repo, IOptions<ScrapperSettings> settings
             needsUpdate = true;
         }
 
-        var expectedFileName = $"{index}.webp";
+        var ext = Path.GetExtension(page.LocalImageUrl);
+        if (string.IsNullOrEmpty(ext)) ext = ".webp";
+        var expectedFileName = $"{index}{ext}";
         var currentFileName = Path.GetFileName(page.LocalImageUrl);
         var currentRelativeDir = Path.GetDirectoryName(page.LocalImageUrl);
 
