@@ -221,7 +221,15 @@ public abstract class ScrapperServiceBase : IScrapperService
                 using var request = new HttpRequestMessage(HttpMethod.Get, imageUrl);
                 if (_provider != null)
                 {
-                    request.Headers.Referrer = new Uri(_provider.BaseUrl);
+                    if (_provider.ProviderName == "MangaDex")
+                    {
+                        request.Headers.UserAgent.Clear();
+                        request.Headers.TryAddWithoutValidation("User-Agent", "MangaScrapper/1.0");
+                    }
+                    else
+                    {
+                        request.Headers.Referrer = new Uri(_provider.BaseUrl);
+                    }
                 }
                 var response = await HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token);
                 response.EnsureSuccessStatusCode();
