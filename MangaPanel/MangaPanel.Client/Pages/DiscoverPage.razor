@@ -374,6 +374,68 @@
                         <!-- Divider -->
                         <div class="border-t border-border-main mb-5"></div>
 
+                        <!-- Link Existing Manga Section -->
+                        <div class="mb-5 bg-bg-app/40 border border-border-main p-4 rounded-xl space-y-3">
+                            <div class="flex items-center justify-between">
+                                <label class="text-xs font-bold text-text-main flex items-center gap-2 cursor-pointer select-none">
+                                    <input type="checkbox" @bind="linkToExisting" class="rounded border-border-main text-primary focus:ring-primary/20" />
+                                    Link to Existing Manga in Library
+                                </label>
+                                @if (selectedLinkManga != null)
+                                {
+                                    <span class="px-2 py-0.5 bg-green-500/10 text-green-500 text-[10px] font-semibold rounded-md">Linked</span>
+                                }
+                            </div>
+
+                            @if (linkToExisting)
+                            {
+                                <div class="space-y-2 animate-in slide-in-from-top-2 duration-200">
+                                    <div class="relative">
+                                        <input type="text" @bind="linkSearchKeyword" @bind:event="oninput" @onkeyup="HandleLinkSearchKeyup"
+                                               placeholder="Search existing manga title..."
+                                               class="w-full px-3 py-2 bg-surface border border-border-main rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-xs text-text-main" />
+                                        @if (isLinkSearching)
+                                        {
+                                            <span class="absolute right-3 top-2.5">
+                                                <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                                            </span>
+                                        }
+                                    </div>
+
+                                    @if (linkSearchResults.Any())
+                                    {
+                                        <div class="bg-surface border border-border-main rounded-lg max-h-40 overflow-y-auto divide-y divide-border-main/50 shadow-sm">
+                                            @foreach (var m in linkSearchResults)
+                                            {
+                                                <button type="button" @onclick="() => SelectLinkManga(m)"
+                                                        class="w-full text-left px-3 py-2 text-xs hover:bg-bg-app flex items-center justify-between transition-colors @(selectedLinkManga?.Id == m.Id ? "bg-primary/5 text-primary font-semibold" : "text-text-main")">
+                                                    <span>@m.Title</span>
+                                                    <span class="text-[10px] text-slate-400">@m.Type</span>
+                                                </button>
+                                            }
+                                        </div>
+                                    }
+                                    else if (!string.IsNullOrEmpty(linkSearchKeyword) && !isLinkSearching)
+                                    {
+                                        <p class="text-[11px] text-slate-400 italic">No manga found in library. Press Enter to search.</p>
+                                    }
+
+                                    @if (selectedLinkManga != null)
+                                    {
+                                        <div class="flex items-center justify-between p-2.5 bg-green-500/5 border border-green-500/20 rounded-lg">
+                                            <div class="text-xs">
+                                                <p class="font-semibold text-green-600 dark:text-green-400">@selectedLinkManga.Title</p>
+                                                <p class="text-[10px] text-slate-400">ID: @selectedLinkManga.Id</p>
+                                            </div>
+                                            <button type="button" @onclick="ClearSelectedLinkManga" class="text-xs text-red-500 hover:text-red-600 font-semibold">
+                                                Remove
+                                            </button>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+
                         <!-- Action Buttons -->
                         <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">Scrape Action</p>
 
@@ -509,6 +571,8 @@
         public string MangaUrl { get; set; } = string.Empty;
         [JsonPropertyName("scrapChapters")]
         public bool ScrapChapters { get; set; }
+        [JsonPropertyName("linkId")]
+        public string? LinkId { get; set; }
     }
 
     private class ChapterInfo
@@ -545,6 +609,22 @@
         public List<ChapterInfo> Chapters { get; set; } = new();
     }
 
+    private class MangaSummaryDto
+    {
+        [JsonPropertyName("id")]
+        public Guid Id { get; set; }
+        [JsonPropertyName("title")]
+        public string Title { get; set; } = string.Empty;
+        [JsonPropertyName("type")]
+        public string Type { get; set; } = string.Empty;
+    }
+
+    private class GetPagedMangaResponse
+    {
+        [JsonPropertyName("items")]
+        public List<MangaSummaryDto> Items { get; set; } = new();
+    }
+
     // ── State ────────────────────────────────────────────────────────────────
     private List<ProviderInfo> providers = new();
 
@@ -573,6 +653,13 @@
     private bool scrapResultIsError = false;
     private bool isDetailLoading = false;
     private MangaDetailDto? detailManga = null;
+
+    // Link Existing Manga States
+    private bool linkToExisting = false;
+    private string linkSearchKeyword = "";
+    private bool isLinkSearching = false;
+    private List<MangaSummaryDto> linkSearchResults = new();
+    private MangaSummaryDto? selectedLinkManga = null;
 
     // ── Lifecycle ────────────────────────────────────────────────────────────
     protected override async Task OnInitializedAsync()
@@ -714,6 +801,11 @@
         scrapResultIsError = false;
         isScrapLoading = false;
 
+        linkToExisting = false;
+        linkSearchKeyword = "";
+        linkSearchResults.Clear();
+        selectedLinkManga = null;
+
         detailManga = null;
         isDetailLoading = true;
         StateHasChanged();
@@ -741,6 +833,62 @@
         selectedItem = null;
         scrapResultMessage = "";
         detailManga = null;
+
+        linkToExisting = false;
+        linkSearchKeyword = "";
+        linkSearchResults.Clear();
+        selectedLinkManga = null;
+    }
+
+    private async Task HandleLinkSearchKeyup(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await SearchLibraryManga();
+        }
+    }
+
+    private async Task SearchLibraryManga()
+    {
+        if (string.IsNullOrWhiteSpace(linkSearchKeyword))
+        {
+            linkSearchResults.Clear();
+            return;
+        }
+
+        isLinkSearching = true;
+        linkSearchResults.Clear();
+        StateHasChanged();
+
+        try
+        {
+            var searchUrl = $"/api/manga/paged?Search={Uri.EscapeDataString(linkSearchKeyword)}&Page=1&PageSize=10";
+            var response = await Http.GetFromJsonAsync<GetPagedMangaResponse>(searchUrl);
+            if (response != null)
+            {
+                linkSearchResults = response.Items;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error searching library manga: {ex.Message}");
+        }
+        finally
+        {
+            isLinkSearching = false;
+            StateHasChanged();
+        }
+    }
+
+    private void SelectLinkManga(MangaSummaryDto manga)
+    {
+        selectedLinkManga = manga;
+        linkSearchResults.Clear();
+    }
+
+    private void ClearSelectedLinkManga()
+    {
+        selectedLinkManga = null;
     }
 
     private async Task ScrapMetadata()
@@ -780,7 +928,8 @@
             var request = new ScrapRequest
             {
                 MangaUrl = selectedItem.DetailUrl,
-                ScrapChapters = scrapChapters
+                ScrapChapters = scrapChapters,
+                LinkId = linkToExisting && selectedLinkManga != null ? selectedLinkManga.Id.ToString() : null
             };
 
             var response = await Http.PostAsJsonAsync(

@@ -37,5 +37,6 @@ public class LatestChapterSummary{
     public int TotalView { get; set; }
     public string? ChapterProvider { get; set; }
     public string? ChapterProviderIcon { get; set; }
+    public string Language { get; set; } = string.Empty;
     public DateTime UploadDate { get; set; }
 }

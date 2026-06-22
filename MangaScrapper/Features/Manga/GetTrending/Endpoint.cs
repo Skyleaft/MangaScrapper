@@ -53,7 +53,8 @@ public class Endpoint(IMangaRepository mangaRepository) : Endpoint<Request, Resp
                         TotalView = c.TotalView,
                         UploadDate = c.UploadDate,
                         ChapterProvider = c.ChapterProvider,
-                        ChapterProviderIcon = c.ChapterProviderIcon
+                        ChapterProviderIcon = c.ChapterProviderIcon,
+                        Language = c.Language
                     }).FirstOrDefault() ?? new()
             }).ToList(),
             TotalCount = totalCount,

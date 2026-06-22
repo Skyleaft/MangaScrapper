@@ -44,7 +44,7 @@ public class LatestChapterScrapingJob(
                     logger.LogInformation("Found new chapter for {Title} on {Provider}", item.Title, provider);
                     try
                     {
-                        await scrapperService.ExtractManga(item.DetailUrl, ct, false);
+                        await scrapperService.ExtractManga(item.DetailUrl, ct, false, item.MangaId?.ToString());
                     }
                     catch (Exception ex)
                     {

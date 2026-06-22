@@ -14,7 +14,7 @@ public class Endpoint(MangaDexService mangaDexService) : Endpoint<Request, Manga
 
     public override async Task HandleAsync(Request r, CancellationToken ct)
     {
-        var data = await mangaDexService.ExtractManga(r.MangaUrl, ct, r.ScrapChapterPages);
+        var data = await mangaDexService.ExtractManga(r.MangaUrl, ct, r.ScrapChapterPages, r.LinkId);
         if (data == null)
         {
             await Send.NotFoundAsync(ct);

@@ -14,7 +14,7 @@ public class Endpoint(KiryuuService kiryuuService) : Endpoint<Request, MangaDocu
 
     public override async Task HandleAsync(Request r, CancellationToken ct)
     {
-        var data = await kiryuuService.ExtractManga(r.MangaUrl, ct, r.ScrapChapterPages);
+        var data = await kiryuuService.ExtractManga(r.MangaUrl, ct, r.ScrapChapterPages,r.LinkId);
         if (data == null)
         {
             await Send.NotFoundAsync(ct);

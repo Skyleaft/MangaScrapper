@@ -14,7 +14,7 @@ public interface IScrapperService
     Task<JikanMangaItem?> GetMangaInfo(string title, string type, CancellationToken ct = default);
     Task<JikanMangaItem?> GetMangaInfoById(int malId, CancellationToken ct = default);
     Task<MangaDocument> UpdateMangaDocument(MangaDocument manga, CancellationToken ct = default);
-    Task<MangaDocument> ExtractManga(string url, CancellationToken ct, bool scrapChapters = true);
+    Task<MangaDocument> ExtractManga(string url, CancellationToken ct, bool scrapChapters = true, string? linkedId = null);
     Task<ChapterDocument> GetChapterPage(string mangaTitle, ChapterDocument chapter, CancellationToken ct = default);
     Task QueueChapterScraping(Guid mangaId, string mangaTitle, ChapterDocument chapter);
     Task<List<SearchItem>> SearchManga(SearchRequest request, CancellationToken ct);

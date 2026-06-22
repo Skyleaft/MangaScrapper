@@ -11,6 +11,7 @@ public class MangaSummary
     public string? Description { get; set; }
     public string? ImageUrl { get; set; }
     public string? LocalImageUrl { get; set; }
+    public long ThumbnailSize { get; set; }
     public double? Rating { get; set; }
     public int Popularity { get; set; }
     public int Members { get; set; }
@@ -30,6 +31,7 @@ public class LatestChapterSummary
     public int TotalView { get; set; }
     public string? ChapterProvider { get; set; }
     public string? ChapterProviderIcon { get; set; }
+    public string Language { get; set; } = string.Empty;
     public DateTime UploadDate { get; set; }
 }
 

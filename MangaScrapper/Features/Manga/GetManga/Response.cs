@@ -13,6 +13,7 @@ public class Response
     public string? Description { get; set; }
     public string? ImageUrl { get; set; }
     public string? LocalImageUrl { get; set; }
+    public long ThumbnailSize { get; set; }
     public double? Rating { get; set; }
     public int Popularity { get; set; }
     public int Members { get; set; }

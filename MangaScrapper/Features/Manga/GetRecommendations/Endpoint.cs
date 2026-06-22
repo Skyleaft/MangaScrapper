@@ -61,7 +61,8 @@ public class Endpoint(QdrantService qdrantService, IMangaRepository mangaReposit
                     TotalView = c.TotalView,
                     UploadDate = c.UploadDate,
                     ChapterProvider = c.ChapterProvider,
-                    ChapterProviderIcon = c.ChapterProviderIcon
+                    ChapterProviderIcon = c.ChapterProviderIcon,
+                    Language = c.Language
                 }).FirstOrDefault() ?? new()
         }).ToList();
 

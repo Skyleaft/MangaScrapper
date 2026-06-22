@@ -415,7 +415,7 @@ public abstract class ScrapperServiceBase : IScrapperService
         }
     }
 
-    public async Task<MangaDocument> ExtractManga(string url, CancellationToken ct, bool scrapChapters = true)
+    public async Task<MangaDocument> ExtractManga(string url, CancellationToken ct, bool scrapChapters = true, string? linkedId = null)
     {
         try
         {
@@ -427,12 +427,19 @@ public abstract class ScrapperServiceBase : IScrapperService
                 throw new ArgumentException("Missing Manga Title!");
             }
 
-            var searchmanga = await MeilisearchService.SearchTittleAsync(mangaData.Title, ct);
             MangaDocument? existingManga = null;
-            if (searchmanga is not null)
+            if (!string.IsNullOrEmpty(linkedId) && Guid.TryParse(linkedId, out var parsedGuid))
             {
-                if (StringHelper.CalculateSimilarity(searchmanga.Title, mangaData.Title) >= 0.8)
-                    existingManga = await MangaRepository.GetByIdAsync(Guid.Parse(searchmanga.Id), ct);
+                existingManga = await MangaRepository.GetByIdAsync(parsedGuid, ct);
+            }
+            else
+            {
+                var searchmanga = await MeilisearchService.SearchTittleAsync(mangaData.Title, ct);
+                if (searchmanga is not null)
+                {
+                    if (StringHelper.CalculateSimilarity(searchmanga.Title, mangaData.Title) >= 0.8)
+                        existingManga = await MangaRepository.GetByIdAsync(Guid.Parse(searchmanga.Id), ct);
+                }
             }
 
             var chapters = await ExtractChaptersMetadata(ct);

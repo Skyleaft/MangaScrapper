@@ -16,7 +16,7 @@ public class Endpoint(KomikcastService komikcastService) : Endpoint<Request, Man
 
     public override async Task HandleAsync(Request r, CancellationToken ct)
     {
-        var data = await komikcastService.ExtractManga(r.MangaUrl, ct, r.ScrapChapterPages);
+        var data = await komikcastService.ExtractManga(r.MangaUrl, ct, r.ScrapChapterPages,r.LinkId);
         if (data == null)
         {
             await Send.NotFoundAsync(ct);

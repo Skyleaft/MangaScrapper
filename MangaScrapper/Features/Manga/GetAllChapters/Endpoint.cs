@@ -1,4 +1,4 @@
-﻿using FastEndpoints;
+using FastEndpoints;
 using MangaScrapper.Infrastructure.Repositories;
 using MangaScrapper.Infrastructure.Mongo.Collections;
 
@@ -37,6 +37,7 @@ public class Endpoint(IMangaRepository repo) : Endpoint<Request, List<Response>>
                 UploadDate = c.UploadDate,
                 ChapterProvider = c.ChapterProvider,
                 ChapterProviderIcon = c.ChapterProviderIcon,
+                Language = c.Language,
                 PageCount = c.Pages?.Count ?? 0,
                 IsChapterAvailable = c.Pages?.Any() ?? false
             })

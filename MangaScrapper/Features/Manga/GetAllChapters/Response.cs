@@ -1,4 +1,4 @@
-﻿namespace MangaScrapper.Features.Manga.GetAllChapters;
+namespace MangaScrapper.Features.Manga.GetAllChapters;
 
 public class Response
 {
@@ -8,6 +8,7 @@ public class Response
     public DateTime UploadDate { get; set; }
     public string? ChapterProvider { get; set; }
     public string? ChapterProviderIcon { get; set; }
+    public string Language { get; set; } = string.Empty;
     public int PageCount { get; set; }
     public bool IsChapterAvailable { get; set; }
 }
