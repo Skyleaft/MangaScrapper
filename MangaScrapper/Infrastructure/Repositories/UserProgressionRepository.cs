@@ -15,12 +15,19 @@ public class UserProgressionRepository : IUserProgressionRepository
 
     public async Task<UserProgressionDocument?> GetByUserAndMangaAsync(Guid userId, Guid mangaId, CancellationToken ct)
     {
-        return await _collection.Find(x => x.UserId == userId && x.MangaId == mangaId).FirstOrDefaultAsync(ct);
+        var doc = await _collection.Find(x => x.UserId == userId && x.MangaId == mangaId).FirstOrDefaultAsync(ct);
+        doc?.MigrateIfNeeded();
+        return doc;
     }
 
     public async Task<List<UserProgressionDocument>> GetByUserAsync(Guid userId, CancellationToken ct)
     {
-        return await _collection.Find(x => x.UserId == userId).ToListAsync(ct);
+        var docs = await _collection.Find(x => x.UserId == userId).ToListAsync(ct);
+        foreach (var doc in docs)
+        {
+            doc.MigrateIfNeeded();
+        }
+        return docs;
     }
 
     public async Task<UserProgressionDocument> CreateAsync(UserProgressionDocument document, CancellationToken ct)

@@ -15,18 +15,41 @@ public class UserProgressionService : IUserProgressionService
     public async Task<UserProgressionDocument> UpdateProgressionAsync(Guid userId, Guid mangaId, Guid chapterId, double chapterNumber, int lastReadPage, int totalPages, int readingTimeSeconds, CancellationToken ct)
     {
         var existing = await _repository.GetByUserAndMangaAsync(userId, mangaId, ct);
+        var isCompleted = lastReadPage >= totalPages - 1 && totalPages > 0;
+
         if (existing != null)
         {
-            existing.ChapterId = chapterId;
-            existing.ChapterNumber = chapterNumber;
-            existing.LastReadPage = lastReadPage;
-            existing.TotalPages = totalPages;
-            existing.ReadingTimeSeconds += readingTimeSeconds;
-            
-            if (lastReadPage >= totalPages - 1 && totalPages > 0)
+            if (existing.ChapterLogs == null)
             {
-                existing.IsCompleted = true;
+                existing.ChapterLogs = new List<UserChapterLogDocument>();
             }
+
+            var log = existing.ChapterLogs.FirstOrDefault(x => x.ChapterId == chapterId);
+            if (log != null)
+            {
+                log.ChapterNumber = chapterNumber;
+                log.LastReadPage = lastReadPage;
+                log.TotalPages = totalPages;
+                log.ReadingTimeSeconds += readingTimeSeconds;
+                log.IsCompleted = isCompleted;
+                log.LastReadAt = DateTime.UtcNow;
+            }
+            else
+            {
+                existing.ChapterLogs.Add(new UserChapterLogDocument
+                {
+                    ChapterId = chapterId,
+                    ChapterNumber = chapterNumber,
+                    LastReadPage = lastReadPage,
+                    TotalPages = totalPages,
+                    ReadingTimeSeconds = readingTimeSeconds,
+                    IsCompleted = isCompleted,
+                    LastReadAt = DateTime.UtcNow
+                });
+            }
+
+            existing.TotalReadingTime += readingTimeSeconds;
+            existing.LastReadAt = DateTime.UtcNow;
 
             await _repository.UpdateAsync(existing, ct);
             return existing;
@@ -36,12 +59,21 @@ public class UserProgressionService : IUserProgressionService
         {
             UserId = userId,
             MangaId = mangaId,
-            ChapterId = chapterId,
-            ChapterNumber = chapterNumber,
-            LastReadPage = lastReadPage,
-            TotalPages = totalPages,
-            ReadingTimeSeconds = readingTimeSeconds,
-            IsCompleted = lastReadPage >= totalPages - 1 && totalPages > 0
+            TotalReadingTime = readingTimeSeconds,
+            LastReadAt = DateTime.UtcNow,
+            ChapterLogs = new List<UserChapterLogDocument>
+            {
+                new UserChapterLogDocument
+                {
+                    ChapterId = chapterId,
+                    ChapterNumber = chapterNumber,
+                    LastReadPage = lastReadPage,
+                    TotalPages = totalPages,
+                    ReadingTimeSeconds = readingTimeSeconds,
+                    IsCompleted = isCompleted,
+                    LastReadAt = DateTime.UtcNow
+                }
+            }
         };
 
         return await _repository.CreateAsync(newEntry, ct);
