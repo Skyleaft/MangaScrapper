@@ -329,9 +329,18 @@ using (var scope = app.Services.CreateScope())
         )
     );
 
+    try
+    {
+        await mongoContext.UserProgressions.Indexes.DropOneAsync("UserId_1_MangaId_1_ChapterId_1");
+    }
+    catch (Exception)
+    {
+        // Ignore if index doesn't exist or cannot be dropped
+    }
+
     await mongoContext.UserProgressions.Indexes.CreateOneAsync(
         new CreateIndexModel<UserProgressionDocument>(
-            Builders<UserProgressionDocument>.IndexKeys.Ascending(up => up.UserId).Ascending(up => up.MangaId).Ascending(up => up.ChapterId),
+            Builders<UserProgressionDocument>.IndexKeys.Ascending(up => up.UserId).Ascending(up => up.MangaId),
             new CreateIndexOptions { Unique = true }
         )
     );
