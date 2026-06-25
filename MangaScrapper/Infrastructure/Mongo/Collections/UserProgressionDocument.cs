@@ -42,6 +42,7 @@ public class UserProgressionDocument
     public int TotalReadingTime { get; set; }
 
     [BsonExtraElements]
+    [System.Text.Json.Serialization.JsonIgnore]
     public BsonDocument? ExtraElements { get; set; }
 
     public void MigrateIfNeeded()
