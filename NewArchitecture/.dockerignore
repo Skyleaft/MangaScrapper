@@ -1,0 +1,29 @@
+## Build output
+bin/
+obj/
+
+## Logs
+logs/
+*.log
+
+## Environment files (never commit secrets)
+.env
+*.env
+.env.local
+
+## Test results
+TestResults/
+
+## User-specific VS files
+.vs/
+*.user
+
+## Rider / JetBrains
+.idea/
+
+## NuGet
+*.nupkg
+.nuget/
+
+## Docker
+docker-compose.override.yml
