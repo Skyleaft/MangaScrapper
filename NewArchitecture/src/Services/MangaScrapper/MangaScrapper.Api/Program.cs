@@ -10,6 +10,7 @@ using NovaStack.Infrastructure.Observability;
 using NovaStack.Infrastructure.Persistence.Options;
 using Scalar.AspNetCore;
 using Serilog;
+using Serilog.Events;
 
 // ── Bootstrap logger (captures startup errors) ───────────────────────────────
 LoggingExtensions.BootstrapLogger();
@@ -72,6 +73,20 @@ try
     app.UseExceptionHandler();
     app.UseSerilogRequestLogging(options =>
     {
+        options.GetLevel = (httpContext, elapsed, ex) =>
+        {
+            var path = httpContext.Request.Path.Value;
+
+            if (!string.IsNullOrEmpty(path) && path.StartsWith("/images", StringComparison.OrdinalIgnoreCase))
+            {
+                return LogEventLevel.Verbose; 
+            }
+
+            if (ex != null || httpContext.Response.StatusCode >= 500)
+                return LogEventLevel.Error;
+
+            return LogEventLevel.Information;
+        };
         options.MessageTemplate =
             "HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000}ms";
     });
