@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\MangaScrapper.Domain\MangaScrapper.Domain.csproj" />
+    <ProjectReference Include="..\MangaScrapper.Application\MangaScrapper.Application.csproj" />
     <ProjectReference Include="..\..\..\BuildingBlocks\NovaStack.Infrastructure\NovaStack.Infrastructure.csproj" />
     <ProjectReference Include="..\..\..\BuildingBlocks\NovaStack.SharedKernel\NovaStack.SharedKernel.csproj" />
   </ItemGroup>

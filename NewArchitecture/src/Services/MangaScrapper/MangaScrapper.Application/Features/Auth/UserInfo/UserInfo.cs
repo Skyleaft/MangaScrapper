@@ -16,6 +16,7 @@ internal sealed class UserInfoQueryHandler : IQueryHandler<UserInfoQuery, UserIn
     public Task<Result<UserInfoResponse>> Handle(UserInfoQuery query, CancellationToken ct)
     {
         var principal = query.Principal;
+
         if (principal.Identity?.IsAuthenticated != true)
         {
             return Task.FromResult<Result<UserInfoResponse>>(
@@ -23,11 +24,17 @@ internal sealed class UserInfoQueryHandler : IQueryHandler<UserInfoQuery, UserIn
         }
 
         var userId = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
-        var username = principal.Identity.Name ?? string.Empty;
-        var email = principal.FindFirst(ClaimTypes.Email)?.Value ?? string.Empty;
+        // "Username" custom claim set at login; fall back to Identity.Name (email)
+        var username = principal.FindFirst("Username")?.Value
+                       ?? principal.Identity.Name
+                       ?? string.Empty;
+        var email = principal.FindFirst(ClaimTypes.Name)?.Value
+                    ?? principal.FindFirst(ClaimTypes.Email)?.Value
+                    ?? string.Empty;
         var roles = principal.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList();
+        var firebaseUid = principal.FindFirst("FirebaseUid")?.Value ?? string.Empty;
 
-        var response = new UserInfoResponse(true, userId, username, email, roles, string.Empty);
+        var response = new UserInfoResponse(true, userId, username, email, roles, firebaseUid);
         return Task.FromResult<Result<UserInfoResponse>>(response);
     }
 }

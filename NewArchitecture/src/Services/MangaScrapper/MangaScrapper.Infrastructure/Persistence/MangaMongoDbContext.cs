@@ -11,8 +11,8 @@ public class MangaMongoDbContext : MongoDbContextBase
     {
     }
 
-    public IMongoCollection<MangaDocument> Mangas => GetCollection<MangaDocument>("Mangas");
-    public IMongoCollection<UserDocument> Users => GetCollection<UserDocument>("Users");
-    public IMongoCollection<UserLibraryDocument> UserLibraries => GetCollection<UserLibraryDocument>("UserLibraries");
-    public IMongoCollection<UserProgressionDocument> UserProgressions => GetCollection<UserProgressionDocument>("UserProgressions");
+    public IMongoCollection<MangaDocument> Mangas => GetCollection<MangaDocument>("mangas");
+    public IMongoCollection<UserDocument> Users => GetCollection<UserDocument>("users");
+    public IMongoCollection<UserLibraryDocument> UserLibraries => GetCollection<UserLibraryDocument>("user_libraries");
+    public IMongoCollection<UserProgressionDocument> UserProgressions => GetCollection<UserProgressionDocument>("user_progressions");
 }

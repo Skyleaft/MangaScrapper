@@ -1,5 +1,7 @@
 using MangaScrapper.Application.Common.Abstractions;
 using MediatR;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -24,14 +26,17 @@ public sealed class LogoutEndpoint : IEndpointDefinition
     {
         app.MapPost("/api/auth/logout", HandleAsync)
             .WithName("Logout")
-            .WithSummary("User logout")
+            .WithSummary("User logout — clears cookie session")
             .WithTags("Auth")
             .Produces<ApiResponse<object>>();
     }
 
-    private static async Task<IResult> HandleAsync(ISender sender, CancellationToken ct)
+    private static async Task<IResult> HandleAsync(ISender sender, HttpContext httpContext, CancellationToken ct)
     {
+        await httpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
         var result = await sender.Send(new LogoutCommand(), ct);
-        return result.IsSuccess ? Results.Ok(ApiResponse.Ok<object?>(null, "Logged out")) : result.Error.ToHttpResult();
+        return result.IsSuccess
+            ? Results.Ok(ApiResponse.Ok<object?>(null, "Logged out successfully."))
+            : result.Error.ToHttpResult();
     }
 }

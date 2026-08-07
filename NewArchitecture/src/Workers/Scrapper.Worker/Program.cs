@@ -1,16 +1,39 @@
 using MangaScrapper.Infrastructure.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using NovaStack.Infrastructure.Logging;
 using NovaStack.Infrastructure.Observability;
+using Serilog;
 
-var host = Host.CreateDefaultBuilder(args)
-    .ConfigureServices((hostContext, services) =>
-    {
-        // 1. Infrastructure (MongoDB, Scrapers, Repositories, Hangfire Server & Jobs)
-        services.AddMangaScrapperInfrastructure(hostContext.Configuration);
+// ── Bootstrap logger (captures startup errors) ───────────────────────────────
+LoggingExtensions.BootstrapLogger();
 
-        // 2. OpenTelemetry Observability
-        services.AddNovaStackObservability("Scrapper.Worker");
-    })
-    .Build();
+try
+{
+    Log.Information("Starting Scrapper.Worker...");
 
-await host.RunAsync();
+    var host = Host.CreateDefaultBuilder(args)
+        .UseNovaStackSerilog()
+        .ConfigureServices((hostContext, services) =>
+        {
+            // ── OpenTelemetry Observability ──────────────────────────────────────────
+            services.AddNovaStackObservability(
+                "Scrapper.Worker",
+                otlpEndpoint: hostContext.Configuration["Observability:OtlpEndpoint"]);
+
+            // ── Infrastructure Layer (MongoDB, Scrapers, Repositories, Hangfire Server & Jobs) ────
+            services.AddMangaScrapperInfrastructure(hostContext.Configuration, includeHangfireServer: true);
+        })
+        .Build();
+
+    Log.Information("Scrapper.Worker is running...");
+
+    await host.RunAsync();
+}
+catch (Exception ex) when (ex is not HostAbortedException)
+{
+    Log.Fatal(ex, "Scrapper.Worker terminated unexpectedly.");
+}
+finally
+{
+    Log.CloseAndFlush();
+}

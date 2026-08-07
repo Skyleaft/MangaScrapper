@@ -14,6 +14,17 @@ public interface IMangaRepository
     Task DeleteAsync(MangaId id, CancellationToken ct = default);
 }
 
+public interface IUserRepository
+{
+    Task<User?> GetByIdAsync(UserId id, CancellationToken ct = default);
+    Task<User?> GetByUsernameAsync(string username, CancellationToken ct = default);
+    Task<User?> GetByEmailAsync(string email, CancellationToken ct = default);
+    Task<User?> GetByFirebaseUidOrEmailAsync(string firebaseUid, string email, CancellationToken ct = default);
+    Task<long> CountByRoleAsync(string role, CancellationToken ct = default);
+    Task AddAsync(User user, CancellationToken ct = default);
+    Task UpdateAsync(User user, CancellationToken ct = default);
+}
+
 public interface IUserLibraryRepository
 {
     Task<UserLibrary?> GetByIdAsync(Guid id, CancellationToken ct = default);

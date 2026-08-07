@@ -8,6 +8,78 @@ using NovaStack.SharedKernel.Common;
 
 namespace MangaScrapper.Infrastructure.Repositories;
 
+public class MongoUserRepository(MangaMongoDbContext dbContext) : IUserRepository
+{
+    public async Task<User?> GetByIdAsync(UserId id, CancellationToken ct = default)
+    {
+        var doc = await dbContext.Users.Find(u => u.Id == id.Value).FirstOrDefaultAsync(ct);
+        return doc is null ? null : MapToDomain(doc);
+    }
+
+    public async Task<User?> GetByUsernameAsync(string username, CancellationToken ct = default)
+    {
+        var doc = await dbContext.Users.Find(u => u.Username == username).FirstOrDefaultAsync(ct);
+        return doc is null ? null : MapToDomain(doc);
+    }
+
+    public async Task<User?> GetByEmailAsync(string email, CancellationToken ct = default)
+    {
+        var doc = await dbContext.Users.Find(u => u.Email == email).FirstOrDefaultAsync(ct);
+        return doc is null ? null : MapToDomain(doc);
+    }
+
+    public async Task<User?> GetByFirebaseUidOrEmailAsync(string firebaseUid, string email, CancellationToken ct = default)
+    {
+        var doc = await dbContext.Users.Find(u => u.FirebaseUid == firebaseUid || u.Email == email).FirstOrDefaultAsync(ct);
+        return doc is null ? null : MapToDomain(doc);
+    }
+
+    public async Task<long> CountByRoleAsync(string role, CancellationToken ct = default)
+    {
+        return await dbContext.Users.CountDocumentsAsync(u => u.Roles.Contains(role), cancellationToken: ct);
+    }
+
+    public async Task AddAsync(User user, CancellationToken ct = default)
+    {
+        var doc = MapToDocument(user);
+        await dbContext.Users.InsertOneAsync(doc, cancellationToken: ct);
+    }
+
+    public async Task UpdateAsync(User user, CancellationToken ct = default)
+    {
+        var doc = MapToDocument(user);
+        await dbContext.Users.ReplaceOneAsync(u => u.Id == doc.Id, doc, cancellationToken: ct);
+    }
+
+    private static User MapToDomain(UserDocument doc)
+    {
+        return User.Reconstitute(
+            UserId.From(doc.Id),
+            doc.Username,
+            doc.PasswordHash,
+            doc.Email,
+            doc.Roles ?? new List<string>(),
+            doc.IsActive,
+            doc.FirebaseUid,
+            doc.CreatedAt);
+    }
+
+    private static UserDocument MapToDocument(User user)
+    {
+        return new UserDocument
+        {
+            Id = user.Id.Value,
+            Username = user.Username,
+            PasswordHash = user.PasswordHash,
+            Email = user.Email,
+            Roles = user.Roles ?? new List<string>(),
+            IsActive = user.IsActive,
+            FirebaseUid = user.FirebaseUid,
+            CreatedAt = user.CreatedAt
+        };
+    }
+}
+
 public class MongoUserLibraryRepository(MangaMongoDbContext dbContext) : IUserLibraryRepository
 {
     public async Task<UserLibrary?> GetByIdAsync(Guid id, CancellationToken ct = default)
