@@ -2,6 +2,7 @@ using MangaScrapper.Application.Common.Abstractions;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using NovaStack.Contracts.Responses;
 
@@ -21,13 +22,17 @@ public sealed class GetPagedMangaEndpoint : IEndpointDefinition
     private static async Task<IResult> HandleAsync(
         ISender sender,
         CancellationToken ct,
-        int page = 1,
-        int pageSize = 10,
         string? search = null,
+        string[]? genres = null,
+        string? status = null,
         string? type = null,
-        string? genre = null)
+        int page = 1,
+        int pageSize = 10, 
+        string? sortBy="updatedAt",
+        string? orderBy = "desc")
     {
-        var query = new GetPagedMangaQuery(page, pageSize, search, type, genre);
+        var genresList = genres?.ToList();
+        var query = new GetPagedMangaQuery(search, genresList, status, type, page, pageSize, sortBy, orderBy);
         var result = await sender.Send(query, ct);
 
         return result.IsSuccess

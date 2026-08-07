@@ -1,4 +1,5 @@
 using MangaScrapper.Application.Common.Abstractions;
+using MangaScrapper.Domain.Repositories;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -10,17 +11,11 @@ namespace MangaScrapper.Application.Features.Manga.GetAllGenre;
 
 public record GetAllGenreQuery : IQuery<List<string>>;
 
-internal sealed class GetAllGenreQueryHandler : IQueryHandler<GetAllGenreQuery, List<string>>
+internal sealed class GetAllGenreQueryHandler(IMangaRepository mangaRepository) : IQueryHandler<GetAllGenreQuery, List<string>>
 {
-    public Task<Result<List<string>>> Handle(GetAllGenreQuery query, CancellationToken ct)
+    public async Task<Result<List<string>>> Handle(GetAllGenreQuery query, CancellationToken ct)
     {
-        var genres = new List<string>
-        {
-            "Action", "Adventure", "Comedy", "Drama", "Fantasy", "Horror",
-            "Isekai", "Mecha", "Mystery", "Romance", "Sci-Fi", "Slice of Life",
-            "Sports", "Supernatural", "Thriller"
-        };
-        return Task.FromResult<Result<List<string>>>(genres);
+        return await mangaRepository.GetAllGenresAsync(ct);
     }
 }
 

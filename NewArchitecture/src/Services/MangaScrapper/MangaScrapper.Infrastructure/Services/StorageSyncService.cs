@@ -38,7 +38,7 @@ public class StorageSyncService
 
         while (true)
         {
-            var paged = await _mangaRepository.GetPagedAsync(page, pageSize, ct: ct);
+            var paged = await _mangaRepository.GetPagedAsync("",null,"","","","asc",page, pageSize, ct);
             if (paged.Items.Count == 0) break;
 
             foreach (var manga in paged.Items)

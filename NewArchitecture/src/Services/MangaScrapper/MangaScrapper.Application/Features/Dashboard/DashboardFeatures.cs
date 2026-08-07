@@ -1,5 +1,6 @@
 using MangaScrapper.Application.Common.Abstractions;
 using MangaScrapper.Domain.Repositories;
+using Mapster;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -17,17 +18,8 @@ internal sealed class GetStatisticsQueryHandler(IMangaRepository mangaRepository
 {
     public async Task<Result<DashboardStatisticResponse>> Handle(GetStatisticsQuery query, CancellationToken ct)
     {
-        var paged = await mangaRepository.GetPagedAsync(1, 1, ct: ct);
-        var response = new DashboardStatisticResponse(
-            TotalManga: paged.TotalCount,
-            TotalSourceProvider: 4,
-            ScrappedToday: 0,
-            ScrappedThisMonth: 0,
-            TotalQueue: 0,
-            TotalUnlinkedMetadata: 0,
-            TotalUnavailableMangaChapter: 0,
-            TotalStorageUsed: 0,
-            MonthlyScrap: []);
+        var data = await mangaRepository.GetStatisticsAsync(ct);
+        var response = data.Adapt<DashboardStatisticResponse>();
 
         return response;
     }

@@ -13,11 +13,14 @@ public sealed class GetPagedMangaQueryHandler(IMangaRepository mangaRepository)
         CancellationToken ct)
     {
         var paged = await mangaRepository.GetPagedAsync(
+            query.Search,
+            query.Genres,
+            query.Status,
+            query.Type,
+            query.SortBy,
+            query.OrderBy,
             query.Page,
             query.PageSize,
-            query.Search,
-            query.Type,
-            query.Genre,
             ct);
 
         var mapped = paged.Items.Select(m =>

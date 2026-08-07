@@ -8,10 +8,30 @@ public interface IMangaRepository
 {
     Task<Manga?> GetByIdAsync(MangaId id, CancellationToken ct = default);
     Task<Manga?> GetByTitleAsync(string title, CancellationToken ct = default);
-    Task<PagedList<Manga>> GetPagedAsync(int page, int pageSize, string? search = null, string? type = null, string? genre = null, CancellationToken ct = default);
+    Task<PagedList<Manga>> GetPagedAsync(
+        string? search, 
+        List<string>? genres, 
+        string? status, 
+        string? type,
+        string sortBy,
+        string orderBy,
+        int page, 
+        int pageSize, 
+        CancellationToken ct = default);
     Task AddAsync(Manga manga, CancellationToken ct = default);
     Task UpdateAsync(Manga manga, CancellationToken ct = default);
     Task DeleteAsync(MangaId id, CancellationToken ct = default);
+    Task<List<string>> GetAllGenresAsync(CancellationToken ct);
+    Task<List<string>> GetAllTypesAsync(CancellationToken ct);
+    Task<DashboardStatistic> GetStatisticsAsync(CancellationToken ct);
+    Task<(List<Manga> Items, long TotalCount)> GetTrendingAsync(
+        string? search, 
+        List<string>? genres, 
+        string? status, 
+        string? type,
+        int page, 
+        int pageSize, 
+        CancellationToken ct);
 }
 
 public interface IUserRepository

@@ -4,8 +4,11 @@ using NovaStack.Contracts.Responses;
 namespace MangaScrapper.Application.Features.Manga.GetPagedManga;
 
 public record GetPagedMangaQuery(
-    int Page = 1,
-    int PageSize = 10,
     string? Search = null,
+    List<string>?Genres = null,
+    string? Status = null,
     string? Type = null,
-    string? Genre = null) : IQuery<PagedResponse<MangaSummaryResponse>>;
+    int Page = 1,
+    int PageSize = 10, 
+    string? SortBy = "updatedAt",
+    string? OrderBy = "desc") : IQuery<PagedResponse<MangaSummaryResponse>>;

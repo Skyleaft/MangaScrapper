@@ -1,4 +1,5 @@
 using MangaScrapper.Application.Common.Abstractions;
+using MangaScrapper.Domain.Repositories;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -10,12 +11,11 @@ namespace MangaScrapper.Application.Features.Manga.GetAllType;
 
 public record GetAllTypeQuery : IQuery<List<string>>;
 
-internal sealed class GetAllTypeQueryHandler : IQueryHandler<GetAllTypeQuery, List<string>>
+internal sealed class GetAllTypeQueryHandler(IMangaRepository mangaRepository) : IQueryHandler<GetAllTypeQuery, List<string>>
 {
-    public Task<Result<List<string>>> Handle(GetAllTypeQuery query, CancellationToken ct)
+    public async Task<Result<List<string>>> Handle(GetAllTypeQuery query, CancellationToken ct)
     {
-        var types = new List<string> { "Manga", "Manhwa", "Manhua", "OEL" };
-        return Task.FromResult<Result<List<string>>>(types);
+        return await mangaRepository.GetAllTypesAsync(ct);
     }
 }
 
