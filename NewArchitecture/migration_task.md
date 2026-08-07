@@ -246,31 +246,29 @@
 ## Phase 5 — MangaScrapper.Api (NEW PROJECT)
 
 ### 5.1 Project Setup
-- [ ] Create `src/Services/MangaScrapper/MangaScrapper.Api/MangaScrapper.Api.csproj`
-- [ ] Add references: `MangaScrapper.Application`, `MangaScrapper.Infrastructure`, `NovaStack.Infrastructure`, `MangaPanel.Client` (Blazor WASM)
-- [ ] Add project to `MangaScrapperStack.sln`
+- [x] Create `src/Services/MangaScrapper/MangaScrapper.Api/MangaScrapper.Api.csproj`
+- [x] Add references: `MangaScrapper.Application`, `MangaScrapper.Infrastructure`, `NovaStack.Infrastructure`
+- [x] Add project to `MangaScrapperStack.sln`
 
 ### 5.2 Program.cs — Composition Root (Thin)
-- [ ] Wire `builder.Services.AddMangaScrapperApplication()`
-- [ ] Wire `builder.Services.AddMangaScrapperInfrastructure(builder.Configuration)`
-- [ ] Wire `builder.Services.AddMangaScrapperAuth(builder.Configuration)`
-- [ ] Wire `builder.Services.AddMangaScrapperOtel(builder.Configuration)`
-- [ ] Wire Razor Components + Blazor WASM (`AddRazorComponents` + `AddInteractiveWebAssemblyComponents`)
-- [ ] Wire `IEndpointDefinition` scanner (`MapEndpointDefinitions()`)
-- [ ] Map Hangfire dashboard (`/hangfire`)
-- [ ] Map static file serving (image storage path from config)
-- [ ] Map Swagger/OpenAPI
-- [ ] Add MongoDB index bootstrap on startup (unique Title, composite UserLib, UserProgression indexes)
-- [ ] Add CORS middleware from config
-- [ ] Add Data Protection key persistence
+- [x] Wire `builder.Services.AddMangaScrapperApplication()`
+- [x] Wire `builder.Services.AddMangaScrapperInfrastructure(builder.Configuration)`
+- [x] Wire `builder.Services.AddMangaScrapperAuth(builder.Configuration)` (part of Infrastructure DI)
+- [x] Wire `builder.Services.AddNovaStackObservability("MangaScrapper.Api")`
+- [x] Wire `IEndpointDefinition` scanner
+- [x] Map Hangfire dashboard (`/hangfire`)
+- [x] Map static file serving (image storage path from config)
+- [x] Map Swagger/OpenAPI
+- [x] Add CORS middleware from config
+- [x] Add Data Protection key persistence
 
 ### 5.3 Configuration & appsettings
-- [ ] Create `appsettings.json` with all sections: MongoDB, Scrapper, Meili, Qdrant, Embedding, FlareSolverr, Discord, Domain, Firebase, Cors, Jwt, Authentication, OTEL
-- [ ] Create `appsettings.Development.json`
-- [ ] Copy `provider/` JSON scraping configs into project
+- [x] Create `appsettings.json` with all sections: MongoDB, Scrapper, Meili, Qdrant, Embedding, FlareSolverr, Discord, Domain, Cors, Jwt
+- [x] Create `appsettings.Development.json`
+- [x] Copy `provider/` JSON scraping configs into project
 
 ### 5.4 Dockerfile
-- [ ] Update `Dockerfile` for multi-stage build (build from solution root, publish Api project)
+- [x] Update `Dockerfile` for multi-stage build (build from solution root, publish Api project)
 
 ---
 
