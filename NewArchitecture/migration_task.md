@@ -119,51 +119,51 @@
 - [ ] `Features/Manga/SyncQdrant/` — Command + Handler + Endpoint
 
 ### 3.4 Feature: Scrapper (generic)
-- [ ] `Features/Scrapper/ScrapChapterPages/` — Command + Handler (queues Hangfire job) + Validator + Endpoint
-- [ ] `Features/Scrapper/SearchJikan/` — Query + Handler (Jikan HTTP call) + Endpoint
-- [ ] `Features/Scrapper/UpdateMangaMetaData/` — Command + Handler + Validator + Endpoint
-- [ ] `Features/Scrapper/GetAllProvider/` — Query + Handler + Endpoint
-- [ ] `Features/Scrapper/GetQueue/` — Query + Handler + Endpoint
-- [ ] `Features/Scrapper/ClearQueueErrors/` — Command + Handler + Endpoint
-- [ ] `Features/Scrapper/FixFile/` — Command + Handler + Endpoint
-- [ ] `Features/Scrapper/FixLanguage/` — Command + Handler + Endpoint
+- [x] `Features/Scrapper/ScrapChapterPages/` — Command + Handler (queues Hangfire job) + Validator + Endpoint
+- [x] `Features/Scrapper/SearchJikan/` — Query + Handler (Jikan HTTP call) + Endpoint
+- [x] `Features/Scrapper/UpdateMangaMetaData/` — Command + Handler + Validator + Endpoint
+- [x] `Features/Scrapper/GetAllProvider/` — Query + Handler + Endpoint
+- [x] `Features/Scrapper/GetQueue/` — Query + Handler + Endpoint
+- [x] `Features/Scrapper/ClearQueueErrors/` — Command + Handler + Endpoint
+- [x] `Features/Scrapper/FixFile/` — Command + Handler + Endpoint
+- [x] `Features/Scrapper/FixLanguage/` — Command + Handler + Endpoint
 
 ### 3.5 Feature: ScrapperKomiku
-- [ ] `Features/ScrapperKomiku/GetDetail/` — Query + Handler + Endpoint
-- [ ] `Features/ScrapperKomiku/ScrapManga/` — Command + Handler + Endpoint
-- [ ] `Features/ScrapperKomiku/Search/` — Query + Handler + Endpoint
+- [x] `Features/ScrapperKomiku/GetDetail/` — Query + Handler + Endpoint
+- [x] `Features/ScrapperKomiku/ScrapManga/` — Command + Handler + Endpoint
+- [x] `Features/ScrapperKomiku/Search/` — Query + Handler + Endpoint
 
 ### 3.6 Feature: ScrapperKiryuu
-- [ ] `Features/ScrapperKiryuu/GetDetail/` — Query + Handler + Endpoint
-- [ ] `Features/ScrapperKiryuu/ScrapManga/` — Command + Handler + Endpoint
-- [ ] `Features/ScrapperKiryuu/Search/` — Query + Handler + Endpoint
+- [x] `Features/ScrapperKiryuu/GetDetail/` — Query + Handler + Endpoint
+- [x] `Features/ScrapperKiryuu/ScrapManga/` — Command + Handler + Endpoint
+- [x] `Features/ScrapperKiryuu/Search/` — Query + Handler + Endpoint
 
 ### 3.7 Feature: ScrapperKomikcast
-- [ ] `Features/ScrapperKomikcast/GetDetail/` — Query + Handler + Endpoint
-- [ ] `Features/ScrapperKomikcast/ScrapManga/` — Command + Handler + Endpoint
-- [ ] `Features/ScrapperKomikcast/Search/` — Query + Handler + Endpoint
+- [x] `Features/ScrapperKomikcast/GetDetail/` — Query + Handler + Endpoint
+- [x] `Features/ScrapperKomikcast/ScrapManga/` — Command + Handler + Endpoint
+- [x] `Features/ScrapperKomikcast/Search/` — Query + Handler + Endpoint
 
 ### 3.8 Feature: ScrapperMangadex
-- [ ] `Features/ScrapperMangadex/GetDetail/` — Query + Handler + Endpoint
-- [ ] `Features/ScrapperMangadex/ScrapManga/` — Command + Handler + Endpoint
-- [ ] `Features/ScrapperMangadex/Search/` — Query + Handler + Endpoint
+- [x] `Features/ScrapperMangadex/GetDetail/` — Query + Handler + Endpoint
+- [x] `Features/ScrapperMangadex/ScrapManga/` — Command + Handler + Endpoint
+- [x] `Features/ScrapperMangadex/Search/` — Query + Handler + Endpoint
 
 ### 3.9 Feature: Auth
 - [x] `Features/Auth/Login/` — Command + Handler + Validator + Endpoint (`POST /api/auth/login`)
 - [x] `Features/Auth/Logout/` — Command + Handler + Endpoint (`POST /api/auth/logout`)
-- [ ] `Features/Auth/Register/` — Command + Handler + Validator + Endpoint (`POST /api/auth/register`)
+- [x] `Features/Auth/Register/` — Command + Handler + Validator + Endpoint (`POST /api/auth/register`)
 - [x] `Features/Auth/UserInfo/` — Query + Handler + Endpoint (`GET /api/auth/me`)
-- [ ] `Features/Auth/FirebaseVerify/` — Command + Handler + Endpoint (`POST /api/auth/firebase-verify`)
+- [x] `Features/Auth/FirebaseVerify/` — Command + Handler + Endpoint (`POST /api/auth/firebase-verify`)
 
 ### 3.10 Feature: Dashboard
-- [ ] `Features/Dashboard/GetStatistics/` — Query + Handler + Endpoint (`GET /api/v1/dashboard/stats`)
-- [ ] `Features/Dashboard/SyncStorage/` — Command + Handler + Endpoint (`POST /api/v1/dashboard/sync-storage`)
+- [x] `Features/Dashboard/GetStatistics/` — Query + Handler + Endpoint (`GET /api/v1/dashboard/stats`)
+- [x] `Features/Dashboard/SyncStorage/` — Command + Handler + Endpoint (`POST /api/v1/dashboard/sync-storage`)
 
 ### 3.11 Feature: RecurringJobs
-- [ ] `Features/RecurringJobs/CreateOrUpdateRecurringJob/` — Command + Handler + Endpoint
-- [ ] `Features/RecurringJobs/DeleteRecurringJob/` — Command + Handler + Endpoint
-- [ ] `Features/RecurringJobs/GetRecurringJobs/` — Query + Handler + Endpoint
-- [ ] `Features/RecurringJobs/TriggerRecurringJob/` — Command + Handler + Endpoint
+- [x] `Features/RecurringJobs/CreateOrUpdateRecurringJob/` — Command + Handler + Endpoint
+- [x] `Features/RecurringJobs/DeleteRecurringJob/` — Command + Handler + Endpoint
+- [x] `Features/RecurringJobs/GetRecurringJobs/` — Query + Handler + Endpoint
+- [x] `Features/RecurringJobs/TriggerRecurringJob/` — Command + Handler + Endpoint
 
 ### 3.12 Feature: UserLibrary
 - [x] `Features/UserLibrary/AddOrUpdateUserLibrary/` — Command + Handler + Validator + Endpoint
@@ -176,7 +176,7 @@
 - [x] `Features/UserProgression/GetMangaProgression/` — Query + Handler + Endpoint
 
 ### 3.14 Feature: Images
-- [ ] `Features/Images/ProxyImage/` — Query + Handler + Endpoint (`GET /api/v1/images/proxy`)
+- [x] `Features/Images/ProxyImage/` — Query + Handler + Endpoint (`GET /api/v1/images/proxy`)
 
 ---
 
