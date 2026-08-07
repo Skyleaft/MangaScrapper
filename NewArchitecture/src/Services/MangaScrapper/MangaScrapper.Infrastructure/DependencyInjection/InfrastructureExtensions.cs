@@ -1,4 +1,7 @@
 using Hangfire;
+using Hangfire.Mongo;
+using Hangfire.Mongo.Migration.Strategies;
+using Hangfire.Mongo.Migration.Strategies.Backup;
 using MangaScrapper.Domain.Repositories;
 using MangaScrapper.Infrastructure.Configuration;
 using MangaScrapper.Infrastructure.Persistence;
@@ -142,10 +145,20 @@ public static class InfrastructureExtensions
     {
         var mongoSettings = configuration.GetSection("MongoDB").Get<MongoSettings>() ?? new MongoSettings();
 
-        services.AddHangfire(config =>
+        services.AddHangfire((sp, config) =>
         {
+            var mongoClient = sp.GetRequiredService<IMongoClient>();
             config.UseSimpleAssemblyNameTypeSerializer()
-                  .UseRecommendedSerializerSettings();
+                  .UseRecommendedSerializerSettings()
+                  .UseMongoStorage(mongoClient, mongoSettings.DatabaseName, new MongoStorageOptions
+                  {
+                      MigrationOptions = new MongoMigrationOptions
+                      {
+                          MigrationStrategy = new MigrateMongoMigrationStrategy(),
+                          BackupStrategy = new CollectionMongoBackupStrategy()
+                      },
+                      CheckQueuedJobsStrategy = CheckQueuedJobsStrategy.TailNotificationsCollection
+                  });
         });
 
         services.AddHangfireServer(opts =>
@@ -187,6 +200,8 @@ public static class InfrastructureExtensions
             };
         })
         .AddScheme<CustomAuthSchemeOptions, CustomAuthValidation>("CustomAuth", _ => { });
+
+        services.AddAuthorization();
 
         services.AddDataProtection()
             .SetApplicationName("MangaScrapper");
