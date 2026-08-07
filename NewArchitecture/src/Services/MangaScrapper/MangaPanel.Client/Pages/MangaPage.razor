@@ -1,6 +1,5 @@
 @page "/admin/manga"
 @layout Layout.AdminLayout
-@using MangaScrapper.Shared.Models
 @using MangaPanel.Client.Components
 @using System.Net.Http.Json
 @attribute [Authorize]
@@ -227,8 +226,8 @@
     {
         try
         {
-            var genresTask = Http.GetFromJsonAsync<List<string>>("/api/manga/genres");
-            var typesTask = Http.GetFromJsonAsync<List<string>>("/api/manga/types");
+            var genresTask = Http.GetApiDataAsync<List<string>>("/api/v1/manga/genres");
+            var typesTask = Http.GetApiDataAsync<List<string>>("/api/v1/manga/types");
             await Task.WhenAll(genresTask, typesTask);
             availableGenres = await genresTask ?? new();
             availableTypes = await typesTask ?? new();
@@ -244,7 +243,7 @@
         isLoading = true;
         try
         {
-            var url = $"/api/manga/paged?page={currentPage}&pageSize={pageSize}&sortBy={sortBy}&orderBy={orderBy}";
+            var url = $"/api/v1/manga?page={currentPage}&pageSize={pageSize}&sortBy={sortBy}&orderBy={orderBy}";
             
             if (!string.IsNullOrWhiteSpace(searchQuery))
                 url += $"&search={Uri.EscapeDataString(searchQuery)}";
@@ -263,7 +262,7 @@
                 }
             }
 
-            response = await Http.GetFromJsonAsync<MangaListResponse>(url);
+            response = await Http.GetApiDataAsync<MangaListResponse>(url);
         }
         catch (Exception ex)
         {

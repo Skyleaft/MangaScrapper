@@ -10,11 +10,13 @@
   <ItemGroup>
     <ProjectReference Include="..\MangaScrapper.Application\MangaScrapper.Application.csproj" />
     <ProjectReference Include="..\MangaScrapper.Infrastructure\MangaScrapper.Infrastructure.csproj" />
+    <ProjectReference Include="..\MangaPanel.Client\MangaPanel.Client.csproj" />
     <ProjectReference Include="..\..\..\BuildingBlocks\NovaStack.Infrastructure\NovaStack.Infrastructure.csproj" />
     <ProjectReference Include="..\..\..\BuildingBlocks\NovaStack.Contracts\NovaStack.Contracts.csproj" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.10" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.10" />
     <PackageReference Include="Scalar.AspNetCore" Version="2.16.17" />
     <PackageReference Include="Hangfire.AspNetCore" Version="1.8.24" />

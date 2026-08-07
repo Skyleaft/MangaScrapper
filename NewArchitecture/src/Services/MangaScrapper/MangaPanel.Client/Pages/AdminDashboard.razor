@@ -1,6 +1,5 @@
 @page "/admin/dashboard"
 @layout Layout.AdminLayout
-@using MangaScrapper.Shared.Models
 @using MangaPanel.Client.Components
 @using Microsoft.AspNetCore.Authorization
 @attribute [Authorize]
@@ -74,7 +73,7 @@ else
         </div>
     </div>
 
-    @if (stats.MonthlyScrap.Any())
+    @if (stats.MonthlyScrap != null && stats.MonthlyScrap.Any())
     {
         <div class="bg-surface p-6 rounded-2xl shadow-sm border border-border-main mb-10 transition-colors duration-300">
 
@@ -105,7 +104,7 @@ else
 }
 
 @code {
-    private DashboardStatistic stats = new();
+    private DashboardStatistic stats = new(0, 0, 0, 0, 0, 0, 0, 0, new());
     private List<MangaSummary> recentManga = new();
     private bool isLoading = true;
     private Guid selectedMangaId = Guid.Empty;
@@ -118,7 +117,7 @@ else
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!isLoading && stats.MonthlyScrap.Any())
+        if (!isLoading && stats.MonthlyScrap != null && stats.MonthlyScrap.Any())
         {
             await CreateChart();
         }
@@ -158,13 +157,13 @@ else
     {
         try
         {
-            var statsTask = Http.GetFromJsonAsync<DashboardStatistic>("/api/dashboard/statistics");
-            var mangaTask = Http.GetFromJsonAsync<MangaListResponse>("/api/manga/paged?pageSize=5");
+            var statsTask = Http.GetApiDataAsync<DashboardStatistic>("/api/v1/dashboard/stats");
+            var mangaTask = Http.GetApiDataAsync<MangaListResponse>("/api/v1/manga?pageSize=5");
 
             await Task.WhenAll(statsTask, mangaTask);
 
-            stats = await statsTask ?? new();
-            recentManga = (await mangaTask)?.Items ?? new();
+            stats = await statsTask ?? new(0, 0, 0, 0, 0, 0, 0, 0, new());
+            recentManga = (await mangaTask)?.Items?.ToList() ?? new();
         }
         catch (Exception ex)
         {

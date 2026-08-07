@@ -192,7 +192,7 @@
         isLoading = true;
         try
         {
-            jobs = await Http.GetFromJsonAsync<List<RecurringJobDto>>("/api/recurring-jobs") ?? new();
+            jobs = await Http.GetApiDataAsync<List<RecurringJobDto>>("/api/v1/recurring-jobs") ?? new();
         }
         catch (Exception ex)
         {
@@ -250,7 +250,7 @@
 
         try
         {
-            var response = await Http.PostAsJsonAsync("/api/recurring-jobs", currentJob);
+            var response = await Http.PostAsJsonAsync("/api/v1/recurring-jobs", currentJob);
             if (response.IsSuccessStatusCode)
             {
                 showModal = false;
@@ -284,7 +284,7 @@
         isDeleting = true;
         try
         {
-            var response = await Http.DeleteAsync($"/api/recurring-jobs/{jobToDelete.Id}");
+            var response = await Http.DeleteAsync($"/api/v1/recurring-jobs/{jobToDelete.Id}");
             if (response.IsSuccessStatusCode)
             {
                 showDeleteConfirm = false;
@@ -305,7 +305,7 @@
     {
         try
         {
-            var response = await Http.GetAsync($"/api/recurring-jobs/{job.Id}/trigger");
+            var response = await Http.GetAsync($"/api/v1/recurring-jobs/{job.Id}/trigger");
             if (response.IsSuccessStatusCode)
             {
                 // We can show a toast here later, or just reload data to see state change.

@@ -125,6 +125,6 @@
     {
         if (string.IsNullOrWhiteSpace(url)) return string.Empty;
         if (!url.StartsWith("http", StringComparison.OrdinalIgnoreCase)) return url;
-        return $"/api/images/proxy?url={Uri.EscapeDataString(url)}";
+        return $"/api/v1/images/proxy?url={Uri.EscapeDataString(url)}";
     }
 }

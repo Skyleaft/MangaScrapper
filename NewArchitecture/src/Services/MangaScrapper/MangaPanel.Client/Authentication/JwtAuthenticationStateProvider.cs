@@ -1,6 +1,6 @@
 using System.Net.Http.Json;
 using System.Security.Claims;
-using MangaScrapper.Shared.Models;
+using NovaStack.Contracts.Responses;
 using Microsoft.AspNetCore.Components.Authorization;
 
 namespace MangaPanel.Client.Authentication;
@@ -18,7 +18,8 @@ public class JwtAuthenticationStateProvider : AuthenticationStateProvider
     {
         try
         {
-            var userInfo = await _http.GetFromJsonAsync<UserInfoResponse>("api/auth/me");
+            var apiResponse = await _http.GetFromJsonAsync<ApiResponse<UserInfoResponse>>("api/auth/me");
+            var userInfo = apiResponse?.Data;
 
             if (userInfo == null || !userInfo.IsAuthenticated)
             {

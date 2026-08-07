@@ -11,13 +11,13 @@
 
     <ItemGroup>
         <PackageReference Include="Blazored.LocalStorage" Version="4.3.0" />
-        <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="10.0.8" />
-        <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.8" />
+        <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="10.0.10" />
+        <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.10" />
         <PackageReference Include="Microsoft.DotNet.HotReload.WebAssembly.Browser" Version="10.0.204" />
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\..\MangaScrapper.Shared\MangaScrapper.Shared.csproj" />
+      <ProjectReference Include="..\..\..\BuildingBlocks\NovaStack.Contracts\NovaStack.Contracts.csproj" />
     </ItemGroup>
 
     <ItemGroup>

@@ -1,4 +1,3 @@
-@using MangaScrapper.Shared.Models
 @using System.Net.Http.Json
 @inject HttpClient Http
 @inject IJSRuntime JS
@@ -470,8 +469,8 @@
         IsLoading = true;
         try
         {
-            var mangaTask = Http.GetFromJsonAsync<MangaSummary>($"/api/manga/{MangaId}");
-            var chaptersTask = Http.GetFromJsonAsync<List<ChapterResponse>>($"/api/manga/{MangaId}/chapters");
+            var mangaTask = Http.GetApiDataAsync<MangaSummary>($"/api/v1/manga/{MangaId}");
+            var chaptersTask = Http.GetApiDataAsync<List<ChapterResponse>>($"/api/v1/manga/{MangaId}/chapters");
             
             await Task.WhenAll(mangaTask, chaptersTask);
 
@@ -525,7 +524,7 @@
         IsSaving = true;
         try
         {
-            var response = await Http.PutAsJsonAsync($"/api/manga/{MangaId}", EditModel);
+            var response = await Http.PutAsJsonAsync($"/api/v1/manga/{MangaId}", EditModel);
             if (response.IsSuccessStatusCode)
             {
                 await OnSaved.InvokeAsync();
@@ -556,7 +555,7 @@
         {
             try
             {
-                var response = await Http.DeleteAsync($"/api/manga/{MangaId}");
+                var response = await Http.DeleteAsync($"/api/v1/manga/{MangaId}");
                 if (response.IsSuccessStatusCode)
                 {
                     await OnSaved.InvokeAsync();
@@ -577,7 +576,7 @@
         {
             try
             {
-                var response = await Http.DeleteAsync($"/api/manga/{MangaId}/chapter/{chapter.Id}");
+                var response = await Http.DeleteAsync($"/api/v1/manga/{MangaId}/chapter/{chapter.Id}");
                 if (response.IsSuccessStatusCode)
                 {
                     Chapters.Remove(chapter);
@@ -595,7 +594,7 @@
     {
         try 
         {
-            var response = await Http.GetAsync($"/api/scrapper/manga/{MangaId}/chapter-pages");
+            var response = await Http.GetAsync($"/api/v1/scrapper/manga/{MangaId}/chapter-pages");
             if (response.IsSuccessStatusCode)
             {
                 await JS.InvokeVoidAsync("alert", "Scraping jobs have been queued for missing chapters!");
@@ -644,7 +643,7 @@
         
         try
         {
-            var results = await Http.GetFromJsonAsync<List<JikanMangaItem>>($"/api/scrapper/jikan/search?title={Uri.EscapeDataString(_jikanSearchQuery)}");
+            var results = await Http.GetApiDataAsync<List<JikanMangaItem>>($"/api/v1/scrapper/jikan/search?title={Uri.EscapeDataString(_jikanSearchQuery)}");
             _jikanSearchResults = results ?? new();
         }
         catch (Exception ex)

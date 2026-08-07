@@ -1,4 +1,5 @@
 using Hangfire;
+using MangaScrapper.Api.Components;
 using MangaScrapper.Application.DependencyInjection;
 using MangaScrapper.Infrastructure.DependencyInjection;
 using MangaScrapper.Infrastructure.Security;
@@ -25,6 +26,10 @@ try
     // ── OpenAPI / Swagger ────────────────────────────────────────────────────
     builder.Services.AddOpenApi();
     builder.Services.AddEndpointsApiExplorer();
+    
+    // ── Razor Component ──────────────────────────────────────────────────────
+    builder.Services.AddRazorComponents()
+        .AddInteractiveWebAssemblyComponents();
 
     // ── Shared Infrastructure ────────────────────────────────────────────────
     builder.Services.AddNovaStackAuth(builder.Configuration);
@@ -74,11 +79,13 @@ try
 
     if (app.Environment.IsDevelopment())
     {
+        app.UseWebAssemblyDebugging();
         app.MapOpenApi(); // Access via /openapi/v1.json
         app.MapScalarApiReference();
     }
 
     app.UseHttpsRedirection();
+    app.UseStaticFiles();
     app.UseCors("DefaultCors");
     app.UseAuthentication();
     app.UseAuthorization();
@@ -112,6 +119,15 @@ try
 
     // Health checks
     app.MapHealthChecks("/health");
+
+    // Blazor WASM fallback route
+    app.MapFallbackToFile("index.html");
+    app.UseAntiforgery();
+    app.MapStaticAssets();
+    
+    app.MapRazorComponents<App>()
+        .AddInteractiveWebAssemblyRenderMode()
+        .AddAdditionalAssemblies(typeof(MangaPanel.Client._Imports).Assembly);
 
     // ── Auto-migrate ─────────────────────────────────────────────────────────
     // MongoDB is schemaless — no EF migrations to run.

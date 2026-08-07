@@ -617,12 +617,10 @@
         public string Title { get; set; } = string.Empty;
         [JsonPropertyName("type")]
         public string Type { get; set; } = string.Empty;
-    }
-
-    private class GetPagedMangaResponse
-    {
-        [JsonPropertyName("items")]
-        public List<MangaSummaryDto> Items { get; set; } = new();
+        public string? ImageUrl { get; set; }
+        public string? LocalImageUrl { get; set; }
+        public string? Author { get; set; }
+        public string? Status { get; set; }
     }
 
     // ── State ────────────────────────────────────────────────────────────────
@@ -671,7 +669,7 @@
     {
         try
         {
-            availableGenres = await Http.GetFromJsonAsync<List<string>>("/api/manga/genres") ?? new();
+            availableGenres = await Http.GetApiDataAsync<List<string>>("/api/v1/manga/genres") ?? new();
         }
         catch (Exception ex)
         {
@@ -683,7 +681,7 @@
     {
         try
         {
-            providers = await Http.GetFromJsonAsync<List<ProviderInfo>>("/api/scrapper/providers") ?? new();
+            providers = await Http.GetApiDataAsync<List<ProviderInfo>>("/api/v1/scrapper/providers") ?? new();
         }
         catch (Exception ex)
         {
@@ -747,7 +745,7 @@
                 }
             }
 
-            results = await Http.GetFromJsonAsync<List<SearchItem>>(url) ?? new();
+            results = await Http.GetApiDataAsync<List<SearchItem>>(url) ?? new();
         }
         catch (Exception ex)
         {
@@ -815,7 +813,7 @@
             var providerEscaped = Uri.EscapeDataString(selectedProvider);
             var urlEscaped = Uri.EscapeDataString(item.DetailUrl);
             var detailUrl = $"/api/scrapper/{providerEscaped}/manga/detail?mangaUrl={urlEscaped}";
-            detailManga = await Http.GetFromJsonAsync<MangaDetailDto>(detailUrl);
+            detailManga = await Http.GetApiDataAsync<MangaDetailDto>(detailUrl);
         }
         catch (Exception ex)
         {
@@ -862,11 +860,20 @@
 
         try
         {
-            var searchUrl = $"/api/manga/paged?Search={Uri.EscapeDataString(linkSearchKeyword)}&Page=1&PageSize=10";
-            var response = await Http.GetFromJsonAsync<GetPagedMangaResponse>(searchUrl);
-            if (response != null)
+            var searchUrl = $"/api/manga?Search={Uri.EscapeDataString(linkSearchKeyword)}&Page=1&PageSize=10";
+            var response = await Http.GetApiDataAsync<GetPagedMangaResponse>(searchUrl);
+            if (response != null && response.Items != null)
             {
-                linkSearchResults = response.Items;
+                linkSearchResults = response.Items.Select(x => new MangaSummaryDto
+                {
+                    Id = x.Id,
+                    Title = x.Title,
+                    ImageUrl = x.ImageUrl,
+                    LocalImageUrl = x.LocalImageUrl,
+                    Type = x.Type,
+                    Author = x.Author,
+                    Status = x.Status
+                }).ToList();
             }
         }
         catch (Exception ex)
@@ -912,7 +919,7 @@
         if (string.IsNullOrWhiteSpace(url)) return string.Empty;
         // Already a relative/local path — no proxying needed
         if (!url.StartsWith("http", StringComparison.OrdinalIgnoreCase)) return url;
-        return $"/api/images/proxy?url={Uri.EscapeDataString(url)}";
+        return $"/api/v1/images/proxy?url={Uri.EscapeDataString(url)}";
     }
 
     private async Task PostScrap(bool scrapChapters)
