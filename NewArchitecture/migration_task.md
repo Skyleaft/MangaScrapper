@@ -5,41 +5,41 @@
 ## Phase 1 — BuildingBlocks Extension
 
 ### 1.1 NovaStack.SharedKernel
-- [ ] Verify `Entity<TId>`, `IAggregateRoot<TId>`, `IHasDomainEvents` exist
-- [ ] Verify `Guard` class covers null, empty string, range checks
-- [ ] Verify `Result<T>` / `Result` / `Error` / `ErrorType` types are complete
-- [ ] Add `Guard.NotEmpty<T>(IEnumerable<T>)` if missing
-- [ ] Verify `DomainException` is present
+- [x] Verify `Entity<TId>`, `IAggregateRoot<TId>`, `IHasDomainEvents` exist
+- [x] Verify `Guard` class covers null, empty string, range checks
+- [x] Verify `Result<T>` / `Result` / `Error` / `ErrorType` types are complete
+- [x] Add `Guard.NotEmpty<T>(IEnumerable<T>)` if missing
+- [x] Verify `DomainException` is present
 
 ### 1.2 NovaStack.Infrastructure — Persistence/MongoDb
-- [ ] Verify `IMongoDbContext` and `MongoDbContextBase` exist
-- [ ] Verify MongoDB camelCase convention registration helper is in place
-- [ ] Verify `GuidSerializer(GuidRepresentation.Standard)` registration in bootstrap
+- [x] Verify `IMongoDbContext` and `MongoDbContextBase` exist
+- [x] Verify MongoDB camelCase convention registration helper is in place
+- [x] Verify `GuidSerializer(GuidRepresentation.Standard)` registration in bootstrap
 
 ### 1.3 NovaStack.Infrastructure — Observability
-- [ ] Create `ObservabilityExtensions.AddMangaScrapperOtel(...)` — wraps current OTel setup from `Program.cs`:
+- [x] Create `ObservabilityExtensions.AddMangaScrapperOtel(...)` — wraps current OTel setup from `Program.cs`:
   - Tracing: AspNetCore, HttpClient, MongoDB sources
   - Metrics: AspNetCore, HttpClient, Runtime, Process, Prometheus exporter
   - Logging: OTLP exporter (conditional on env var)
 
 ### 1.4 NovaStack.Infrastructure — Authentication
-- [ ] Move `CustomAuthSchemeOptions` and `CustomAuthValidation` into `MangaScrapper.Infrastructure/Security/`
-- [ ] Create `AuthExtensions.AddMangaScrapperAuth(...)` — Cookie + CustomAuth + Data Protection wiring
+- [x] Move `CustomAuthSchemeOptions` and `CustomAuthValidation` into `MangaScrapper.Infrastructure/Security/`
+- [x] Create `AuthExtensions.AddMangaScrapperAuth(...)` — Cookie + CustomAuth + Data Protection wiring
 
 ### 1.5 NovaStack.Infrastructure — Http
-- [ ] Move `HttpConfig` (ConfigureClient + CreateHandler) to `NovaStack.Infrastructure/Http/HttpConfig.cs`
-- [ ] Create named client registration helpers
+- [x] Move `HttpConfig` (ConfigureClient + CreateHandler) to `NovaStack.Infrastructure/Http/HttpConfig.cs`
+- [x] Create named client registration helpers
 
 ### 1.6 NovaStack.Contracts
-- [ ] Verify `ApiResponse<T>` wrapper exists
-- [ ] Add `MangaSummaryResponse` record
-- [ ] Add `ChapterResponse` record
-- [ ] Add `UserLibraryResponse` record
-- [ ] Add `UserProgressionResponse` record
-- [ ] Add `DashboardStatisticResponse` record
-- [ ] Add `ScrapStatsResponse` record
-- [ ] Add `StorageSyncReportResponse` record
-- [ ] Migrate `MangaScrapper.Shared/Models/` DTOs → `NovaStack.Contracts/Responses/`
+- [x] Verify `ApiResponse<T>` wrapper exists
+- [x] Add `MangaSummaryResponse` record
+- [x] Add `ChapterResponse` record
+- [x] Add `UserLibraryResponse` record
+- [x] Add `UserProgressionResponse` record
+- [x] Add `DashboardStatisticResponse` record
+- [x] Add `ScrapStatsResponse` record
+- [x] Add `StorageSyncReportResponse` record
+- [x] Migrate `MangaScrapper.Shared/Models/` DTOs → `NovaStack.Contracts/Responses/`
 
 ---
 

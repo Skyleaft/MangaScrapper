@@ -46,4 +46,14 @@ public static class Guard
             throw new ArgumentOutOfRangeException(paramName, message ?? $"{paramName} cannot be negative.");
         return value;
     }
+
+    public static IEnumerable<T> NotEmpty<T>(
+        [NotNull] IEnumerable<T>? value,
+        string paramName,
+        string? message = null)
+    {
+        if (value is null || !value.Any())
+            throw new ArgumentException(message ?? $"{paramName} cannot be null or empty.", paramName);
+        return value;
+    }
 }

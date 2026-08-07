@@ -43,7 +43,8 @@ public static class ObservabilityExtensions
                     {
                         options.RecordException = true;
                     })
-                    .AddSource(serviceName);
+                    .AddSource(serviceName)
+                    .AddSource("MongoDB.Driver.Core.Extensions.DiagnosticSources");
 
                 if (!string.IsNullOrWhiteSpace(otlpEndpoint))
                 {
@@ -57,7 +58,8 @@ public static class ObservabilityExtensions
                     .AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation()
                     .AddPrometheusExporter()
-                    .AddRuntimeInstrumentation();
+                    .AddRuntimeInstrumentation()
+                    .AddProcessInstrumentation();
 
                 if (!string.IsNullOrWhiteSpace(otlpEndpoint))
                 {
