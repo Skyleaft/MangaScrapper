@@ -101,6 +101,8 @@ public static class InfrastructureExtensions
         services.AddScoped<QdrantService>();
         services.AddScoped<StorageSyncService>();
 
+        services.AddScoped<IMangaSearchRepository, MangaSearchMeili>();
+
         services.AddHttpClient<DiscordWebhookService>();
 
         return services;

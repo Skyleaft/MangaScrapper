@@ -12,12 +12,14 @@ namespace UnitTests.MangaScrapper.Application;
 public class GetPagedMangaQueryHandlerTests
 {
     private readonly Mock<IMangaRepository> _mangaRepositoryMock;
+    private readonly Mock<IMangaSearchRepository> _searchRepositoryMock;
     private readonly GetPagedMangaQueryHandler _handler;
 
     public GetPagedMangaQueryHandlerTests()
     {
         _mangaRepositoryMock = new Mock<IMangaRepository>();
-        _handler = new GetPagedMangaQueryHandler(_mangaRepositoryMock.Object);
+        _searchRepositoryMock = new Mock<IMangaSearchRepository>();
+        _handler = new GetPagedMangaQueryHandler(_mangaRepositoryMock.Object,_searchRepositoryMock.Object);
     }
 
     [Fact]

@@ -18,6 +18,7 @@ public interface IMangaRepository
         int page, 
         int pageSize, 
         CancellationToken ct = default);
+    Task<List<Manga>> GetByIdsAsync(List<Guid> ids, CancellationToken ct);
     Task AddAsync(Manga manga, CancellationToken ct = default);
     Task UpdateAsync(Manga manga, CancellationToken ct = default);
     Task DeleteAsync(MangaId id, CancellationToken ct = default);
@@ -32,6 +33,20 @@ public interface IMangaRepository
         int page, 
         int pageSize, 
         CancellationToken ct);
+}
+
+public interface IMangaSearchRepository
+{
+    Task<PagedList<Manga>> SearchAsync(
+        string? search,
+        List<string>? genres,
+        string? status,
+        string? type,
+        string sortBy,
+        string orderBy,
+        int page,
+        int pageSize,
+        CancellationToken ct = default);
 }
 
 public interface IUserRepository

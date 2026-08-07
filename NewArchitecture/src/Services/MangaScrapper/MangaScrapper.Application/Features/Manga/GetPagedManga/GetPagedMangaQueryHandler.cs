@@ -5,15 +5,14 @@ using NovaStack.SharedKernel.Results;
 
 namespace MangaScrapper.Application.Features.Manga.GetPagedManga;
 
-public sealed class GetPagedMangaQueryHandler(IMangaRepository mangaRepository)
+public sealed class GetPagedMangaQueryHandler(IMangaRepository mangaRepository, IMangaSearchRepository mangaSearchRepository)
     : IQueryHandler<GetPagedMangaQuery, PagedResponse<MangaSummaryResponse>>
 {
     public async Task<Result<PagedResponse<MangaSummaryResponse>>> Handle(
         GetPagedMangaQuery query,
         CancellationToken ct)
     {
-        var paged = await mangaRepository.GetPagedAsync(
-            query.Search,
+        var data = await mangaSearchRepository.SearchAsync(query.Search,
             query.Genres,
             query.Status,
             query.Type,
@@ -22,17 +21,32 @@ public sealed class GetPagedMangaQueryHandler(IMangaRepository mangaRepository)
             query.Page,
             query.PageSize,
             ct);
-
-        var mapped = paged.Items.Select(m =>
+        
+        // Collect the IDs from Meilisearch results to fetch full documents from MongoDB
+        var ids = data.Items.Select(x => x.Id.Value).ToList();
+        
+        // Fetch full manga documents from MongoDB (with chapter data for LatestChapter)
+        var mongoDocs = new Dictionary<Guid, Domain.Aggregates.Manga>();
+        if (ids.Count > 0)
         {
+            var fullDocs = await mangaRepository.GetByIdsAsync(ids, ct);
+            mongoDocs = fullDocs.ToDictionary(m => m.Id.Value);
+        }
+        
+        var mapped = data.Items.Select(m =>
+        {
+            var id = m.Id.Value;
+            mongoDocs.TryGetValue(id, out var mongoDoc);
+
+            
             var latest = m.Chapters.OrderByDescending(c => c.Number).FirstOrDefault();
             var latestSummary = latest is null
                 ? new LatestChapterSummaryResponse(Guid.Empty, 0, 0, null, null, string.Empty, DateTime.MinValue)
                 : new LatestChapterSummaryResponse(latest.Id.Value, latest.Number, latest.TotalView, latest.ChapterProvider, latest.ChapterProviderIcon, latest.Language, latest.UploadDate);
 
             return new MangaSummaryResponse(
-                m.Id.Value,
-                m.MalId,
+                id,
+                mongoDoc.MalId,
                 m.Title,
                 m.Author,
                 m.Type,
@@ -43,20 +57,22 @@ public sealed class GetPagedMangaQueryHandler(IMangaRepository mangaRepository)
                 m.ThumbnailSize,
                 m.Rating,
                 m.Popularity,
-                m.Members,
+                mongoDoc.Members,
                 m.ReleaseDate,
                 m.Status,
                 m.CreatedAt,
                 m.UpdatedAt,
                 m.Url,
-                m.TotalView,
-                latestSummary);
+                m.TotalView > 0 ? m.TotalView : mongoDoc?.Chapters.Sum(c => c.TotalView) ?? 0,
+                latestSummary
+                );
+            
         });
 
         return PagedResponse<MangaSummaryResponse>.Create(
             mapped,
-            paged.Page,
-            paged.PageSize,
-            paged.TotalCount);
+            data.Page,
+            data.PageSize,
+            data.TotalCount);
     }
 }

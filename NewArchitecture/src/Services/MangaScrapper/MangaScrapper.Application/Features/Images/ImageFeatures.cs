@@ -18,7 +18,7 @@ public sealed class ServeImageEndpoint : IEndpointDefinition
 {
     public void DefineEndpoints(IEndpointRouteBuilder app)
     {
-        app.MapGet("/api/images/{*filePath}", HandleAsync)
+        app.MapGet("/api/v1/images/{*filePath}", HandleAsync)
             .WithName("ServeImage")
             .WithSummary("Serve a local image file from disk storage")
             .WithTags("Images")

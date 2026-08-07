@@ -80,41 +80,13 @@ public class MongoMangaRepository(MangaMongoDbContext dbContext) : IMangaReposit
         return new PagedList<Manga>(items, page, pageSize, (int)totalCount);
     }
 
-    public async Task<PagedList<Manga>> GetPagedAsync(
-        int page,
-        int pageSize,
-        string? search = null,
-        string? type = null,
-        string? genre = null,
-        CancellationToken ct = default)
+    public async Task<List<Manga>> GetByIdsAsync(List<Guid> ids, CancellationToken ct)
     {
-        var builder = Builders<MangaDocument>.Filter;
-        var filter = builder.Empty;
-
-        if (!string.IsNullOrWhiteSpace(search))
-        {
-            filter &= builder.Regex(m => m.Title, new MongoDB.Bson.BsonRegularExpression(search, "i"));
-        }
-
-        if (!string.IsNullOrWhiteSpace(type))
-        {
-            filter &= builder.Eq(m => m.Type, type);
-        }
-
-        if (!string.IsNullOrWhiteSpace(genre))
-        {
-            filter &= builder.AnyEq(m => m.Genres, genre);
-        }
-
-        var totalCount = await dbContext.Mangas.CountDocumentsAsync(filter, cancellationToken: ct);
-        var docs = await dbContext.Mangas.Find(filter)
-            .SortByDescending(m => m.UpdatedAt)
-            .Skip((page - 1) * pageSize)
-            .Limit(pageSize)
+        var filter = Builders<MangaDocument>.Filter.In(m => m.Id, ids);
+        var doc=  await dbContext.Mangas.Find(filter)
+            .Project<MangaDocument>(Builders<MangaDocument>.Projection.Exclude("chapters.pages"))
             .ToListAsync(ct);
-
-        var items = docs.Select(MapToDomain).ToList();
-        return new PagedList<Manga>(items, page, pageSize, (int)totalCount);
+        return doc is null ? new List<Manga>() : doc.Select(MapToDomain).ToList();
     }
 
     public async Task AddAsync(Manga manga, CancellationToken ct = default)
