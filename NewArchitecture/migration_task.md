@@ -275,14 +275,14 @@
 ## Phase 6 — Scrapper.Worker (NEW PROJECT)
 
 ### 6.1 Project Setup
-- [ ] Create `src/Workers/Scrapper.Worker/Scrapper.Worker.csproj`
-- [ ] Add references: `MangaScrapper.Infrastructure`
-- [ ] Add project to `MangaScrapperStack.sln`
+- [x] Create `src/Workers/Scrapper.Worker/Scrapper.Worker.csproj`
+- [x] Add references: `MangaScrapper.Infrastructure`
+- [x] Add project to `MangaScrapperStack.sln`
 
 ### 6.2 Worker Host
-- [ ] Create `Program.cs` — hosted service with Hangfire server
-- [ ] Register all Hangfire background job classes as transient (`ChapterScrapingJob`, `MeiliSyncJob`, `DeleteMangaJob`, `LatestScrappingJob`)
-- [ ] Configure Hangfire MongoDB storage (same DB as Api)
+- [x] Create `Program.cs` — hosted service with Hangfire server
+- [x] Register all Hangfire background job classes as transient (`ChapterScrapingJob`, `MeiliSyncJob`, `DeleteMangaJob`, `LatestScrappingJob`)
+- [x] Configure Hangfire MongoDB storage (same DB as Api)
 
 ---
 
