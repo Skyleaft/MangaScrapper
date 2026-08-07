@@ -88,28 +88,28 @@
 ## Phase 3 — MangaScrapper.Application (NEW PROJECT)
 
 ### 3.1 Project Setup
-- [ ] Create `src/Services/MangaScrapper/MangaScrapper.Application/MangaScrapper.Application.csproj`
-- [ ] Add references: `MangaScrapper.Domain`, `NovaStack.SharedKernel`, `NovaStack.Contracts`
-- [ ] Add NuGet: `MediatR`, `FluentValidation`, `Mapster`
-- [ ] Add project to `MangaScrapperStack.sln`
+- [x] Create `src/Services/MangaScrapper/MangaScrapper.Application/MangaScrapper.Application.csproj`
+- [x] Add references: `MangaScrapper.Domain`, `NovaStack.SharedKernel`, `NovaStack.Contracts`
+- [x] Add NuGet: `MediatR`, `FluentValidation`, `Mapster`
+- [x] Add project to `MangaScrapperStack.sln`
 
 ### 3.2 Common Abstractions
-- [ ] Create `Common/Abstractions/ICommand.cs` — `IRequest<Result>` / `IRequest<Result<T>>`
-- [ ] Create `Common/Abstractions/IQuery.cs` — `IRequest<Result<T>>`
-- [ ] Create `Common/Abstractions/ICommandHandler.cs`
-- [ ] Create `Common/Abstractions/IQueryHandler.cs`
-- [ ] Create `Common/Abstractions/IEndpointDefinition.cs`
-- [ ] Create `Common/Behaviors/ValidationBehavior.cs` — MediatR pipeline behavior for FluentValidation
-- [ ] Create `Common/Behaviors/LoggingBehavior.cs` — MediatR pipeline behavior for structured logging
-- [ ] Create `Common/Extensions/ApplicationExtensions.cs` — `AddMangaScrapperApplication()` DI method
+- [x] Create `Common/Abstractions/ICommand.cs` — `IRequest<Result>` / `IRequest<Result<T>>`
+- [x] Create `Common/Abstractions/IQuery.cs` — `IRequest<Result<T>>`
+- [x] Create `Common/Abstractions/ICommandHandler.cs`
+- [x] Create `Common/Abstractions/IQueryHandler.cs`
+- [x] Create `Common/Abstractions/IEndpointDefinition.cs`
+- [x] Create `Common/Behaviors/ValidationBehavior.cs` — MediatR pipeline behavior for FluentValidation
+- [x] Create `Common/Behaviors/LoggingBehavior.cs` — MediatR pipeline behavior for structured logging
+- [x] Create `Common/Extensions/ApplicationExtensions.cs` — `AddMangaScrapperApplication()` DI method
 
 ### 3.3 Feature: Manga
-- [ ] `Features/Manga/GetPagedManga/` — Query + Handler (Mongo paged query) + Validator + Endpoint (`GET /api/v1/manga`)
-- [ ] `Features/Manga/GetMangaById/` — Query + Handler + Endpoint (`GET /api/v1/manga/{id}`)
-- [ ] `Features/Manga/GetAllChapters/` — Query + Handler + Endpoint
+- [x] `Features/Manga/GetPagedManga/` — Query + Handler (Mongo paged query) + Validator + Endpoint (`GET /api/v1/manga`)
+- [x] `Features/Manga/GetMangaById/` — Query + Handler + Endpoint (`GET /api/v1/manga/{id}`)
+- [x] `Features/Manga/GetAllChapters/` — Query + Handler + Endpoint
 - [ ] `Features/Manga/GetChaptersPage/` — Query + Handler + Endpoint
-- [ ] `Features/Manga/GetAllGenre/` — Query + Handler + Endpoint
-- [ ] `Features/Manga/GetAllType/` — Query + Handler + Endpoint
+- [x] `Features/Manga/GetAllGenre/` — Query + Handler + Endpoint
+- [x] `Features/Manga/GetAllType/` — Query + Handler + Endpoint
 - [ ] `Features/Manga/GetTrending/` — Query + Handler + Endpoint
 - [ ] `Features/Manga/GetRecommendations/` — Query + Handler (Qdrant delegate) + Endpoint
 - [ ] `Features/Manga/UpdateManga/` — Command + Handler + Validator + Endpoint (`PUT /api/v1/manga/{id}`)
@@ -149,10 +149,10 @@
 - [ ] `Features/ScrapperMangadex/Search/` — Query + Handler + Endpoint
 
 ### 3.9 Feature: Auth
-- [ ] `Features/Auth/Login/` — Command + Handler + Validator + Endpoint (`POST /api/auth/login`)
-- [ ] `Features/Auth/Logout/` — Command + Handler + Endpoint (`POST /api/auth/logout`)
+- [x] `Features/Auth/Login/` — Command + Handler + Validator + Endpoint (`POST /api/auth/login`)
+- [x] `Features/Auth/Logout/` — Command + Handler + Endpoint (`POST /api/auth/logout`)
 - [ ] `Features/Auth/Register/` — Command + Handler + Validator + Endpoint (`POST /api/auth/register`)
-- [ ] `Features/Auth/UserInfo/` — Query + Handler + Endpoint (`GET /api/auth/me`)
+- [x] `Features/Auth/UserInfo/` — Query + Handler + Endpoint (`GET /api/auth/me`)
 - [ ] `Features/Auth/FirebaseVerify/` — Command + Handler + Endpoint (`POST /api/auth/firebase-verify`)
 
 ### 3.10 Feature: Dashboard
@@ -166,14 +166,14 @@
 - [ ] `Features/RecurringJobs/TriggerRecurringJob/` — Command + Handler + Endpoint
 
 ### 3.12 Feature: UserLibrary
-- [ ] `Features/UserLibrary/AddOrUpdateUserLibrary/` — Command + Handler + Validator + Endpoint
-- [ ] `Features/UserLibrary/GetUserLibrary/` — Query + Handler + Endpoint
-- [ ] `Features/UserLibrary/RemoveUserLibrary/` — Command + Handler + Endpoint
+- [x] `Features/UserLibrary/AddOrUpdateUserLibrary/` — Command + Handler + Validator + Endpoint
+- [x] `Features/UserLibrary/GetUserLibrary/` — Query + Handler + Endpoint
+- [x] `Features/UserLibrary/RemoveUserLibrary/` — Command + Handler + Endpoint
 
 ### 3.13 Feature: UserProgression
-- [ ] `Features/UserProgression/UpdateUserProgression/` — Command + Handler + Validator + Endpoint
-- [ ] `Features/UserProgression/GetUserProgression/` — Query + Handler + Endpoint
-- [ ] `Features/UserProgression/GetMangaProgression/` — Query + Handler + Endpoint
+- [x] `Features/UserProgression/UpdateUserProgression/` — Command + Handler + Validator + Endpoint
+- [x] `Features/UserProgression/GetUserProgression/` — Query + Handler + Endpoint
+- [x] `Features/UserProgression/GetMangaProgression/` — Query + Handler + Endpoint
 
 ### 3.14 Feature: Images
 - [ ] `Features/Images/ProxyImage/` — Query + Handler + Endpoint (`GET /api/v1/images/proxy`)
