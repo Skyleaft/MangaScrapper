@@ -11,3 +11,4 @@ MangaScrapper/temp-keys
 .vs
 MangaScrapper/appsettings.Development.json
 MangaScrapper/secrets/mykomikid-firebase-adminsdk-fbsvc-74f8b57641.json
+NewArchitecture/src/Services/MangaScrapper/MangaScrapper.Api/appsettings.Development.json

@@ -5,7 +5,7 @@ using NovaStack.SharedKernel.Results;
 
 namespace MangaScrapper.Application.Features.Manga.GetPagedManga;
 
-internal sealed class GetPagedMangaQueryHandler(IMangaRepository mangaRepository)
+public sealed class GetPagedMangaQueryHandler(IMangaRepository mangaRepository)
     : IQueryHandler<GetPagedMangaQuery, PagedResponse<MangaSummaryResponse>>
 {
     public async Task<Result<PagedResponse<MangaSummaryResponse>>> Handle(

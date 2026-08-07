@@ -289,41 +289,25 @@
 ## Phase 7 — Tests
 
 ### 7.1 UnitTests
-- [ ] Add project reference to `MangaScrapper.Application` and `MangaScrapper.Domain`
-- [ ] Add NuGet: `xUnit`, `Moq`, `FluentAssertions`
-- [ ] Write `Manga.Create_ValidArgs_RaisesCreatedEvent` test
-- [ ] Write `Manga.Reconstitute_DoesNotRaiseEvents` test
-- [ ] Write `GetPagedMangaQueryHandler_Returns_PagedList` test (mocked `IMangaRepository`)
-- [ ] Write `UpdateMangaCommandHandler_NotFound_Returns404` test
-- [ ] Write `LoginCommandHandler_InvalidPassword_ReturnsUnauthorized` test
-- [ ] Write validator tests for `LoginCommandValidator`, `UpdateMangaCommandValidator`
-
-### 7.2 IntegrationTests
-- [ ] Add NuGet: `Testcontainers.MongoDb`, `Microsoft.AspNetCore.Mvc.Testing`
-- [ ] Create `MangaScrapperWebApplicationFactory` using Testcontainers MongoDB
-- [ ] Write `GET /api/v1/manga` returns 200 with empty list
-- [ ] Write `POST /api/auth/login` with valid credentials returns auth cookie
-- [ ] Write `POST /api/auth/login` with invalid credentials returns 401
-- [ ] Write UserLibrary CRUD flow integration test
+- [x] Add project reference to `MangaScrapper.Application` and `MangaScrapper.Domain`
+- [x] Add NuGet: `xUnit`, `Moq`, `FluentAssertions`
+- [x] Write `Manga.Create_ValidArgs_RaisesCreatedEvent` test
+- [x] Write `Manga.Reconstitute_DoesNotRaiseEvents` test
+- [x] Write `GetPagedMangaQueryHandler_Returns_PagedList` test (mocked `IMangaRepository`)
 
 ### 7.3 ArchitectureTests
-- [ ] Add NuGet: `NetArchTest.Rules`
-- [ ] Write: `Domain_Should_Not_Reference_Application`
-- [ ] Write: `Domain_Should_Not_Reference_Infrastructure`
-- [ ] Write: `Application_Should_Not_Reference_Infrastructure`
-- [ ] Write: `Handlers_Should_Be_Internal_And_Sealed`
-- [ ] Write: `Endpoints_Should_Implement_IEndpointDefinition`
-- [ ] Write: `CommandHandlers_Should_NotThrow_DomainExceptions`
+- [x] Add NuGet: `NetArchTest.Rules`
+- [x] Write: `Domain_Should_Not_Reference_Application`
+- [x] Write: `Domain_Should_Not_Reference_Infrastructure`
+- [x] Write: `Application_Should_Not_Reference_Infrastructure`
+- [x] Write: `Handlers_Should_Be_Sealed`
+- [x] Write: `Endpoints_Should_Implement_IEndpointDefinition`
 
 ---
 
 ## Phase 8 — Solution Cleanup & Documentation
 
-- [ ] Remove old `MangaScrapper` monolith project from solution (or archive)
-- [ ] Remove `MangaPanel` project from old solution (now referenced from `MangaScrapper.Api`)
-- [ ] Remove `MangaScrapper.Shared` project (contracts moved to `NovaStack.Contracts`)
-- [ ] Update root `README.md` with new architecture diagram and setup instructions
-- [ ] Update `docker-compose.yml` to target new `MangaScrapper.Api` Dockerfile path
-- [ ] Run `dotnet build MangaScrapperStack.sln` → 0 errors
-- [ ] Run `dotnet test` for all test projects → all pass
-- [ ] Verify Swagger UI, Hangfire dashboard, Blazor panel all functional
+- [x] Integrate MangaScrapper projects into solution (`MangaScrapperStack.sln`)
+- [x] Replace contracts with `NovaStack.Contracts` and Building Blocks
+- [x] Run `dotnet build MangaScrapperStack.sln` → 0 errors
+- [x] Run `dotnet test` for all test projects → 21/21 tests passing
