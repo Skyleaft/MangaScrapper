@@ -46,6 +46,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MangaScrapper.Domain", "src
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MangaScrapper.Application", "src\Services\MangaScrapper\MangaScrapper.Application\MangaScrapper.Application.csproj", "{56CA47AA-FE61-45B2-A003-22E09598BCB3}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MangaScrapper.Infrastructure", "src\Services\MangaScrapper\MangaScrapper.Infrastructure\MangaScrapper.Infrastructure.csproj", "{00B6AB08-B2E1-48A8-ACDF-D9F31BEF44EC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -224,6 +226,18 @@ Global
 		{56CA47AA-FE61-45B2-A003-22E09598BCB3}.Release|x64.Build.0 = Release|Any CPU
 		{56CA47AA-FE61-45B2-A003-22E09598BCB3}.Release|x86.ActiveCfg = Release|Any CPU
 		{56CA47AA-FE61-45B2-A003-22E09598BCB3}.Release|x86.Build.0 = Release|Any CPU
+		{00B6AB08-B2E1-48A8-ACDF-D9F31BEF44EC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{00B6AB08-B2E1-48A8-ACDF-D9F31BEF44EC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{00B6AB08-B2E1-48A8-ACDF-D9F31BEF44EC}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{00B6AB08-B2E1-48A8-ACDF-D9F31BEF44EC}.Debug|x64.Build.0 = Debug|Any CPU
+		{00B6AB08-B2E1-48A8-ACDF-D9F31BEF44EC}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{00B6AB08-B2E1-48A8-ACDF-D9F31BEF44EC}.Debug|x86.Build.0 = Debug|Any CPU
+		{00B6AB08-B2E1-48A8-ACDF-D9F31BEF44EC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{00B6AB08-B2E1-48A8-ACDF-D9F31BEF44EC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{00B6AB08-B2E1-48A8-ACDF-D9F31BEF44EC}.Release|x64.ActiveCfg = Release|Any CPU
+		{00B6AB08-B2E1-48A8-ACDF-D9F31BEF44EC}.Release|x64.Build.0 = Release|Any CPU
+		{00B6AB08-B2E1-48A8-ACDF-D9F31BEF44EC}.Release|x86.ActiveCfg = Release|Any CPU
+		{00B6AB08-B2E1-48A8-ACDF-D9F31BEF44EC}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -248,5 +262,6 @@ Global
 		{AC3DD8F5-B81A-5E7A-2E01-08639917456F} = {5854FF58-B8C5-05C6-5BF2-ACE42193F22B}
 		{1923C371-0EE0-4714-8405-1626D2CD9A77} = {AC3DD8F5-B81A-5E7A-2E01-08639917456F}
 		{56CA47AA-FE61-45B2-A003-22E09598BCB3} = {AC3DD8F5-B81A-5E7A-2E01-08639917456F}
+		{00B6AB08-B2E1-48A8-ACDF-D9F31BEF44EC} = {AC3DD8F5-B81A-5E7A-2E01-08639917456F}
 	EndGlobalSection
 EndGlobal

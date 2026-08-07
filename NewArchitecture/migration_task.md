@@ -183,57 +183,57 @@
 ## Phase 4 — MangaScrapper.Infrastructure (NEW PROJECT)
 
 ### 4.1 Project Setup
-- [ ] Create `src/Services/MangaScrapper/MangaScrapper.Infrastructure/MangaScrapper.Infrastructure.csproj`
-- [ ] Add references: `MangaScrapper.Domain`, `NovaStack.Infrastructure`, `NovaStack.SharedKernel`
-- [ ] Add NuGet: `MongoDB.Driver`, `Hangfire.AspNetCore`, `Hangfire.Mongo`, `MeiliSearch`, `Qdrant.Client`, `HtmlAgilityPack`, `Microsoft.Playwright`, `SkiaSharp`, `FirebaseAdmin`, `Google.Apis.Auth`, `Isopoh.Cryptography.Argon2`, `OpenTelemetry.*`
-- [ ] Add project to `MangaScrapperStack.sln`
+- [x] Create `src/Services/MangaScrapper/MangaScrapper.Infrastructure/MangaScrapper.Infrastructure.csproj`
+- [x] Add references: `MangaScrapper.Domain`, `NovaStack.Infrastructure`, `NovaStack.SharedKernel`
+- [x] Add NuGet: `MongoDB.Driver`, `Hangfire.AspNetCore`, `Hangfire.Mongo`, `MeiliSearch`, `Qdrant.Client`, `HtmlAgilityPack`, `Microsoft.Playwright`, `SkiaSharp`, `FirebaseAdmin`, `Google.Apis.Auth`, `Isopoh.Cryptography.Argon2`, `OpenTelemetry.*`
+- [x] Add project to `MangaScrapperStack.sln`
 
 ### 4.2 Persistence — MongoDB Context
-- [ ] Create `Persistence/MangaMongoDbContext.cs` — extends `MongoDbContextBase`:
+- [x] Create `Persistence/MangaMongoDbContext.cs` — extends `MongoDbContextBase`:
   - Exposes: `Mangas`, `UserLibraries`, `UserProgressions`, `Users` collections
-- [ ] Create `Persistence/Documents/MangaDocument.cs` (migrate from `Infrastructure/Mongo/Collections/`)
-- [ ] Create `Persistence/Documents/UserDocument.cs`
-- [ ] Create `Persistence/Documents/UserLibraryDocument.cs`
-- [ ] Create `Persistence/Documents/UserProgressionDocument.cs`
+- [x] Create `Persistence/Documents/MangaDocument.cs` (migrate from `Infrastructure/Mongo/Collections/`)
+- [x] Create `Persistence/Documents/UserDocument.cs`
+- [x] Create `Persistence/Documents/UserLibraryDocument.cs`
+- [x] Create `Persistence/Documents/UserProgressionDocument.cs`
 
 ### 4.3 Repositories
-- [ ] Create `Repositories/MongoMangaRepository.cs` — implements `IMangaRepository`:
+- [x] Create `Repositories/MongoMangaRepository.cs` — implements `IMangaRepository`:
   - `GetByIdAsync`, `GetByTitleAsync`, `GetPagedAsync`, `AddAsync`, `UpdateAsync`, `DeleteAsync`
   - Uses `Manga.Reconstitute(...)` for mapping
-- [ ] Create `Repositories/MongoUserLibraryRepository.cs` — implements `IUserLibraryRepository`
-- [ ] Create `Repositories/MongoUserProgressionRepository.cs` — implements `IUserProgressionRepository`
+- [x] Create `Repositories/MongoUserLibraryRepository.cs` — implements `IUserLibraryRepository`
+- [x] Create `Repositories/MongoUserProgressionRepository.cs` — implements `IUserProgressionRepository`
 
 ### 4.4 External Services
-- [ ] Migrate `Infrastructure/Services/MeilisearchService.cs` → `Services/MeilisearchService.cs`
-- [ ] Migrate `Infrastructure/Services/QdrantService.cs` → `Services/QdrantService.cs`
-- [ ] Migrate `Infrastructure/Services/StorageSyncService.cs` → `Services/StorageSyncService.cs`
-- [ ] Migrate `Infrastructure/Services/FlareSolverrService.cs` → `Services/FlareSolverrService.cs`
-- [ ] Migrate `Infrastructure/Services/DiscordWebhookService.cs` → `Services/DiscordWebhookService.cs`
+- [x] Migrate `Infrastructure/Services/MeilisearchService.cs` → `Services/MeilisearchService.cs`
+- [x] Migrate `Infrastructure/Services/QdrantService.cs` → `Services/QdrantService.cs`
+- [x] Migrate `Infrastructure/Services/StorageSyncService.cs` → `Services/StorageSyncService.cs`
+- [x] Migrate `Infrastructure/Services/FlareSolverrService.cs` → `Services/FlareSolverrService.cs`
+- [x] Migrate `Infrastructure/Services/DiscordWebhookService.cs` → `Services/DiscordWebhookService.cs`
 
 ### 4.5 Scraper HTTP Services
-- [ ] Migrate `Features/ScrapperKomiku/Services/KomikuService.cs` → `Scrapers/KomikuService.cs`
-- [ ] Migrate `Features/ScrapperKiryuu/Services/KiryuuService.cs` → `Scrapers/KiryuuService.cs`
-- [ ] Migrate `Features/ScrapperKomikcast/Services/KomikcastService.cs` → `Scrapers/KomikcastService.cs`
-- [ ] Migrate `Features/ScrapperMangadex/Services/MangaDexService.cs` → `Scrapers/MangaDexService.cs`
-- [ ] Migrate `Infrastructure/Services/ScrapperService.cs` → `Scrapers/ScrapperService.cs`
+- [x] Migrate `Features/ScrapperKomiku/Services/KomikuService.cs` → `Scrapers/KomikuService.cs`
+- [x] Migrate `Features/ScrapperKiryuu/Services/KiryuuService.cs` → `Scrapers/KiryuuService.cs`
+- [x] Migrate `Features/ScrapperKomikcast/Services/KomikcastService.cs` → `Scrapers/KomikcastService.cs`
+- [x] Migrate `Features/ScrapperMangadex/Services/MangaDexService.cs` → `Scrapers/MangaDexService.cs`
+- [x] Migrate `Infrastructure/Services/ScrapperService.cs` → `Scrapers/ScrapperService.cs`
 
 ### 4.6 Background Jobs (Hangfire)
-- [ ] Migrate `Infrastructure/BackgroundJobs/ChapterScrapingJob.cs` → `BackgroundJobs/ChapterScrapingJob.cs`
-- [ ] Migrate `Infrastructure/BackgroundJobs/MeiliSyncJob.cs` → `BackgroundJobs/MeiliSyncJob.cs`
-- [ ] Migrate `Infrastructure/BackgroundJobs/DeleteMangaJob.cs` → `BackgroundJobs/DeleteMangaJob.cs`
-- [ ] Migrate `Infrastructure/BackgroundJobs/LatestScrappingJob.cs` → `BackgroundJobs/LatestScrappingJob.cs`
+- [x] Migrate `Infrastructure/BackgroundJobs/ChapterScrapingJob.cs` → `BackgroundJobs/ChapterScrapingJob.cs`
+- [x] Migrate `Infrastructure/BackgroundJobs/MeiliSyncJob.cs` → `BackgroundJobs/MeiliSyncJob.cs`
+- [x] Migrate `Infrastructure/BackgroundJobs/DeleteMangaJob.cs` → `BackgroundJobs/DeleteMangaJob.cs`
+- [x] Migrate `Infrastructure/BackgroundJobs/LatestScrappingJob.cs` → `BackgroundJobs/LatestScrappingJob.cs`
 
 ### 4.7 Security
-- [ ] Migrate `Infrastructure/Security/CustomAuthSchemeOptions.cs` → `Security/CustomAuthSchemeOptions.cs`
-- [ ] Migrate `Infrastructure/Security/CustomAuthValidation.cs` → `Security/CustomAuthValidation.cs`
-- [ ] Migrate `Infrastructure/Security/HangfireAuthFillter.cs` → `Security/HangfireAuthFilter.cs` (fix typo)
+- [x] Migrate `Infrastructure/Security/CustomAuthSchemeOptions.cs` → `Security/CustomAuthSchemeOptions.cs`
+- [x] Migrate `Infrastructure/Security/CustomAuthValidation.cs` → `Security/CustomAuthValidation.cs`
+- [x] Migrate `Infrastructure/Security/HangfireAuthFillter.cs` → `Security/HangfireAuthFilter.cs` (fix typo)
 
 ### 4.8 Configuration Models
-- [ ] Migrate all `Infrastructure/Models/*.cs` settings POCOs → `Configuration/` folder:
+- [x] Migrate all `Infrastructure/Models/*.cs` settings POCOs → `Configuration/` folder:
   - `MongoSettings`, `ScrapperSettings`, `FlareSolverrSettings`, `MeiliConfig`, `QdrantConfig`, `EmbeddingConfig`, `DiscordWebhookSettings`, `DomainSettings`
 
 ### 4.9 DI Extension
-- [ ] Create `DependencyInjection/InfrastructureExtensions.cs` — `AddMangaScrapperInfrastructure(IServiceCollection, IConfiguration)`:
+- [x] Create `DependencyInjection/InfrastructureExtensions.cs` — `AddMangaScrapperInfrastructure(IServiceCollection, IConfiguration)`:
   - MongoDB client + context registration
   - Repository registrations
   - Hangfire MongoDB storage setup
