@@ -39,7 +39,7 @@ public sealed class GetPagedMangaQueryHandler(IMangaRepository mangaRepository, 
             mongoDocs.TryGetValue(id, out var mongoDoc);
 
             
-            var latest = m.Chapters.OrderByDescending(c => c.Number).FirstOrDefault();
+            var latest = mongoDoc?.Chapters.OrderByDescending(c => c.Number).FirstOrDefault();
             var latestSummary = latest is null
                 ? new LatestChapterSummaryResponse(Guid.Empty, 0, 0, null, null, string.Empty, DateTime.MinValue)
                 : new LatestChapterSummaryResponse(latest.Id.Value, latest.Number, latest.TotalView, latest.ChapterProvider, latest.ChapterProviderIcon, latest.Language, latest.UploadDate);
@@ -62,7 +62,7 @@ public sealed class GetPagedMangaQueryHandler(IMangaRepository mangaRepository, 
                 m.Status,
                 m.CreatedAt,
                 m.UpdatedAt,
-                m.Url,
+                mongoDoc.Url,
                 m.TotalView > 0 ? m.TotalView : mongoDoc?.Chapters.Sum(c => c.TotalView) ?? 0,
                 latestSummary
                 );
