@@ -46,42 +46,42 @@
 ## Phase 2 — MangaScrapper.Domain (NEW PROJECT)
 
 ### 2.1 Project Setup
-- [ ] Create `src/Services/MangaScrapper/MangaScrapper.Domain/MangaScrapper.Domain.csproj`
-- [ ] Add reference to `NovaStack.SharedKernel`
-- [ ] Add project to `MangaScrapperStack.sln` under `Services/MangaScrapper` folder
+- [x] Create `src/Services/MangaScrapper/MangaScrapper.Domain/MangaScrapper.Domain.csproj`
+- [x] Add reference to `NovaStack.SharedKernel`
+- [x] Add project to `MangaScrapperStack.sln` under `Services/MangaScrapper` folder
 
 ### 2.2 Value Objects
-- [ ] Create `ValueObjects/MangaId.cs` (strongly-typed Guid wrapper)
-- [ ] Create `ValueObjects/ChapterId.cs`
-- [ ] Create `ValueObjects/UserId.cs`
-- [ ] Create `ValueObjects/MangaSource.cs` (enum: Komiku, Kiryuu, Komikcast, MangaDex)
-- [ ] Create `ValueObjects/MangaStatus.cs` (enum: Ongoing, Completed, Hiatus)
+- [x] Create `ValueObjects/MangaId.cs` (strongly-typed Guid wrapper)
+- [x] Create `ValueObjects/ChapterId.cs`
+- [x] Create `ValueObjects/UserId.cs`
+- [x] Create `ValueObjects/MangaSource.cs` (enum: Komiku, Kiryuu, Komikcast, MangaDex)
+- [x] Create `ValueObjects/MangaStatus.cs` (enum: Ongoing, Completed, Hiatus)
 
 ### 2.3 Domain Aggregates
-- [ ] Create `Aggregates/Manga.cs` — `Entity<MangaId>` with:
+- [x] Create `Aggregates/Manga.cs` — `Entity<MangaId>` with:
   - Properties: `Title`, `Slug`, `CoverImage`, `Status`, `Source`, `Genres`, `Chapters`, `TotalView`, `LastUpdated`
   - Factory: `Manga.Create(...)`
   - Factory: `Manga.Reconstitute(...)` (for MongoDB hydration, no events raised)
   - Methods: `UpdateMetadata(...)`, `AddChapter(...)`, `DeleteChapter(...)`
   - Domain Events: `MangaCreatedDomainEvent`, `ChapterScrapedDomainEvent`
-- [ ] Create `Aggregates/UserLibrary.cs` — `Entity<Guid>` with:
+- [x] Create `Aggregates/UserLibrary.cs` — `Entity<Guid>` with:
   - Properties: `UserId`, `MangaId`, `AddedAt`
   - Factory: `UserLibrary.Create(...)`, `UserLibrary.Reconstitute(...)`
   - Domain Event: `UserLibraryUpdatedDomainEvent`
-- [ ] Create `Aggregates/UserProgression.cs` — `Entity<Guid>` with:
+- [x] Create `Aggregates/UserProgression.cs` — `Entity<Guid>` with:
   - Properties: `UserId`, `MangaId`, `LastReadChapterId`, `LastReadAt`
   - Factory: `UserProgression.Create(...)`, `UserProgression.Reconstitute(...)`
   - Method: `UpdateProgression(...)`
 
 ### 2.4 Domain Events
-- [ ] Create `DomainEvents/MangaCreatedDomainEvent.cs`
-- [ ] Create `DomainEvents/ChapterScrapedDomainEvent.cs`
-- [ ] Create `DomainEvents/UserLibraryUpdatedDomainEvent.cs`
+- [x] Create `DomainEvents/MangaCreatedDomainEvent.cs`
+- [x] Create `DomainEvents/ChapterScrapedDomainEvent.cs`
+- [x] Create `DomainEvents/UserLibraryUpdatedDomainEvent.cs`
 
 ### 2.5 Repository Interfaces
-- [ ] Move `IMangaRepository.cs` → `Repositories/IMangaRepository.cs` (update to use domain types)
-- [ ] Move `IUserLibraryRepository.cs` → `Repositories/IUserLibraryRepository.cs`
-- [ ] Move `IUserProgressionRepository.cs` → `Repositories/IUserProgressionRepository.cs`
+- [x] Move `IMangaRepository.cs` → `Repositories/IMangaRepository.cs` (update to use domain types)
+- [x] Move `IUserLibraryRepository.cs` → `Repositories/IUserLibraryRepository.cs`
+- [x] Move `IUserProgressionRepository.cs` → `Repositories/IUserProgressionRepository.cs`
 
 ---
 
