@@ -726,7 +726,7 @@
 
         try
         {
-            var url = $"/api/scrapper/{Uri.EscapeDataString(selectedProvider)}/manga/search?page={currentPage}";
+            var url = $"/api/v1/scrapper/{Uri.EscapeDataString(selectedProvider)}/search?page={currentPage}";
 
             if (!string.IsNullOrWhiteSpace(keyword))
                 url += $"&keyword={Uri.EscapeDataString(keyword)}";
@@ -812,7 +812,7 @@
         {
             var providerEscaped = Uri.EscapeDataString(selectedProvider);
             var urlEscaped = Uri.EscapeDataString(item.DetailUrl);
-            var detailUrl = $"/api/scrapper/{providerEscaped}/manga/detail?mangaUrl={urlEscaped}";
+            var detailUrl = $"/api/v1/scrapper/{providerEscaped}/detail?mangaUrl={urlEscaped}";
             detailManga = await Http.GetApiDataAsync<MangaDetailDto>(detailUrl);
         }
         catch (Exception ex)
@@ -860,7 +860,7 @@
 
         try
         {
-            var searchUrl = $"/api/manga?Search={Uri.EscapeDataString(linkSearchKeyword)}&Page=1&PageSize=10";
+            var searchUrl = $"/api/v1/manga?Search={Uri.EscapeDataString(linkSearchKeyword)}&Page=1&PageSize=10";
             var response = await Http.GetApiDataAsync<GetPagedMangaResponse>(searchUrl);
             if (response != null && response.Items != null)
             {
@@ -940,7 +940,7 @@
             };
 
             var response = await Http.PostAsJsonAsync(
-                $"/api/scrapper/{Uri.EscapeDataString(selectedProvider)}/manga",
+                $"/api/v1/scrapper/{Uri.EscapeDataString(selectedProvider)}",
                 request
             );
 

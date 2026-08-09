@@ -106,6 +106,12 @@ public class MongoMangaRepository(MangaMongoDbContext dbContext) : IMangaReposit
         await dbContext.Mangas.DeleteOneAsync(m => m.Id == id.Value, ct);
     }
 
+    public async Task<List<Manga>> GetAllAsync(CancellationToken ct = default)
+    {
+        var docs = await dbContext.Mangas.Find(_ => true).ToListAsync(ct);
+        return docs.Select(MapToDomain).ToList();
+    }
+
     public async Task<List<string>> GetAllGenresAsync(CancellationToken ct)
     {
         var result = await dbContext.Mangas.Distinct<string>("Genres", Builders<MangaDocument>.Filter.Empty).ToListAsync(ct);

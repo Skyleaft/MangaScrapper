@@ -105,6 +105,8 @@ public static class InfrastructureExtensions
 
         services.AddHttpClient<DiscordWebhookService>();
 
+        services.AddScoped<IScrapperSettingsProvider, ScrapperSettingsProvider>();
+
         return services;
     }
 
@@ -142,6 +144,13 @@ public static class InfrastructureExtensions
         services.AddKeyedScoped<IScrapperService, KiryuuService>("kiryuu");
         services.AddKeyedScoped<IScrapperService, KomikcastService>("komikcast");
         services.AddKeyedScoped<IScrapperService, MangaDexService>("mangadex");
+
+        services.AddKeyedScoped<IProviderScrapperService, KomikuService>("komiku");
+        services.AddKeyedScoped<IProviderScrapperService, KiryuuService>("kiryuu");
+        services.AddKeyedScoped<IProviderScrapperService, KomikcastService>("komikcast");
+        services.AddKeyedScoped<IProviderScrapperService, MangaDexService>("mangadex");
+
+        services.AddScoped<IScrapperQueueService, ScrapperQueueService>();
 
         return services;
     }

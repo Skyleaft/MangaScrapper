@@ -56,6 +56,12 @@ public class Page
         LocalImageUrl = localImageUrl;
         Size = size;
     }
+
+    public void UpdateLocalImage(string localImageUrl, long size)
+    {
+        LocalImageUrl = localImageUrl;
+        Size = size;
+    }
 }
 
 public class Manga : Entity<MangaId>
@@ -209,5 +215,12 @@ public class Manga : Entity<MangaId>
     public void IncrementView()
     {
         TotalView++;
+    }
+
+    public void UpdateLocalImage(string localImageUrl, long size)
+    {
+        LocalImageUrl = localImageUrl;
+        ThumbnailSize = size;
+        UpdatedAt = DateTime.UtcNow;
     }
 }

@@ -33,6 +33,8 @@ public interface IMangaRepository
         int page, 
         int pageSize, 
         CancellationToken ct);
+
+    Task<List<Manga>> GetAllAsync(CancellationToken ct = default);
 }
 
 public interface IMangaSearchRepository

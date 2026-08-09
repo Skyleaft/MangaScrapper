@@ -12,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SkiaSharp;
 using NovaStack.Contracts.Responses;
+using MangaScrapper.Application.Common.Abstractions;
 
 namespace MangaScrapper.Infrastructure.Scrapers;
 
@@ -25,6 +26,7 @@ public interface IScrapperService
     Task<JikanMangaItem?> GetMangaInfoById(int malId, CancellationToken ct = default);
     Task<MangaDocument> UpdateMangaDocument(MangaDocument manga, CancellationToken ct = default);
     Task<MangaDocument> ExtractManga(string url, CancellationToken ct, bool scrapChapters = true, string? linkedId = null);
+    Task<MangaDocument> GetDetail(string url, CancellationToken ct);
     Task<ChapterDocument> GetChapterPage(string mangaTitle, ChapterDocument chapter, CancellationToken ct = default);
     Task QueueChapterScraping(Guid mangaId, string mangaTitle, ChapterDocument chapter);
     Task<List<SearchItem>> SearchManga(SearchRequest request, CancellationToken ct);
@@ -33,7 +35,7 @@ public interface IScrapperService
     Task<List<ScrapperProvider>> GetAllProvider();
 }
 
-public abstract class ScrapperServiceBase : IScrapperService
+public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperService
 {
     protected const string DefaultIndonesianLanguage = "id";
 
@@ -547,5 +549,96 @@ public abstract class ScrapperServiceBase : IScrapperService
             catch { /* skip invalid files */ }
         }
         return providers;
+    }
+
+    async Task<ScrapperMangaDocumentResponse> IProviderScrapperService.ExtractManga(string url, CancellationToken ct, bool scrapChapters, string? linkedId)
+    {
+        var doc = await ExtractManga(url, ct, scrapChapters, linkedId);
+        return MapToResponse(doc);
+    }
+
+    async Task<ScrapperMangaDocumentResponse> IProviderScrapperService.GetDetail(string url, CancellationToken ct)
+    {
+        var doc = await GetDetail(url, ct);
+        return MapToResponse(doc);
+    }
+
+    async Task<List<SearchItemResponse>> IProviderScrapperService.SearchManga(ScrapperSearchRequest request, CancellationToken ct)
+    {
+        var req = new SearchRequest
+        {
+            Keyword = request.Keyword,
+            Genres = request.Genres.ToList(),
+            Status = request.Status,
+            Type = request.Type,
+            Page = request.Page
+        };
+        var items = await SearchManga(req, ct);
+        return items.Select(i => new SearchItemResponse
+        {
+            Title = i.Title,
+            DetailUrl = i.DetailUrl,
+            Thumbnail = i.Thumbnail,
+            Type = i.Type,
+            Genre = i.Genre,
+            LastUpdateText = i.LastUpdateText,
+            LatestChapterNumber = i.LatestChapterNumber,
+            LatestScrapped = i.LatestScrapped,
+            CurrentChapterNumber = i.CurrentChapterNumber,
+            MangaId = i.MangaId
+        }).ToList();
+    }
+
+    async Task<List<ProviderInfoResponse>> IProviderScrapperService.GetAllProvider()
+    {
+        var providers = await GetAllProvider();
+        return providers.Select(p => new ProviderInfoResponse
+        {
+            ProviderName = p.ProviderName,
+            BaseUrl = p.BaseUrl
+        }).ToList();
+    }
+
+    private static ScrapperMangaDocumentResponse MapToResponse(MangaDocument doc)
+    {
+        return new ScrapperMangaDocumentResponse
+        {
+            Id = doc.Id,
+            MalID = doc.MalID,
+            Title = doc.Title,
+            Author = doc.Author,
+            Type = doc.Type,
+            Rating = doc.Rating,
+            Popularity = doc.Popularity,
+            Members = doc.Members,
+            Genres = doc.Genres,
+            Description = doc.Description,
+            ImageUrl = doc.ImageUrl,
+            LocalImageUrl = doc.LocalImageUrl,
+            ThumbnailSize = doc.ThumbnailSize,
+            Status = doc.Status,
+            ReleaseDate = doc.ReleaseDate,
+            TotalView = doc.TotalView,
+            CreatedAt = doc.CreatedAt,
+            UpdatedAt = doc.UpdatedAt,
+            Url = doc.Url,
+            Chapters = doc.Chapters?.Select(c => new ScrapperChapterDocumentResponse
+            {
+                Id = c.Id,
+                Number = c.Number,
+                Link = c.Link,
+                ChapterProvider = c.ChapterProvider,
+                ChapterProviderIcon = c.ChapterProviderIcon,
+                Language = c.Language,
+                TotalView = c.TotalView,
+                UploadDate = c.UploadDate,
+                Pages = c.Pages?.Select(p => new ScrapperPageDocumentResponse
+                {
+                    ImageUrl = p.ImageUrl,
+                    LocalImageUrl = p.LocalImageUrl,
+                    Size = p.Size
+                }).ToList() ?? new()
+            }).ToList() ?? new()
+        };
     }
 }
