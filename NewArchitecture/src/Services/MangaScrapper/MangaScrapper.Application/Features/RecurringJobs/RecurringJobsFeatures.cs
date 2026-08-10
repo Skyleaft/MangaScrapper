@@ -1,3 +1,4 @@
+using System;
 using MangaScrapper.Application.Common.Abstractions;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
@@ -8,37 +9,50 @@ using NovaStack.SharedKernel.Results;
 
 namespace MangaScrapper.Application.Features.RecurringJobs;
 
-public record RecurringJobDto(string Id, string Cron, string Queue, string JobType);
+public record RecurringJobDto(string Id, string Cron, string Queue, DateTime? NextExecution, DateTime? LastExecution, string LastJobState, DateTime? CreatedAt);
 
 public record GetRecurringJobsQuery : IQuery<List<RecurringJobDto>>;
 
-public record CreateOrUpdateRecurringJobCommand(string JobId, string CronExpression, string JobType) : ICommand;
+public record CreateOrUpdateRecurringJobCommand(string JobId, string CronExpression, string Provider, int ScrapLastTotalPage) : ICommand;
 
 public record DeleteRecurringJobCommand(string JobId) : ICommand;
 
 public record TriggerRecurringJobCommand(string JobId) : ICommand;
 
-internal sealed class RecurringJobsQueryHandler : IQueryHandler<GetRecurringJobsQuery, List<RecurringJobDto>>
+internal sealed class RecurringJobsQueryHandler(IRecurringJobsService recurringJobsService) : IQueryHandler<GetRecurringJobsQuery, List<RecurringJobDto>>
 {
-    public Task<Result<List<RecurringJobDto>>> Handle(GetRecurringJobsQuery query, CancellationToken ct)
+    public async Task<Result<List<RecurringJobDto>>> Handle(GetRecurringJobsQuery query, CancellationToken ct)
     {
-        return Task.FromResult<Result<List<RecurringJobDto>>>(new List<RecurringJobDto>());
+        var jobs = await recurringJobsService.GetRecurringJobsAsync(ct);
+        return Result.Success(jobs);
     }
 }
 
-internal sealed class CreateOrUpdateRecurringJobCommandHandler : ICommandHandler<CreateOrUpdateRecurringJobCommand>
+internal sealed class CreateOrUpdateRecurringJobCommandHandler(IRecurringJobsService recurringJobsService) : ICommandHandler<CreateOrUpdateRecurringJobCommand>
 {
-    public Task<Result> Handle(CreateOrUpdateRecurringJobCommand command, CancellationToken ct) => Task.FromResult(Result.Success());
+    public async Task<Result> Handle(CreateOrUpdateRecurringJobCommand command, CancellationToken ct)
+    {
+        await recurringJobsService.CreateOrUpdateLatestChapterScrapingJobAsync(command.JobId, command.CronExpression, command.Provider, command.ScrapLastTotalPage, ct);
+        return Result.Success();
+    }
 }
 
-internal sealed class DeleteRecurringJobCommandHandler : ICommandHandler<DeleteRecurringJobCommand>
+internal sealed class DeleteRecurringJobCommandHandler(IRecurringJobsService recurringJobsService) : ICommandHandler<DeleteRecurringJobCommand>
 {
-    public Task<Result> Handle(DeleteRecurringJobCommand command, CancellationToken ct) => Task.FromResult(Result.Success());
+    public async Task<Result> Handle(DeleteRecurringJobCommand command, CancellationToken ct)
+    {
+        await recurringJobsService.DeleteRecurringJobAsync(command.JobId, ct);
+        return Result.Success();
+    }
 }
 
-internal sealed class TriggerRecurringJobCommandHandler : ICommandHandler<TriggerRecurringJobCommand>
+internal sealed class TriggerRecurringJobCommandHandler(IRecurringJobsService recurringJobsService) : ICommandHandler<TriggerRecurringJobCommand>
 {
-    public Task<Result> Handle(TriggerRecurringJobCommand command, CancellationToken ct) => Task.FromResult(Result.Success());
+    public async Task<Result> Handle(TriggerRecurringJobCommand command, CancellationToken ct)
+    {
+        await recurringJobsService.TriggerRecurringJobAsync(command.JobId, ct);
+        return Result.Success();
+    }
 }
 
 public sealed class RecurringJobsEndpoints : IEndpointDefinition

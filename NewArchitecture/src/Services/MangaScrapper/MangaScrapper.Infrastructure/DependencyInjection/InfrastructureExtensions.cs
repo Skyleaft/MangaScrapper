@@ -106,6 +106,7 @@ public static class InfrastructureExtensions
         services.AddHttpClient<DiscordWebhookService>();
 
         services.AddScoped<IScrapperSettingsProvider, ScrapperSettingsProvider>();
+        services.AddScoped<IRecurringJobsService, RecurringJobsService>();
 
         return services;
     }
