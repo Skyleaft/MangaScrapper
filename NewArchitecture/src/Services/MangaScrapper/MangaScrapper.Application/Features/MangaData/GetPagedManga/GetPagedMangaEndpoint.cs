@@ -2,11 +2,10 @@ using MangaScrapper.Application.Common.Abstractions;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using NovaStack.Contracts.Responses;
 
-namespace MangaScrapper.Application.Features.Manga.GetPagedManga;
+namespace MangaScrapper.Application.Features.MangaData.GetPagedManga;
 
 public sealed class GetPagedMangaEndpoint : IEndpointDefinition
 {

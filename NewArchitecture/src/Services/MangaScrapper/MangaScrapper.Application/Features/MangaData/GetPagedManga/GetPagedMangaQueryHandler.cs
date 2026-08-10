@@ -3,7 +3,7 @@ using MangaScrapper.Domain.Repositories;
 using NovaStack.Contracts.Responses;
 using NovaStack.SharedKernel.Results;
 
-namespace MangaScrapper.Application.Features.Manga.GetPagedManga;
+namespace MangaScrapper.Application.Features.MangaData.GetPagedManga;
 
 public sealed class GetPagedMangaQueryHandler(IMangaRepository mangaRepository, IMangaSearchRepository mangaSearchRepository)
     : IQueryHandler<GetPagedMangaQuery, PagedResponse<MangaSummaryResponse>>

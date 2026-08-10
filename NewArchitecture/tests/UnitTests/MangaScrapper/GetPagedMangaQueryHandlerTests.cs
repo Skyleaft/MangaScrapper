@@ -1,5 +1,5 @@
 using FluentAssertions;
-using MangaScrapper.Application.Features.Manga.GetPagedManga;
+using MangaScrapper.Application.Features.MangaData.GetPagedManga;
 using MangaScrapper.Domain.Aggregates;
 using MangaScrapper.Domain.Repositories;
 using MangaScrapper.Domain.ValueObjects;

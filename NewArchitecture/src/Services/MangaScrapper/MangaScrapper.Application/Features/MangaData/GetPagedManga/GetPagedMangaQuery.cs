@@ -1,7 +1,7 @@
 using MangaScrapper.Application.Common.Abstractions;
 using NovaStack.Contracts.Responses;
 
-namespace MangaScrapper.Application.Features.Manga.GetPagedManga;
+namespace MangaScrapper.Application.Features.MangaData.GetPagedManga;
 
 public record GetPagedMangaQuery(
     string? Search = null,

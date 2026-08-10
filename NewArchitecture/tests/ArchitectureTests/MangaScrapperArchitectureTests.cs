@@ -1,4 +1,5 @@
 using FluentAssertions;
+using MangaScrapper.Application.Features.MangaData.GetPagedManga;
 using NetArchTest.Rules;
 using Xunit;
 
@@ -24,7 +25,7 @@ public sealed class MangaScrapperArchitectureTests
     [Fact]
     public void Application_Should_Not_DependOn_Infrastructure()
     {
-        var result = Types.InAssembly(typeof(MangaScrapper.Application.Features.Manga.GetPagedManga.GetPagedMangaQuery).Assembly)
+        var result = Types.InAssembly(typeof(GetPagedMangaQuery).Assembly)
             .ShouldNot()
             .HaveDependencyOn(InfrastructureAssembly)
             .GetResult();
@@ -35,7 +36,7 @@ public sealed class MangaScrapperArchitectureTests
     [Fact]
     public void Handlers_Should_Be_Sealed()
     {
-        var result = Types.InAssembly(typeof(MangaScrapper.Application.Features.Manga.GetPagedManga.GetPagedMangaQuery).Assembly)
+        var result = Types.InAssembly(typeof(GetPagedMangaQuery).Assembly)
             .That()
             .HaveNameEndingWith("Handler")
             .Should()
@@ -48,7 +49,7 @@ public sealed class MangaScrapperArchitectureTests
     [Fact]
     public void Endpoints_Should_Implement_IEndpointDefinition()
     {
-        var result = Types.InAssembly(typeof(MangaScrapper.Application.Features.Manga.GetPagedManga.GetPagedMangaQuery).Assembly)
+        var result = Types.InAssembly(typeof(GetPagedMangaQuery).Assembly)
             .That()
             .HaveNameEndingWith("Endpoint")
             .Should()

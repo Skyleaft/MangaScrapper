@@ -144,7 +144,7 @@ internal sealed class FixFileCommandHandler(
         return new FixFileResultResponse { Message = "File fixing complete", TotalFixed = totalFixed };
     }
 
-    private bool FixThumbnailPath(MangaScrapper.Domain.Aggregates.Manga manga)
+    private bool FixThumbnailPath(Manga manga)
     {
         if (string.IsNullOrEmpty(manga.LocalImageUrl) || !manga.LocalImageUrl.StartsWith('/'))
             return false;
@@ -164,7 +164,7 @@ internal sealed class FixFileCommandHandler(
         return true;
     }
 
-    private int FixChapterPages(MangaScrapper.Domain.Aggregates.Manga manga)
+    private int FixChapterPages(Manga manga)
     {
         int totalFixed = 0;
         foreach (var chapter in manga.Chapters)
