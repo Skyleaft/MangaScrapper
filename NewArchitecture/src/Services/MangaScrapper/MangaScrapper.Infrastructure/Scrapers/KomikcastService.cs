@@ -1,8 +1,8 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Web;
-using Hangfire;
+using NovaStack.Infrastructure.Messaging;
 using HtmlAgilityPack;
 
 using MangaScrapper.Infrastructure.Persistence.Documents;
@@ -18,10 +18,12 @@ namespace MangaScrapper.Infrastructure.Scrapers;
 
 public class KomikcastService : ScrapperServiceBase
 {
+    protected override string ProviderKey => "komikcast";
+
     public KomikcastService(
         HttpClient httpClient,
         IScrapperRepository scraperRepo,
-        IBackgroundJobClient jobClient,
+        IEventBus eventBus,
         IServiceScopeFactory scopeFactory,
         IOptions<ScrapperSettings> settings,
         SemaphoreSlim semaphore,
@@ -29,7 +31,7 @@ public class KomikcastService : ScrapperServiceBase
         QdrantService qdrantService,
         ILoggerFactory loggerFactory,
         FlareSolverrService flareSolverrService)
-        : base(httpClient, scraperRepo, jobClient, scopeFactory, settings, semaphore, meilisearchService, qdrantService, loggerFactory, flareSolverrService)
+        : base(httpClient, scraperRepo, eventBus, scopeFactory, settings, semaphore, meilisearchService, qdrantService, loggerFactory, flareSolverrService)
     {
         LoadProvider("komikcast-provider.json");
     }

@@ -1,8 +1,8 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Web;
-using Hangfire;
+using NovaStack.Infrastructure.Messaging;
 using HtmlAgilityPack;
 
 
@@ -18,10 +18,12 @@ namespace MangaScrapper.Infrastructure.Scrapers;
 
 public class KiryuuService : ScrapperServiceBase
 {
+    protected override string ProviderKey => "kiryuu";
+
     public KiryuuService(
         HttpClient httpClient,
         IScrapperRepository scraperRepo,
-        IBackgroundJobClient jobClient,
+        IEventBus eventBus,
         IServiceScopeFactory scopeFactory,
         IOptions<ScrapperSettings> settings,
         SemaphoreSlim semaphore,
@@ -29,7 +31,7 @@ public class KiryuuService : ScrapperServiceBase
         QdrantService qdrantService,
         ILoggerFactory loggerFactory,
         FlareSolverrService flareSolverrService)
-        : base(httpClient, scraperRepo, jobClient, scopeFactory, settings, semaphore, meilisearchService, qdrantService, loggerFactory, flareSolverrService)
+        : base(httpClient, scraperRepo, eventBus, scopeFactory, settings, semaphore, meilisearchService, qdrantService, loggerFactory, flareSolverrService)
     {
         LoadProvider("kiryuu-provider.json");
     }

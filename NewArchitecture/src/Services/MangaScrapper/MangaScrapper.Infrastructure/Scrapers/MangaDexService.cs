@@ -1,6 +1,6 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Text.RegularExpressions;
-using Hangfire;
+using NovaStack.Infrastructure.Messaging;
 
 using MangaScrapper.Infrastructure.Persistence.Documents;
 
@@ -14,6 +14,8 @@ namespace MangaScrapper.Infrastructure.Scrapers;
 
 public class MangaDexService : ScrapperServiceBase
 {
+    protected override string ProviderKey => "mangadex";
+
     private const string BaseApi = "https://api.mangadex.org";
     private const string CoverBaseUrl = "https://uploads.mangadex.org/covers";
     private static readonly string[] ChapterLanguagePriority = ["id", "en"];
@@ -26,7 +28,7 @@ public class MangaDexService : ScrapperServiceBase
     public MangaDexService(
         HttpClient httpClient,
         IScrapperRepository scraperRepo,
-        IBackgroundJobClient jobClient,
+        IEventBus eventBus,
         IServiceScopeFactory scopeFactory,
         IOptions<ScrapperSettings> settings,
         SemaphoreSlim semaphore,
@@ -34,7 +36,7 @@ public class MangaDexService : ScrapperServiceBase
         QdrantService qdrantService,
         ILoggerFactory loggerFactory,
         FlareSolverrService flareSolverrService)
-        : base(httpClient, scraperRepo, jobClient, scopeFactory, settings, semaphore, meilisearchService, qdrantService, loggerFactory, flareSolverrService)
+        : base(httpClient, scraperRepo, eventBus, scopeFactory, settings, semaphore, meilisearchService, qdrantService, loggerFactory, flareSolverrService)
     {
         LoadProvider("mangadex-provider.json");
     }

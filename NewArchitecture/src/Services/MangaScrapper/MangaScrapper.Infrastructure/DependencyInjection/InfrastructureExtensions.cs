@@ -4,6 +4,7 @@ using Hangfire.Mongo.Migration.Strategies;
 using Hangfire.Mongo.Migration.Strategies.Backup;
 using MangaScrapper.Domain.Repositories;
 using MangaScrapper.Infrastructure.Configuration;
+using MangaScrapper.Infrastructure.Messaging;
 using MangaScrapper.Infrastructure.Persistence;
 using MangaScrapper.Infrastructure.Repositories;
 using MangaScrapper.Infrastructure.Scrapers;
@@ -20,6 +21,9 @@ using MongoDB.Bson.Serialization.Conventions;
 using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using NovaStack.Contracts.IntegrationEvents;
+using NovaStack.Infrastructure.DependencyInjection;
+using NovaStack.Infrastructure.Messaging.Options;
 using NovaStack.Infrastructure.Persistence.MongoDb;
 
 namespace MangaScrapper.Infrastructure.DependencyInjection;
@@ -29,7 +33,8 @@ public static class InfrastructureExtensions
     public static IServiceCollection AddMangaScrapperInfrastructure(
         this IServiceCollection services,
         IConfiguration configuration,
-        bool includeHangfireServer = false)
+        bool includeHangfireServer = false,
+        bool includeRabbitMqConsumer = false)
     {
         services
             .AddMongoDb(configuration)
@@ -37,6 +42,7 @@ public static class InfrastructureExtensions
             .AddExternalServices(configuration)
             .AddScraperServices(configuration)
             .AddHangfireWithMongo(configuration, includeHangfireServer)
+            .AddRabbitMqMessaging(configuration, includeRabbitMqConsumer)
             .AddSecurityServices();
 
         return services;
@@ -190,10 +196,33 @@ public static class InfrastructureExtensions
             });
         }
 
-        services.AddTransient<BackgroundJobs.ChapterScrapingJob>();
         services.AddTransient<BackgroundJobs.MeiliSyncJob>();
         services.AddTransient<BackgroundJobs.DeleteMangaJob>();
         services.AddTransient<BackgroundJobs.LatestChapterScrapingJob>();
+
+        return services;
+    }
+
+    private static IServiceCollection AddRabbitMqMessaging(
+        this IServiceCollection services,
+        IConfiguration configuration,
+        bool includeConsumer)
+    {
+        // Bind messaging options so RabbitMqEventBus / RabbitMqConsumerService can resolve them
+        services.Configure<MessagingOptions>(configuration.GetSection(MessagingOptions.SectionName));
+
+        // Register the event bus singleton (publisher) — used by both API and Worker
+        services.AddNativeRabbitMqEventBus();
+
+        // Register the event handler (scoped — created per message in the consumer)
+        services.AddScoped<ScrapChapterPagesHandler>();
+
+        if (includeConsumer)
+        {
+            // Register the background consumer service — runs only in Scrapper.Worker
+            services.AddRabbitMqConsumer<ScrapChapterPagesIntegrationEvent, ScrapChapterPagesHandler>(
+                "scrape-chapter-pages");
+        }
 
         return services;
     }

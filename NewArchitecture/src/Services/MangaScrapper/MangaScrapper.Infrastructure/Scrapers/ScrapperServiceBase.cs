@@ -1,9 +1,7 @@
-using Hangfire;
 using System.Globalization;
 using System.Text.Json;
 using System.Web;
 using HtmlAgilityPack;
-using MangaScrapper.Infrastructure.BackgroundJobs;
 using MangaScrapper.Infrastructure.Configuration;
 using MangaScrapper.Infrastructure.Persistence.Documents;
 using MangaScrapper.Infrastructure.Utils;
@@ -11,7 +9,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SkiaSharp;
+using NovaStack.Contracts.IntegrationEvents;
 using NovaStack.Contracts.Responses;
+using NovaStack.Infrastructure.Messaging;
 using MangaScrapper.Application.Common.Abstractions;
 
 namespace MangaScrapper.Infrastructure.Scrapers;
@@ -28,7 +28,7 @@ public interface IScrapperService
     Task<MangaDocument> ExtractManga(string url, CancellationToken ct, bool scrapChapters = true, string? linkedId = null);
     Task<MangaDocument> GetDetail(string url, CancellationToken ct);
     Task<ChapterDocument> GetChapterPage(string mangaTitle, ChapterDocument chapter, CancellationToken ct = default);
-    Task QueueChapterScraping(Guid mangaId, string mangaTitle, ChapterDocument chapter);
+    Task QueueChapterScraping(Guid mangaId, string mangaTitle, ChapterDocument chapter, CancellationToken ct = default);
     Task<List<SearchItem>> SearchManga(SearchRequest request, CancellationToken ct);
     Task<List<JikanMangaItem>> SearchJikan(string title, CancellationToken ct = default);
     Task<List<PageDocument>> GetAllPages(string url, CancellationToken ct = default);
@@ -40,7 +40,7 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
     protected const string DefaultIndonesianLanguage = "id";
 
     protected readonly HttpClient HttpClient;
-    protected readonly IBackgroundJobClient JobClient;
+    protected readonly IEventBus EventBus;
     protected readonly IServiceScopeFactory ScopeFactory;
     protected readonly SemaphoreSlim Semaphore;
     protected readonly string ImageStoragePath;
@@ -48,6 +48,9 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
     protected readonly QdrantService QdrantService;
     protected readonly ILogger Logger;
     protected readonly FlareSolverrService FlareSolverrService;
+
+    /// <summary>Provider key used to resolve this scraper from the DI container (e.g. "komiku", "kiryuu").</summary>
+    protected abstract string ProviderKey { get; }
     private ScrapperProvider? _provider;
 
     // Repository for legacy document-based access used by scrapers
@@ -58,7 +61,7 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
     protected ScrapperServiceBase(
         HttpClient httpClient,
         IScrapperRepository scraperRepo,
-        IBackgroundJobClient jobClient,
+        IEventBus eventBus,
         IServiceScopeFactory scopeFactory,
         IOptions<ScrapperSettings> settings,
         SemaphoreSlim semaphore,
@@ -69,7 +72,7 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
     {
         HttpClient = httpClient;
         _scraperRepo = scraperRepo;
-        JobClient = jobClient;
+        EventBus = eventBus;
         ScopeFactory = scopeFactory;
         Semaphore = semaphore;
         MeilisearchService = meilisearchService;
@@ -450,7 +453,7 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
 
                 if (scrapChapters)
                     foreach (var chapter in newChapters)
-                        await QueueChapterScraping(existingManga.Id, existingManga.Title, chapter);
+                        await QueueChapterScraping(existingManga.Id, existingManga.Title, chapter, ct);
 
                 using var scope = ScopeFactory.CreateScope();
                 var webhookService = scope.ServiceProvider.GetService<DiscordWebhookService>();
@@ -480,7 +483,7 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
 
         if (scrapChapters)
             foreach (var chapter in chapters)
-                await QueueChapterScraping(manga.Id, manga.Title, chapter);
+                await QueueChapterScraping(manga.Id, manga.Title, chapter, ct);
 
         using var webhookScope = ScopeFactory.CreateScope();
         var discord = webhookScope.ServiceProvider.GetService<DiscordWebhookService>();
@@ -539,12 +542,11 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
         return chapter;
     }
 
-    public async Task QueueChapterScraping(Guid mangaId, string mangaTitle, ChapterDocument chapter)
+    public async Task QueueChapterScraping(Guid mangaId, string mangaTitle, ChapterDocument chapter, CancellationToken ct = default)
     {
-        JobClient.Enqueue<ChapterScrapingJob>(job => job.ExecuteAsync(
-            mangaId, mangaTitle, chapter.Number, chapter.Id.ToString(),
-            GetType().AssemblyQualifiedName!, CancellationToken.None));
-        await Task.CompletedTask;
+        var integrationEvent = new ScrapChapterPagesIntegrationEvent(
+            mangaId, mangaTitle, chapter.Number, chapter.Id.ToString(), ProviderKey);
+        await EventBus.PublishAsync(integrationEvent, "scrape-chapter-pages", ct);
     }
 
     public abstract Task<List<SearchItem>> SearchManga(SearchRequest request, CancellationToken ct);

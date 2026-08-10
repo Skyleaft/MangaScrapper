@@ -21,7 +21,10 @@ try
                 otlpEndpoint: hostContext.Configuration["Observability:OtlpEndpoint"]);
 
             // ── Infrastructure Layer (MongoDB, Scrapers, Repositories, Hangfire Server & Jobs) ────
-            services.AddMangaScrapperInfrastructure(hostContext.Configuration, includeHangfireServer: true);
+            services.AddMangaScrapperInfrastructure(
+                hostContext.Configuration,
+                includeHangfireServer: true,
+                includeRabbitMqConsumer: true);
         })
         .Build();
 
