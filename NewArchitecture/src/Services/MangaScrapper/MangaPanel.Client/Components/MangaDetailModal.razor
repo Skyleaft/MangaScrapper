@@ -251,7 +251,7 @@
                                 <div class="px-6 py-3 border-b border-border-main/50 flex items-center justify-between bg-bg-app transition-colors duration-300">
                                     <div class="flex items-center gap-3">
                                         <span class="text-xs text-slate-400">
-                                            @{ var availableCount = Chapters.Count(c => c.IsChapterAvailable); }
+                                            @{ var availableCount = Chapters.Count(c => c.Pages.Count>0); }
                                             <span class="font-bold text-emerald-500">@availableCount</span> available
                                             <span class="mx-1">·</span>
                                             <span class="font-bold text-rose-400">@(Chapters.Count - availableCount)</span> missing
@@ -301,11 +301,11 @@
                                                             <span class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-500 text-[10px] font-bold rounded uppercase">@(string.IsNullOrEmpty(chapter.Language) ? "—" : chapter.Language)</span>
                                                         </td>
                                                         <td class="px-5 py-2.5">
-                                                            @if (chapter.IsChapterAvailable)
+                                                            @if (chapter.Pages.Count>0)
                                                             {
                                                                 <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 rounded-full text-[10px] font-bold">
                                                                     <span class="w-1 h-1 rounded-full bg-emerald-500"></span>
-                                                                    @chapter.PageCount pg
+                                                                    @chapter.Pages.Count pg
                                                                 </span>
                                                             }
                                                             else
@@ -736,12 +736,13 @@
     {
         public Guid Id { get; set; }
         public double Number { get; set; }
-        public int TotalView { get; set; }
-        public DateTime UploadDate { get; set; }
+        public string? Title { get; set; }
+        public string? Url { get; set; }
+        public List<string> Pages { get; set; } = new();
+        public string Language { get; set; } = string.Empty;
         public string? ChapterProvider { get; set; }
         public string? ChapterProviderIcon { get; set; }
-        public string Language { get; set; } = string.Empty;
-        public int PageCount { get; set; }
-        public bool IsChapterAvailable { get; set; }
+        public DateTime UploadDate { get; set; }
+        public int TotalView { get; set; }
     }
 }

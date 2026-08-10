@@ -81,6 +81,14 @@ try
             {
                 return LogEventLevel.Verbose; 
             }
+            else if (path != null && path.StartsWith("/hangfire", StringComparison.OrdinalIgnoreCase))
+            {
+                return LogEventLevel.Verbose; 
+            }
+            else if (path != null && path.StartsWith("/api/v1/images", StringComparison.OrdinalIgnoreCase))
+            {
+                return LogEventLevel.Verbose; 
+            }
 
             if (ex != null || httpContext.Response.StatusCode >= 500)
                 return LogEventLevel.Error;

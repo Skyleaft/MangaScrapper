@@ -16,6 +16,11 @@ public sealed class LoggingBehavior<TRequest, TResponse>(
     {
         var requestName = typeof(TRequest).Name;
 
+        if (requestName == "ProxyImageQuery")
+        {
+            return await next();
+        }
+
         logger.LogInformation("Handling {RequestName}", requestName);
 
         var stopwatch = Stopwatch.StartNew();
