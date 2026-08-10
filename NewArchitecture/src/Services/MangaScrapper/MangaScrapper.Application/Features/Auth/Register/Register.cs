@@ -62,7 +62,7 @@ public sealed class RegisterEndpoint : IEndpointDefinition
 {
     public void DefineEndpoints(IEndpointRouteBuilder app)
     {
-        app.MapPost("/api/auth/register", HandleAsync)
+        app.MapPost("/api/v1/auth/register", HandleAsync)
             .WithName("Register")
             .WithSummary("Register a new user account")
             .WithTags("Auth")

@@ -90,7 +90,7 @@ public sealed class FirebaseVerifyEndpoint : IEndpointDefinition
 {
     public void DefineEndpoints(IEndpointRouteBuilder app)
     {
-        app.MapPost("/api/auth/firebase", HandleAsync)
+        app.MapPost("/api/v1/auth/firebase", HandleAsync)
             .WithName("FirebaseVerify")
             .WithSummary("Authenticate via Firebase ID token")
             .WithTags("Auth")

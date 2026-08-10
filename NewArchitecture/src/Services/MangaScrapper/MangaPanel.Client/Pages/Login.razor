@@ -89,7 +89,7 @@
         try
         {
             var request = new LoginRequest(loginModel.Username, loginModel.Password);
-            var response = await Http.PostAsJsonAsync("api/auth/login", request);
+            var response = await Http.PostAsJsonAsync("api/v1/auth/login", request);
 
             if (response.IsSuccessStatusCode)
             {

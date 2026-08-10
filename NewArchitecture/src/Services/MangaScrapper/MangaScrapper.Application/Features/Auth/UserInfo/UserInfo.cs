@@ -43,7 +43,7 @@ public sealed class UserInfoEndpoint : IEndpointDefinition
 {
     public void DefineEndpoints(IEndpointRouteBuilder app)
     {
-        app.MapGet("/api/auth/me", HandleAsync)
+        app.MapGet("/api/v1/auth/me", HandleAsync)
             .WithName("UserInfo")
             .WithSummary("Get authenticated user info")
             .WithTags("Auth")

@@ -18,7 +18,7 @@ public class JwtAuthenticationStateProvider : AuthenticationStateProvider
     {
         try
         {
-            var apiResponse = await _http.GetFromJsonAsync<ApiResponse<UserInfoResponse>>("api/auth/me");
+            var apiResponse = await _http.GetFromJsonAsync<ApiResponse<UserInfoResponse>>("api/v1/auth/me");
             var userInfo = apiResponse?.Data;
 
             if (userInfo == null || !userInfo.IsAuthenticated)

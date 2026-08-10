@@ -53,7 +53,7 @@ public sealed class LoginEndpoint : IEndpointDefinition
 {
     public void DefineEndpoints(IEndpointRouteBuilder app)
     {
-        app.MapPost("/api/auth/login", HandleAsync)
+        app.MapPost("/api/v1/auth/login", HandleAsync)
             .WithName("Login")
             .WithSummary("User login")
             .WithTags("Auth")

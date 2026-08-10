@@ -24,7 +24,7 @@ public sealed class LogoutEndpoint : IEndpointDefinition
 {
     public void DefineEndpoints(IEndpointRouteBuilder app)
     {
-        app.MapPost("/api/auth/logout", HandleAsync)
+        app.MapPost("/api/v1/auth/logout", HandleAsync)
             .WithName("Logout")
             .WithSummary("User logout — clears cookie session")
             .WithTags("Auth")
