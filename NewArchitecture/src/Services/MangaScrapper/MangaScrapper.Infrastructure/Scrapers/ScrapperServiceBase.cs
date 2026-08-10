@@ -53,6 +53,8 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
     // Repository for legacy document-based access used by scrapers
     private readonly IScrapperRepository _scraperRepo;
 
+    private readonly ScrapperSettings _scrapperSettings;
+
     protected ScrapperServiceBase(
         HttpClient httpClient,
         IScrapperRepository scraperRepo,
@@ -74,7 +76,8 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
         QdrantService = qdrantService;
         Logger = loggerFactory.CreateLogger(GetType());
         FlareSolverrService = flareSolverrService;
-        var path = settings.Value.ImageStoragePath;
+        _scrapperSettings = settings.Value;
+        var path = _scrapperSettings.ImageStoragePath;
         ImageStoragePath = Path.IsPathRooted(path) ? path : Path.Combine(Directory.GetCurrentDirectory(), path);
         Directory.CreateDirectory(ImageStoragePath);
     }
@@ -84,12 +87,47 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
     protected void LoadProvider(string providerName)
     {
         if (_provider != null) return;
-        var path = Path.Combine(Directory.GetCurrentDirectory(), "provider", providerName);
-        if (File.Exists(path))
+        
+        if (!string.IsNullOrWhiteSpace(_scrapperSettings.ApiBaseUrl))
         {
-            var json = File.ReadAllTextAsync(path).GetAwaiter().GetResult();
-            _provider = JsonSerializer.Deserialize<ScrapperProvider>(json);
+            var url = $"{_scrapperSettings.ApiBaseUrl.TrimEnd('/')}/api/v1/providers/{providerName}";
+            try
+            {
+                var response = HttpClient.GetAsync(url).GetAwaiter().GetResult();
+                if (response.IsSuccessStatusCode)
+                {
+                    var json = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                    _provider = JsonSerializer.Deserialize<ScrapperProvider>(json);
+                    return;
+                }
+                else
+                {
+                    Logger.LogWarning("Failed to fetch provider {ProviderName} from API ({StatusCode}). Falling back to local files.", providerName, response.StatusCode);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Exception fetching provider {ProviderName} from API. Falling back to local files.", providerName);
+            }
         }
+
+        var pathsToTry = new[]
+        {
+            Path.Combine(AppContext.BaseDirectory, "provider", providerName),
+            Path.Combine(Directory.GetCurrentDirectory(), "provider", providerName)
+        };
+
+        foreach (var path in pathsToTry)
+        {
+            if (File.Exists(path))
+            {
+                var json = File.ReadAllTextAsync(path).GetAwaiter().GetResult();
+                _provider = JsonSerializer.Deserialize<ScrapperProvider>(json);
+                return;
+            }
+        }
+        
+        throw new FileNotFoundException($"Provider file {providerName} could not be found via API or local disk.");
     }
 
     public async Task<HtmlDocument> GetHtml(string url, string? query = null, HttpContent? formData = null, CancellationToken ct = default)
