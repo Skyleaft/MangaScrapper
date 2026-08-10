@@ -32,4 +32,9 @@
     <ProjectReference Include="..\..\src\Services\Product\Product.Api\Product.Api.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Fixtures\" />
+    <Folder Include="Products\" />
+  </ItemGroup>
+
 </Project>
