@@ -1,5 +1,6 @@
 using MangaScrapper.Domain.DomainEvents;
 using MangaScrapper.Domain.ValueObjects;
+using NovaStack.Contracts.Responses;
 using NovaStack.SharedKernel.Common;
 
 namespace MangaScrapper.Domain.Aggregates;

@@ -7,6 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\BuildingBlocks\NovaStack.Contracts\NovaStack.Contracts.csproj" />
     <ProjectReference Include="..\..\..\BuildingBlocks\NovaStack.SharedKernel\NovaStack.SharedKernel.csproj" />
   </ItemGroup>
 

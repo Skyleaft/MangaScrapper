@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace MangaScrapper.Domain.ValueObjects;
+namespace NovaStack.Contracts.Responses;
 
 public record AnilistResponse(
     [property: JsonPropertyName("data")] AnilistData? Data);
@@ -11,11 +11,19 @@ public record AnilistData(
 public record AnilistPage(
     [property: JsonPropertyName("media")] List<AnilistMedia>? Media);
 
+public enum ComicType
+{
+    Unknown,
+    Manga,  // JP
+    Manhwa, // KR
+    Manhua  // CN, TW, HK
+}
 public record AnilistMedia(
     [property: JsonPropertyName("id")] int Id,
     [property: JsonPropertyName("idMal")] int? IdMal,
     [property: JsonPropertyName("title")] AnilistTitle? Title,
     [property: JsonPropertyName("description")] string? Description,
+    [property: JsonPropertyName("countryOfOrigin")] string? CountryOfOrigin,
     [property: JsonPropertyName("format")] string? Format,
     [property: JsonPropertyName("status")] string? Status,
     [property: JsonPropertyName("chapters")] int? Chapters,
@@ -24,7 +32,21 @@ public record AnilistMedia(
     [property: JsonPropertyName("averageScore")] int? AverageScore,
     [property: JsonPropertyName("popularity")] int? Popularity,
     [property: JsonPropertyName("genres")] List<string>? Genres,
-    [property: JsonPropertyName("startDate")] AnilistFuzzyDate? StartDate);
+    [property: JsonPropertyName("startDate")] AnilistFuzzyDate? StartDate)
+{
+    /// <summary>
+    /// Gets the comic classification derived from CountryOfOrigin.
+    /// </summary>
+    [JsonIgnore]
+    public ComicType ComicType => CountryOfOrigin switch
+    {
+        "JP" => ComicType.Manga,
+        "KR" => ComicType.Manhwa,
+        "CN" or "TW" or "HK" => ComicType.Manhua,
+        _ => ComicType.Unknown
+    };
+}
+
 
 public record AnilistTitle(
     [property: JsonPropertyName("romaji")] string? Romaji,

@@ -3,6 +3,7 @@ namespace NovaStack.Contracts.Responses;
 public record MangaSummaryResponse(
     Guid Id,
     int MalId,
+    int? AnilistId,
     string Title,
     string Author,
     string Type,

@@ -351,6 +351,7 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
                             idMal
                             title { romaji english native }
                             description
+                            countryOfOrigin
                             format
                             status
                             chapters

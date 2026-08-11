@@ -29,6 +29,7 @@ internal sealed class GetMangaByIdQueryHandler(IMangaRepository mangaRepository)
         return new MangaSummaryResponse(
             manga.Id.Value,
             manga.MalId,
+            manga.AnilistId ?? 0,
             manga.Title,
             manga.Author,
             manga.Type,

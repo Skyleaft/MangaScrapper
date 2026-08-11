@@ -187,6 +187,15 @@
                                             </div>
                                         </div>
                                         <div class="space-y-1.5">
+                                            <label class="text-xs font-bold text-slate-600 dark:text-slate-400 ml-1">Anilist ID</label>
+                                            <div class="flex gap-2">
+                                                <input type="number" @bind="EditModel.AnilistId" class="flex-grow px-4 py-2.5 bg-bg-app border border-border-main rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-400 text-sm text-text-main" placeholder="e.g. 98396" />
+                                                <button @onclick="OpenAnilistSearch" class="p-2.5 bg-teal-500/10 text-teal-600 hover:bg-teal-500/20 rounded-xl transition-all" title="Search Anilist">
+                                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="space-y-1.5">
                                             <label class="text-xs font-bold text-slate-600 dark:text-slate-400 ml-1">Author</label>
                                             <input type="text" @bind="EditModel.Author" class="w-full px-4 py-2.5 bg-bg-app border border-border-main rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-400 text-sm text-text-main" placeholder="Author name" />
                                         </div>
@@ -431,6 +440,93 @@
                 </div>
             </div>
         }
+
+        @if (_isSearchAnilistOpen)
+        {
+            <div class="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-backdrop-in">
+                <div class="bg-surface rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col border border-border-main animate-modal-in z-[210]">
+                    <div class="px-6 py-4 border-b border-border-main flex items-center justify-between bg-surface">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-teal-500"></span>
+                            <h3 class="text-lg font-bold text-text-main">Search Anilist</h3>
+                        </div>
+                        <button @onclick="() => _isSearchAnilistOpen = false" class="p-2 hover:bg-bg-app rounded-full transition-colors">
+                            <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div>
+
+                    <div class="p-4 bg-bg-app border-b border-border-main">
+                        <div class="relative">
+                            <input type="text" @bind="_anilistSearchQuery" @bind:event="oninput" @onkeyup="HandleAnilistSearchKeyUp" class="w-full pl-10 pr-4 py-3 bg-surface border border-border-main rounded-xl focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none transition-all text-sm text-text-main" placeholder="Manga title..." />
+                            <svg class="absolute left-3.5 top-3.5 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                            @if (_isSearchingAnilist)
+                            {
+                                <div class="absolute right-3.5 top-3.5 w-4 h-4 border-2 border-teal-500/30 border-t-teal-500 rounded-full animate-spin"></div>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="flex-grow overflow-y-auto p-4 space-y-3">
+                        @if (!_anilistSearchResults.Any())
+                        {
+                            @if (_isSearchingAnilist)
+                            {
+                                <div class="py-12 text-center text-slate-400">Searching Anilist...</div>
+                            }
+                            else
+                            {
+                                <div class="py-12 text-center text-slate-400 italic">No results found or search not started</div>
+                            }
+                        }
+                        else
+                        {
+                            @foreach (var item in _anilistSearchResults)
+                            {
+                                <div class="flex gap-4 p-3 bg-surface border border-border-main rounded-xl hover:border-teal-500/50 transition-colors group">
+                                    @if (!string.IsNullOrEmpty(item.CoverImage?.Large ?? item.CoverImage?.Medium))
+                                    {
+                                        <img src="@(item.CoverImage?.Large ?? item.CoverImage?.Medium)" class="w-16 h-24 object-cover rounded-lg shadow-sm flex-shrink-0" />
+                                    }
+                                    <div class="flex-grow min-w-0">
+                                        <h4 class="font-bold text-sm text-text-main truncate">@(item.Title?.English ?? item.Title?.Romaji ?? item.Title?.Native)</h4>
+                                        <div class="text-[10px] text-slate-400 flex flex-wrap gap-2 mt-1">
+                                            <span>@item.Format</span>
+                                            <span>•</span>
+                                            <span>@item.Status</span>
+                                            @if (item.AverageScore.HasValue)
+                                            {
+                                                <span>•</span>
+                                                <span class="text-amber-500 font-bold">★ @(item.AverageScore.Value / 10.0)</span>
+                                            }
+                                            @if (item.Popularity.HasValue)
+                                            {
+                                                <span>•</span>
+                                                <span>@item.Popularity.Value.ToString("N0") members</span>
+                                            }
+                                        </div>
+                                        @if (item.Genres != null && item.Genres.Any())
+                                        {
+                                            <div class="flex flex-wrap gap-1 mt-1.5">
+                                                @foreach (var g in item.Genres.Take(4))
+                                                {
+                                                    <span class="px-1.5 py-0.5 bg-teal-500/10 text-teal-600 text-[9px] font-bold rounded">@g</span>
+                                                }
+                                            </div>
+                                        }
+                                    </div>
+                                    <div class="flex items-center flex-shrink-0">
+                                        <button @onclick="() => SyncAnilistResult(item)" class="flex items-center gap-1.5 px-3 py-1.5 text-teal-600 hover:bg-teal-500/10 font-bold text-xs rounded-xl transition-all" title="Sync this result">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
+                                            Sync
+                                        </button>
+                                    </div>
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+            </div>
+        }
     </div>
 @* End of modal *@
 
@@ -452,6 +548,11 @@
     private string _jikanSearchQuery = "";
     private List<JikanMangaItem> _jikanSearchResults = new();
     private bool _isSearchingJikan = false;
+
+    private bool _isSearchAnilistOpen = false;
+    private string _anilistSearchQuery = "";
+    private List<AnilistMedia> _anilistSearchResults = new();
+    private bool _isSearchingAnilist = false;
 
 
     private string GenresString => EditModel.Genres != null ? string.Join(", ", EditModel.Genres) : "";
@@ -483,6 +584,7 @@
                 {
                     Id = Manga.Id,
                     MalId = Manga.MalId,
+                    AnilistId = Manga.AnilistId ?? 0,
                     Author = Manga.Author,
                     Type = Manga.Type,
                     Genres = Manga.Genres ?? new List<string>(),
@@ -656,6 +758,92 @@
             StateHasChanged();
         }
     }
+    
+    private void OpenAnilistSearch()
+    {
+        _anilistSearchQuery = Manga?.Title ?? "";
+        _anilistSearchResults.Clear();
+        _isSearchAnilistOpen = true;
+        if (!string.IsNullOrEmpty(_anilistSearchQuery))
+        {
+            _ = SearchAnilist();
+        }
+    }
+
+    private async Task HandleAnilistSearchKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await SearchAnilist();
+        }
+    }
+
+    private async Task SearchAnilist()
+    {
+        if (string.IsNullOrWhiteSpace(_anilistSearchQuery)) return;
+
+        _isSearchingAnilist = true;
+        StateHasChanged();
+
+        try
+        {
+            var results = await Http.GetApiDataAsync<List<AnilistMedia>>($"/api/v1/scrapper/anilist/search?title={Uri.EscapeDataString(_anilistSearchQuery)}");
+            _anilistSearchResults = results ?? new();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error searching Anilist: {ex.Message}");
+        }
+        finally
+        {
+            _isSearchingAnilist = false;
+            StateHasChanged();
+        }
+    }
+
+    private void SyncAnilistResult(AnilistMedia item)
+    {
+        EditModel.AnilistId = item.Id;
+        EditModel.MalId = item.IdMal ?? EditModel.MalId;
+
+        if (item.AverageScore.HasValue)
+            EditModel.Rating = item.AverageScore.Value / 10.0;
+
+        if (item.Popularity.HasValue)
+            EditModel.Popularity = item.Popularity.Value;
+
+        EditModel.Status = item.Status switch
+        {
+            "FINISHED" => "Completed",
+            "RELEASING" => "Ongoing",
+            "HIATUS" => "On Hiatus",
+            "CANCELLED" => "Discontinued",
+            "NOT_YET_RELEASED" => "Upcoming",
+            _ => EditModel.Status
+        };
+
+        if (item.StartDate?.Year != null)
+        {
+            EditModel.ReleaseDate = new DateTime(
+                item.StartDate.Year.Value,
+                item.StartDate.Month ?? 1,
+                item.StartDate.Day ?? 1);
+        }
+
+        if (item.Genres != null && item.Genres.Any())
+        {
+            var merged = (EditModel.Genres ?? new List<string>()).Union(item.Genres).ToList();
+            EditModel.Genres = merged;
+        }
+
+        if (string.IsNullOrEmpty(EditModel.Description) && !string.IsNullOrEmpty(item.Description))
+        {
+            EditModel.Description = item.Description;
+        }
+
+        _isSearchAnilistOpen = false;
+        StateHasChanged();
+    }
 
     private void SyncJikanResult(JikanMangaItem item)
     {
@@ -720,6 +908,7 @@
     {
         public Guid Id { get; set; }
         public int MalId { get; set; }
+        public int? AnilistId { get; set; }
         public string Author { get; set; } = string.Empty;
         public string Type { get; set; } = string.Empty;
         public List<string>? Genres { get; set; }

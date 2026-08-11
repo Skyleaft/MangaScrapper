@@ -47,6 +47,7 @@ public sealed class GetPagedMangaQueryHandler(IMangaRepository mangaRepository, 
             return new MangaSummaryResponse(
                 id,
                 mongoDoc.MalId,
+                mongoDoc.AnilistId ?? 0,
                 m.Title,
                 m.Author,
                 m.Type,
