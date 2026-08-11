@@ -80,6 +80,7 @@ public class MangaSearchMeili(IOptions<MeiliConfig> config, ILogger<MangaSearchM
             doc.Author,
             doc.Type,
             0,
+            0,
             doc.Genres,
             doc.Description,
             doc.ImageUrl,

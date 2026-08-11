@@ -2,17 +2,12 @@ using System.Globalization;
 using System.Text.Json;
 using System.Web;
 using HtmlAgilityPack;
-using MangaScrapper.Infrastructure.Configuration;
-using MangaScrapper.Infrastructure.Persistence.Documents;
-using MangaScrapper.Infrastructure.Utils;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using SkiaSharp;
 using NovaStack.Contracts.IntegrationEvents;
 using NovaStack.Contracts.Responses;
 using NovaStack.Infrastructure.Messaging;
 using MangaScrapper.Application.Common.Abstractions;
+using MangaScrapper.Domain.ValueObjects;
 
 namespace MangaScrapper.Infrastructure.Scrapers;
 
@@ -90,7 +85,7 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
     protected void LoadProvider(string providerName)
     {
         if (_provider != null) return;
-        
+
         if (!string.IsNullOrWhiteSpace(_scrapperSettings.ApiBaseUrl))
         {
             var url = $"{_scrapperSettings.ApiBaseUrl.TrimEnd('/')}/api/v1/providers/{providerName}";
@@ -129,7 +124,7 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
                 return;
             }
         }
-        
+
         throw new FileNotFoundException($"Provider file {providerName} could not be found via API or local disk.");
     }
 
@@ -341,6 +336,47 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
             return response?.Data ?? new List<JikanMangaItem>();
         }
         catch { return new List<JikanMangaItem>(); }
+    }
+
+    public async Task<List<AnilistMedia>> SearchAnilist(string title, CancellationToken ct = default)
+    {
+        var url = "https://graphql.anilist.co";
+        var query = new
+        {
+            query = @"
+                query ($search: String) {
+                    Page (page: 1, perPage: 10) {
+                        media (search: $search, type: MANGA) {
+                            id
+                            idMal
+                            title { romaji english native }
+                            description
+                            format
+                            status
+                            chapters
+                            volumes
+                            coverImage { extraLarge large medium }
+                            averageScore
+                            popularity
+                            genres
+                            startDate { year month day }
+                        }
+                    }
+                }",
+            variables = new { search = title }
+        };
+
+        try
+        {
+            var response = await HttpClient.PostAsJsonAsync(url, query, ct);
+            response.EnsureSuccessStatusCode();
+            var result = await response.Content.ReadFromJsonAsync<AnilistResponse>(cancellationToken: ct);
+            return result?.Data?.Page?.Media ?? new List<AnilistMedia>();
+        }
+        catch (Exception)
+        {
+            return new List<AnilistMedia>();
+        }
     }
 
     public async Task<JikanMangaItem?> GetMangaInfo(string title, string type, CancellationToken ct = default)

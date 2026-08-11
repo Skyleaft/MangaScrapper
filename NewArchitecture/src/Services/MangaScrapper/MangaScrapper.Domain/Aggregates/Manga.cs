@@ -67,6 +67,7 @@ public class Page
 public class Manga : Entity<MangaId>
 {
     public int MalId { get; private set; }
+    public int? AnilistId { get; private set; }
     public string Title { get; private set; }
     public string Author { get; private set; }
     public string Type { get; private set; }
@@ -93,6 +94,7 @@ public class Manga : Entity<MangaId>
         string type,
         string source,
         int malId = 0,
+        int? anilistId = null,
         List<string>? genres = null,
         string? description = null,
         string? imageUrl = null,
@@ -113,6 +115,7 @@ public class Manga : Entity<MangaId>
         Author = author ?? string.Empty;
         Type = type ?? string.Empty;
         MalId = malId;
+        AnilistId = anilistId;
         Genres = genres ?? [];
         Description = description;
         ImageUrl = imageUrl;
@@ -136,6 +139,7 @@ public class Manga : Entity<MangaId>
         string type,
         string source,
         int malId = 0,
+        int? anilistId = null,
         List<string>? genres = null,
         string? description = null,
         string? imageUrl = null,
@@ -144,7 +148,7 @@ public class Manga : Entity<MangaId>
         var id = MangaId.New();
         var manga = new Manga(
             id, title, author, type, source,
-            malId: malId, genres: genres, description: description, imageUrl: imageUrl, url: url);
+            malId: malId, anilistId: anilistId, genres: genres, description: description, imageUrl: imageUrl, url: url);
 
         manga.RaiseDomainEvent(new MangaCreatedDomainEvent(id, title, source));
         return manga;
@@ -156,6 +160,7 @@ public class Manga : Entity<MangaId>
         string author,
         string type,
         int malId,
+        int? anilistId,
         List<string>? genres,
         string? description,
         string? imageUrl,
@@ -174,7 +179,7 @@ public class Manga : Entity<MangaId>
     {
         return new Manga(
             id, title, author, type, "Unknown",
-            malId, genres, description, imageUrl, localImageUrl, thumbnailSize,
+            malId, anilistId, genres, description, imageUrl, localImageUrl, thumbnailSize,
             rating, popularity, members, status, releaseDate, totalView,
             createdAt, updatedAt, url, chapters);
     }
@@ -195,6 +200,40 @@ public class Manga : Entity<MangaId>
         Members = members > 0 ? members : Members;
         Status = status ?? Status;
         ReleaseDate = releaseDate ?? ReleaseDate;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void UpdateFromAnilist(AnilistMedia anilistInfo)
+    {
+        AnilistId = anilistInfo.Id;
+        MalId = anilistInfo.IdMal ?? MalId;
+        Description = string.IsNullOrEmpty(Description) ? anilistInfo.Description : Description;
+        Rating = Rating ?? (anilistInfo.AverageScore.HasValue ? anilistInfo.AverageScore.Value / 10.0 : null);
+        Popularity = anilistInfo.Popularity ?? Popularity;
+        
+        Status = anilistInfo.Status switch
+        {
+            "FINISHED" => "Completed",
+            "RELEASING" => "Ongoing",
+            "HIATUS" => "On Hiatus",
+            "CANCELLED" => "Discontinued",
+            "NOT_YET_RELEASED" => "Upcoming",
+            _ => Status ?? "Unknown"
+        };
+
+        if (anilistInfo.StartDate?.Year != null)
+        {
+            int year = anilistInfo.StartDate.Year.Value;
+            int month = anilistInfo.StartDate.Month ?? 1;
+            int day = anilistInfo.StartDate.Day ?? 1;
+            ReleaseDate = ReleaseDate ?? new DateTime(year, month, day);
+        }
+
+        if (anilistInfo.Genres != null && anilistInfo.Genres.Any())
+        {
+            Genres = Genres.Union(anilistInfo.Genres).ToList();
+        }
+
         UpdatedAt = DateTime.UtcNow;
     }
 

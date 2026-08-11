@@ -44,6 +44,7 @@ public class MangaAggregateTests
             author,
             type,
             malId: 20,
+            anilistId:30,
             genres: new List<string> { "Action", "Ninja" },
             description: "A ninja's journey",
             imageUrl: "http://example.com/cover.jpg",

@@ -1,4 +1,5 @@
 using NovaStack.Contracts.Responses;
+using MangaScrapper.Domain.ValueObjects;
 
 namespace MangaScrapper.Application.Common.Abstractions;
 
@@ -8,4 +9,5 @@ public interface IProviderScrapperService
     Task<ScrapperMangaDocumentResponse> GetDetail(string url, CancellationToken ct);
     Task<List<SearchItemResponse>> SearchManga(ScrapperSearchRequest request, CancellationToken ct);
     Task<List<ProviderInfoResponse>> GetAllProvider();
+    Task<List<AnilistMedia>> SearchAnilist(string title, CancellationToken ct = default);
 }

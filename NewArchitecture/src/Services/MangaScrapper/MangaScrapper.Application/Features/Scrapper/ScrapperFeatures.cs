@@ -60,6 +60,30 @@ internal sealed class SearchJikanQueryHandler(IHttpClientFactory httpClientFacto
     }
 }
 
+// -- 2b. SearchAnilist -----------------------------------------------------------
+public record SearchAnilistQuery(string Title) : IQuery<List<AnilistMedia>>;
+
+internal sealed class SearchAnilistQueryHandler(
+    [FromKeyedServices("komiku")] IProviderScrapperService scrapperService)
+    : IQueryHandler<SearchAnilistQuery, List<AnilistMedia>>
+{
+    public async Task<Result<List<AnilistMedia>>> Handle(SearchAnilistQuery query, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(query.Title))
+            return new List<AnilistMedia>();
+
+        try
+        {
+            var items = await scrapperService.SearchAnilist(query.Title, ct);
+            return items;
+        }
+        catch (Exception ex)
+        {
+            return Error.Failure("Anilist.SearchFailed", ex.Message);
+        }
+    }
+}
+
 // -- 3. ScrapChapterPages -----------------------------------------------------
 public record ScrapChapterPagesCommand(Guid MangaId) : ICommand<int>;
 
@@ -255,6 +279,12 @@ public sealed class ScrapperEndpoints : IEndpointDefinition
             var res = await sender.Send(new SearchJikanQuery(title), ct);
             return res.IsSuccess ? Results.Ok(ApiResponse.Ok(res.Value)) : res.Error.ToHttpResult();
         }).WithName("SearchJikanManga");
+
+        group.MapGet("/anilist/search", async (string title, ISender sender, CancellationToken ct) =>
+        {
+            var res = await sender.Send(new SearchAnilistQuery(title), ct);
+            return res.IsSuccess ? Results.Ok(ApiResponse.Ok(res.Value)) : res.Error.ToHttpResult();
+        }).WithName("SearchAnilistManga");
 
         group.MapGet("/manga/{mangaId:guid}/chapter-pages", async (Guid mangaId, ISender sender, CancellationToken ct) =>
         {

@@ -328,6 +328,7 @@ public class MongoMangaRepository(MangaMongoDbContext dbContext) : IMangaReposit
             doc.Author,
             doc.Type,
             doc.MalID,
+            doc.AnilistID,
             doc.Genres,
             doc.Description,
             doc.ImageUrl,
