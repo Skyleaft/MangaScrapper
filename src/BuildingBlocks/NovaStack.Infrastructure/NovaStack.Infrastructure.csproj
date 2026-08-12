@@ -11,7 +11,7 @@
 
   <ItemGroup>
     <PackageReference Include="Dapper" Version="2.1.79" />
-    <PackageReference Include="MongoDB.Driver" Version="3.10.0" />
+    <PackageReference Include="MongoDB.Driver" Version="3.11.0" />
     <PackageReference Include="Mapster" Version="10.0.11" />
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.17.0" />
     <PackageReference Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" Version="1.17.0-beta.1" />
