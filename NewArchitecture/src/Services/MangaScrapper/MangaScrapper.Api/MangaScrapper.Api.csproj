@@ -8,8 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\MangaScrapper.Application\MangaScrapper.Application.csproj" />
-    <ProjectReference Include="..\MangaScrapper.Infrastructure\MangaScrapper.Infrastructure.csproj" />
+    <ProjectReference Include="..\MangaScrapper.Core\MangaScrapper.Core.csproj" />
     <ProjectReference Include="..\MangaPanel.Client\MangaPanel.Client.csproj" />
     <ProjectReference Include="..\..\..\BuildingBlocks\NovaStack.Infrastructure\NovaStack.Infrastructure.csproj" />
     <ProjectReference Include="..\..\..\BuildingBlocks\NovaStack.Contracts\NovaStack.Contracts.csproj" />

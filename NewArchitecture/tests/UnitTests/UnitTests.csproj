@@ -28,12 +28,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Services\Product\Product.Application\Product.Application.csproj" />
     <ProjectReference Include="..\..\src\BuildingBlocks\NovaStack.SharedKernel\NovaStack.SharedKernel.csproj" />
-    <ProjectReference Include="..\..\src\Services\Product\Product.Domain\Product.Domain.csproj" />
     <ProjectReference Include="..\..\src\BuildingBlocks\NovaStack.Infrastructure\NovaStack.Infrastructure.csproj" />
-    <ProjectReference Include="..\..\src\Services\MangaScrapper\MangaScrapper.Domain\MangaScrapper.Domain.csproj" />
-    <ProjectReference Include="..\..\src\Services\MangaScrapper\MangaScrapper.Application\MangaScrapper.Application.csproj" />
+    <ProjectReference Include="..\..\src\Services\MangaScrapper\MangaScrapper.Core\MangaScrapper.Core.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,0 +1,41 @@
+using MangaScrapper.Application.Common.Abstractions;
+using MangaScrapper.Domain.Repositories;
+using MangaScrapper.Domain.ValueObjects;
+using MediatR;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
+using NovaStack.Contracts.Responses;
+using NovaStack.SharedKernel.Results;
+
+namespace MangaScrapper.Application.Features.UserProgression.GetMangaProgression;
+
+public record GetMangaProgressionQuery(string UserId, Guid MangaId) : IQuery<UserProgressionResponse>;
+
+internal sealed class GetMangaProgressionQueryHandler(IUserProgressionRepository progressionRepository)
+    : IQueryHandler<GetMangaProgressionQuery, UserProgressionResponse>
+{
+    public async Task<Result<UserProgressionResponse>> Handle(GetMangaProgressionQuery query, CancellationToken ct)
+    {
+        var p = await progressionRepository.GetByUserIdAndMangaIdAsync(query.UserId, MangaId.From(query.MangaId), ct);
+        if (p is null)
+            return Error.NotFound("UserProgression.NotFound", "No progression recorded for this manga.");
+
+        return new UserProgressionResponse(p.Id, p.UserId, p.MangaId.Value, p.LastReadChapterId.Value, p.LastReadChapterNumber, p.LastReadAt);
+    }
+}
+
+public sealed class GetMangaProgressionEndpoints : IEndpointDefinition
+{
+    public void DefineEndpoints(IEndpointRouteBuilder app)
+    {
+        var group = app.MapGroup("/api/v1/user-progression").WithTags("UserProgression");
+
+        group.MapGet("/{userId}/{mangaId:guid}", async (string userId, Guid mangaId, ISender sender, CancellationToken ct) =>
+        {
+            var res = await sender.Send(new GetMangaProgressionQuery(userId, mangaId), ct);
+            return res.IsSuccess ? Results.Ok(ApiResponse.Ok(res.Value)) : res.Error.ToHttpResult();
+        }).WithName("GetMangaProgression")
+        .Produces<ApiResponse<UserProgressionResponse>>();
+    }
+}
