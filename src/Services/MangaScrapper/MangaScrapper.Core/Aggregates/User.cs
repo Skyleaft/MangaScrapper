@@ -5,6 +5,13 @@ namespace MangaScrapper.Core.Aggregates;
 
 public class User : Entity<UserId>
 {
+    public static class UserRoles
+    {
+        public const string SuperUser = "SuperUser";
+        public const string Admin = "Admin";
+        public const string User = "User";
+    }
+
     public string Username { get; set; } = string.Empty;
     public string PasswordHash { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;

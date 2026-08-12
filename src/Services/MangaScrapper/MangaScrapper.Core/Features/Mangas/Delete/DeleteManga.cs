@@ -1,3 +1,4 @@
+using MangaScrapper.Core.Aggregates;
 using MangaScrapper.Core.Common.Abstractions;
 using MangaScrapper.Core.Repositories;
 using MangaScrapper.Core.ValueObjects;
@@ -66,12 +67,14 @@ public sealed class DeleteMangaEndpoint : IEndpointDefinition
     {
         app.MapDelete("/api/v1/manga/{mangaId:guid}", HandleDeleteMangaAsync)
             .WithName("DeleteManga")
+            .RequireAuthorization(User.UserRoles.SuperUser)
             .WithSummary("Delete a manga")
             .WithTags("Manga")
             .Produces<ApiResponse<object>>();
 
         app.MapDelete("/api/v1/manga/{mangaId:guid}/chapter/{chapterId:guid}", HandleDeleteChapterAsync)
             .WithName("DeleteChapter")
+            .RequireAuthorization(User.UserRoles.SuperUser)
             .WithSummary("Delete a manga chapter")
             .WithTags("Manga")
             .Produces<ApiResponse<object>>();

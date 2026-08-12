@@ -27,11 +27,7 @@
   <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\..\src\Services\Product\Product.Api\Product.Api.csproj" />
-  </ItemGroup>
-
+  
   <ItemGroup>
     <Folder Include="Fixtures\" />
     <Folder Include="Products\" />

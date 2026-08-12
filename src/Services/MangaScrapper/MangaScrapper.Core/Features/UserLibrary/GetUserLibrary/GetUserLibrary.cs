@@ -1,3 +1,4 @@
+using MangaScrapper.Core.Aggregates;
 using MangaScrapper.Core.Common.Abstractions;
 using MangaScrapper.Core.Repositories;
 using Mapster;
@@ -37,6 +38,7 @@ public sealed class GetUserLibraryEndpoints : IEndpointDefinition
             var res = await sender.Send(new GetUserLibraryQuery(userId, search, type, status, isFavorite, sortBy, orderBy, page, pageSize), ct);
             return res.IsSuccess ? Results.Ok(ApiResponse.Ok(res.Value)) : res.Error.ToHttpResult();
         }).WithName("GetUserLibrary")
+        .RequireAuthorization()
         .Produces<ApiResponse<PagedResponse<UserLibraryResponse>>>();
     }
 }

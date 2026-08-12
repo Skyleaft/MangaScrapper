@@ -1,4 +1,5 @@
 using FluentValidation;
+using MangaScrapper.Core.Aggregates;
 using Hangfire;
 using Hangfire.Mongo;
 using Hangfire.Mongo.Migration.Strategies;
@@ -298,7 +299,15 @@ public static class CoreExtensions
         .AddScheme<CustomAuthSchemeOptions, CustomAuthValidation>("CustomAuth", _ => { });
 
         services.AddRouting();
-        services.AddAuthorization();
+        services.AddAuthorization(options =>
+        {
+            options.AddPolicy(User.UserRoles.SuperUser, policy =>
+                policy.RequireRole(User.UserRoles.SuperUser));
+            options.AddPolicy(User.UserRoles.Admin, policy =>
+                policy.RequireRole(User.UserRoles.Admin));
+            options.AddPolicy(User.UserRoles.User, policy =>
+                policy.RequireRole(User.UserRoles.User));
+        });
 
         services.AddHttpContextAccessor();
         services.AddScoped<IClaimService, ClaimService>();
