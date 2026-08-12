@@ -1,41 +1,58 @@
+using FluentValidation;
 using Hangfire;
 using Hangfire.Mongo;
 using Hangfire.Mongo.Migration.Strategies;
 using Hangfire.Mongo.Migration.Strategies.Backup;
+using MangaScrapper.Application.Common.Abstractions;
+using MangaScrapper.Application.Common.Behaviors;
 using MangaScrapper.Domain.Repositories;
 using MangaScrapper.Infrastructure.Configuration;
 using MangaScrapper.Infrastructure.Messaging;
 using MangaScrapper.Infrastructure.Persistence;
 using MangaScrapper.Infrastructure.Repositories;
 using MangaScrapper.Infrastructure.Scrapers;
-using MangaScrapper.Application.Common.Abstractions;
 using MangaScrapper.Infrastructure.Security;
 using MangaScrapper.Infrastructure.Services;
-using Microsoft.AspNetCore.Authentication;
+using MediatR;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Conventions;
 using MongoDB.Bson.Serialization.Serializers;
-using MongoDB.Bson;
 using MongoDB.Driver;
 using NovaStack.Contracts.IntegrationEvents;
 using NovaStack.Infrastructure.DependencyInjection;
 using NovaStack.Infrastructure.Messaging.Options;
 using NovaStack.Infrastructure.Persistence.MongoDb;
 
-namespace MangaScrapper.Infrastructure.DependencyInjection;
+namespace MangaScrapper.Core.DependencyInjection;
 
-public static class InfrastructureExtensions
+public static class CoreExtensions
 {
-    public static IServiceCollection AddMangaScrapperInfrastructure(
+    public static IServiceCollection AddMangaScrapperCore(
         this IServiceCollection services,
         IConfiguration configuration,
         bool includeHangfireServer = false,
         bool includeRabbitMqConsumer = false)
     {
+        var assembly = typeof(CoreExtensions).Assembly;
+
+        // MediatR & CQRS Behaviors
+        services.AddMediatR(cfg =>
+        {
+            cfg.RegisterServicesFromAssembly(assembly);
+            cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>));
+            cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+        });
+
+        // FluentValidation
+        services.AddValidatorsFromAssembly(assembly);
+
+        // Core Subsystems
         services
             .AddMongoDb(configuration)
             .AddRepositories()
@@ -46,6 +63,21 @@ public static class InfrastructureExtensions
             .AddSecurityServices();
 
         return services;
+    }
+
+    public static WebApplication MapMangaScrapperEndpoints(this WebApplication app)
+    {
+        var endpointDefinitions = typeof(CoreExtensions).Assembly
+            .GetTypes()
+            .Where(t => typeof(IEndpointDefinition).IsAssignableFrom(t)
+                        && t is { IsInterface: false, IsAbstract: false })
+            .Select(Activator.CreateInstance)
+            .Cast<IEndpointDefinition>();
+
+        foreach (var definition in endpointDefinitions)
+            definition.DefineEndpoints(app);
+
+        return app;
     }
 
     private static IServiceCollection AddMongoDb(this IServiceCollection services, IConfiguration configuration)
@@ -87,8 +119,6 @@ public static class InfrastructureExtensions
         services.AddScoped<IUserRepository, MongoUserRepository>();
         services.AddScoped<IUserLibraryRepository, MongoUserLibraryRepository>();
         services.AddScoped<IUserProgressionRepository, MongoUserProgressionRepository>();
-
-        services.AddScoped<IScrapperRepository, MongoScrapperRepository>();
 
         return services;
     }
@@ -197,9 +227,9 @@ public static class InfrastructureExtensions
             });
         }
 
-        services.AddTransient<BackgroundJobs.MeiliSyncJob>();
-        services.AddTransient<BackgroundJobs.DeleteMangaJob>();
-        services.AddTransient<BackgroundJobs.LatestChapterScrapingJob>();
+        services.AddTransient<Infrastructure.BackgroundJobs.MeiliSyncJob>();
+        services.AddTransient<Infrastructure.BackgroundJobs.DeleteMangaJob>();
+        services.AddTransient<Infrastructure.BackgroundJobs.LatestChapterScrapingJob>();
 
         return services;
     }
@@ -209,20 +239,16 @@ public static class InfrastructureExtensions
         IConfiguration configuration,
         bool includeConsumer)
     {
-        // Bind messaging options so RabbitMqEventBus / RabbitMqConsumerService can resolve them
         services.Configure<MessagingOptions>(configuration.GetSection(MessagingOptions.SectionName));
 
-        // Register the event bus singleton (publisher) — used by both API and Worker
         services.AddNativeRabbitMqEventBus();
 
-        // Register the event handlers (scoped — created per message in the consumer)
         services.AddScoped<ScrapChapterPagesHandler>();
         services.AddScoped<DeleteMangaHandler>();
         services.AddScoped<DeleteChapterHandler>();
 
         if (includeConsumer)
         {
-            // Register the background consumer service — runs only in Scrapper.Worker
             services.AddRabbitMqConsumer<ScrapChapterPagesIntegrationEvent, ScrapChapterPagesHandler>(
                 "scrape-chapter-pages");
                 

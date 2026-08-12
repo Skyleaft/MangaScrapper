@@ -1,4 +1,4 @@
-using MangaScrapper.Infrastructure.DependencyInjection;
+using MangaScrapper.Core.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using NovaStack.Infrastructure.Logging;
 using NovaStack.Infrastructure.Observability;
@@ -20,8 +20,8 @@ try
                 "Scrapper.Worker",
                 otlpEndpoint: hostContext.Configuration["Observability:OtlpEndpoint"]);
 
-            // ── Infrastructure Layer (MongoDB, Scrapers, Repositories, Hangfire Server & Jobs) ────
-            services.AddMangaScrapperInfrastructure(
+            // ── Core VSA Layer (MongoDB, Scrapers, Repositories, Hangfire Server & Jobs) ────
+            services.AddMangaScrapperCore(
                 hostContext.Configuration,
                 includeHangfireServer: true,
                 includeRabbitMqConsumer: true);

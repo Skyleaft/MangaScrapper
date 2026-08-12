@@ -1,7 +1,6 @@
 using Hangfire;
 using MangaScrapper.Api.Components;
-using MangaScrapper.Application.DependencyInjection;
-using MangaScrapper.Infrastructure.DependencyInjection;
+using MangaScrapper.Core.DependencyInjection;
 using MangaScrapper.Infrastructure.Security;
 using Microsoft.Extensions.FileProviders;
 using NovaStack.Infrastructure.DependencyInjection;
@@ -42,12 +41,9 @@ try
         "MangaScrapper.Api",
         otlpEndpoint: builder.Configuration["Observability:OtlpEndpoint"]);
 
-    // ── Application Layer (MediatR, FluentValidation, Pipeline behaviors) ────
-    builder.Services.AddMangaScrapperApplication();
-    builder.Services.AddNovaStackMappings(typeof(ApplicationExtensions).Assembly);
-
-    // ── Infrastructure Layer (EF Core, Repos, MassTransit) ──────────────────
-    builder.Services.AddMangaScrapperInfrastructure(builder.Configuration);
+    // ── Core VSA Layer (CQRS, Scrapers, Repositories, Background Jobs, Messaging) ──
+    builder.Services.AddMangaScrapperCore(builder.Configuration);
+    builder.Services.AddNovaStackMappings(typeof(CoreExtensions).Assembly);
 
     // ── CORS ─────────────────────────────────────────────────────────────────
     var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
