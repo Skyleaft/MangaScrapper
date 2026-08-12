@@ -27,6 +27,45 @@ public class MangaExternalService(ILogger<MangaExternalService> logger,
         return mangas;
     }
 
+    public async Task<List<Manga>> GetSimilarAsync(Guid mangaId, int limit, CancellationToken ct = default)
+    {
+        var similarIds = await qdrantService.SearchSimilarAsync(mangaId, limit, ct);
+        if (similarIds.Count == 0) return new List<Manga>();
+        var mangas = await mangaRepository.GetByIdsAsync(similarIds, ct);
+        return mangas;
+    }
+
+    public async Task<List<Manga>> SemanticSearchAsync(string query, int limit, CancellationToken ct = default)
+    {
+        var ids = await qdrantService.SemanticSearchAsync(query, limit, ct);
+        if (ids.Count == 0) return new List<Manga>();
+        return await mangaRepository.GetByIdsAsync(ids, ct);
+    }
+
+    public async Task<List<Manga>> GetSimilarFilteredAsync(
+        Guid mangaId,
+        string? status,
+        string? type,
+        List<string>? genres,
+        int limit,
+        CancellationToken ct = default)
+    {
+        var ids = await qdrantService.SearchSimilarFilteredAsync(mangaId, status, type, genres, limit, ct);
+        if (ids.Count == 0) return new List<Manga>();
+        return await mangaRepository.GetByIdsAsync(ids, ct);
+    }
+
+    public async Task<List<Manga>> GetAdvancedRecommendationAsync(
+        List<Guid> likedIds,
+        List<Guid> dislikedIds,
+        int limit,
+        CancellationToken ct = default)
+    {
+        var ids = await qdrantService.RecommendAdvancedAsync(likedIds, dislikedIds, limit, ct);
+        if (ids.Count == 0) return new List<Manga>();
+        return await mangaRepository.GetByIdsAsync(ids, ct);
+    }
+
     private static Manga MapToDomain(MeiliMangaDocument doc)
     {
         return Manga.Reconstitute(

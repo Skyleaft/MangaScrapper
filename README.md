@@ -21,7 +21,10 @@ For the mobile-first reading experience, check out the [Open Manga Reader](https
 - **Playwright Automation**: Browser-based scraping with **Microsoft Playwright** for JavaScript-rendered pages.
 - **Image Proxy**: Server-side image proxy that spoofs browser User-Agent headers to bypass hotlink protection.
 - **Smart Search**: Typo-tolerant, lightning-fast full-text search powered by **Meilisearch**.
-- **AI Recommendations**: Personalized manga recommendations based on reading history using **Qdrant** vector embeddings and a **BGE-Base Embedding Service**.
+- **AI Vector Search & Recommendations**: Advanced vector operations powered by **Qdrant** and a **Multilingual Embedding Service (`intfloat/multilingual-e5-base`)**:
+  - **Multilingual Semantic Search**: Search manga using natural language across 100+ languages (e.g., Bahasa Indonesia queries like *"reinkarnasi ke dunia lain punya banyak istri"*).
+  - **Vector Similarity Search**: Find semantically similar manga based on content embeddings with support for status, type, and genre payload filters.
+  - **Preference Recommendations**: Centroid-based history recommendations and advanced multi-item recommendations using native positive (liked) and negative (disliked) example vector arithmetic.
 - **Smart Background Processing**: Integration with **Hangfire** (MongoDB storage) for reliable background scraping jobs and recurring sync tasks.
 - **Event Bus Messaging**: Native **RabbitMQ** event bus integration for asynchronous chapter page scraping and deletion tasks.
 - **Discord Notifications**: Webhook-based Discord notifications for scraping events and job completions.
@@ -76,7 +79,7 @@ NewArchitecture/
 │   │
 │   ├── Services/MangaScrapper/
 │   │   ├── MangaScrapper.Core/            # Unified VSA Core Library Project
-│   │   │   ├── Features/                  # 26 Vertical Feature Slices (Co-located Request, Handler, Endpoint)
+│   │   │   ├── Features/                  # 30 Vertical Feature Slices (Co-located Request, Handler, Endpoint)
 │   │   │   │   ├── Mangas/                # GetPagedManga, GetMangaById, GetChapter, DeleteManga, UpdateManga
 │   │   │   │   ├── ProviderScrapers/      # Komiku, Kiryuu, Komikcast, MangaDex slices
 │   │   │   │   ├── Scrapper/              # GetAllProviders, ScrapChapterPages, GetQueue, FixFile

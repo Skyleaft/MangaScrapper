@@ -52,6 +52,10 @@ public interface IMangaExternalRepository
         CancellationToken ct = default);
 
     Task<List<Manga>> GetRecomendationAsync(List<Guid>readingHistoryIds,int limit,  CancellationToken ct = default);
+    Task<List<Manga>> GetSimilarAsync(Guid mangaId, int limit, CancellationToken ct = default);
+    Task<List<Manga>> SemanticSearchAsync(string query, int limit, CancellationToken ct = default);
+    Task<List<Manga>> GetSimilarFilteredAsync(Guid mangaId, string? status, string? type, List<string>? genres, int limit, CancellationToken ct = default);
+    Task<List<Manga>> GetAdvancedRecommendationAsync(List<Guid> likedIds, List<Guid> dislikedIds, int limit, CancellationToken ct = default);
     Task IndexMangaAsync(Manga manga, CancellationToken ct = default);
 }
 
