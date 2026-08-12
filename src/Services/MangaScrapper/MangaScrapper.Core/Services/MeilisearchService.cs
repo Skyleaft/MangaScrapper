@@ -1,6 +1,7 @@
+using MangaScrapper.Core.Aggregates;
 using MangaScrapper.Core.Configuration;
 using MangaScrapper.Core.Persistence;
-using MangaScrapper.Core.Persistence.Documents;
+using Mapster;
 using Meilisearch;
 using MongoDB.Driver;
 
@@ -30,7 +31,7 @@ public class MeilisearchService
     {
         _logger.LogInformation("Initializing Meilisearch index '{IndexName}'...", IndexName);
 
-        var task = await _client.CreateIndexAsync(IndexName, "id");
+        var task = await _client.CreateIndexAsync(IndexName, "id", ct);
         await _client.WaitForTaskAsync(task.TaskUid, cancellationToken: ct);
 
         var index = _client.Index(IndexName);
@@ -41,7 +42,7 @@ public class MeilisearchService
             "author",
             "description",
             "genres"
-        });
+        }, ct);
 
         await index.UpdateFilterableAttributesAsync(new[]
         {
@@ -52,7 +53,7 @@ public class MeilisearchService
             "popularity",
             "totalView",
             "releaseDate"
-        });
+        }, ct);
 
         await index.UpdateSortableAttributesAsync(new[]
         {
@@ -63,7 +64,7 @@ public class MeilisearchService
             "releaseDate",
             "createdAtTimestamp",
             "updatedAtTimestamp"
-        });
+        }, ct);
 
         _logger.LogInformation("Meilisearch index '{IndexName}' initialized successfully.", IndexName);
     }
@@ -77,17 +78,18 @@ public class MeilisearchService
 
         await InitializeAsync(ct);
 
-        var mangas = await _dbContext.Mangas
+        var mangaDocs = await _dbContext.Mangas
             .Find(_ => true)
             .ToListAsync(ct);
 
-        if (mangas.Count == 0)
+        if (mangaDocs.Count == 0)
         {
             _logger.LogWarning("No manga documents found in MongoDB. Nothing to sync.");
             return;
         }
 
-        var documents = mangas.Select(MapToMeiliDocument).ToList();
+        var mangas = mangaDocs.Select(doc => doc.Adapt<Manga>()).ToList();
+        var documents = mangas.Select(m => m.Adapt<MeiliMangaDocument>()).ToList();
 
         // Batch upsert in chunks of 1000
         const int batchSize = 1000;
@@ -106,16 +108,16 @@ public class MeilisearchService
     }
 
     /// <summary>
-    /// Indexes a single manga document (for real-time sync after create/update).
+    /// Indexes a single manga (for real-time sync after create/update).
     /// </summary>
-    public async Task IndexMangaAsync(MangaDocument manga, CancellationToken ct = default)
+    public async Task IndexMangaAsync(Manga manga, CancellationToken ct = default)
     {
-        var document = MapToMeiliDocument(manga);
+        var document = manga.Adapt<MeiliMangaDocument>();
         var index = _client.Index(IndexName);
         var task = await index.AddDocumentsAsync(new[] { document }, "id", ct);
         await _client.WaitForTaskAsync(task.TaskUid, cancellationToken: ct);
 
-        _logger.LogInformation("Indexed manga '{Title}' (ID: {Id}) to Meilisearch.", manga.Title, manga.Id);
+        _logger.LogInformation("Indexed manga '{Title}' (ID: {Id}) to Meilisearch.", manga.Title, manga.Id.Value);
     }
 
     /// <summary>
@@ -210,29 +212,5 @@ public class MeilisearchService
         var totalHits = paginated?.TotalHits ?? 0;
 
         return (result.Hits.ToList(), totalHits);
-    }
-
-    private static MeiliMangaDocument MapToMeiliDocument(MangaDocument manga)
-    {
-        return new MeiliMangaDocument
-        {
-            Id = manga.Id.ToString(),
-            Title = manga.Title,
-            Author = manga.Author,
-            Type = manga.Type,
-            Genres = manga.Genres ?? new List<string>(),
-            Description = manga.Description,
-            Status = manga.Status,
-            Rating = manga.Rating,
-            Popularity = manga.Popularity,
-            TotalView = manga.TotalView + (manga.Chapters?.Sum(c => c.TotalView) ?? 0),
-            ReleaseDate = manga.ReleaseDate.HasValue ? ((DateTimeOffset)manga.ReleaseDate.Value.ToUniversalTime()).ToUnixTimeSeconds() : 0,
-            ImageUrl = manga.ImageUrl,
-            LocalImageUrl = manga.LocalImageUrl,
-            TotalChapters = manga.Chapters?.Count ?? 0,
-            LatestChapterNumber = manga.Chapters?.MaxBy(c => c.Number)?.Number ?? 0,
-            CreatedAtTimestamp = ((DateTimeOffset)manga.CreatedAt.ToUniversalTime()).ToUnixTimeSeconds(),
-            UpdatedAtTimestamp = ((DateTimeOffset)manga.UpdatedAt.ToUniversalTime()).ToUnixTimeSeconds()
-        };
     }
 }

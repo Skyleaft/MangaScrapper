@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using MangaScrapper.Core.Aggregates;
 using MangaScrapper.Core.Configuration;
-using MangaScrapper.Core.Persistence.Documents;
 
 namespace MangaScrapper.Core.Services;
 
@@ -29,7 +29,7 @@ public class DiscordWebhookService
         _domainSettings = domainSettings.Value;
     }
 
-    public async Task SendNewMangaNotificationAsync(MangaDocument manga, List<ChapterDocument> chapters, CancellationToken ct = default)
+    public async Task SendNewMangaNotificationAsync(Manga manga, List<Chapter> chapters, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(_settings.WebhookUrl))
         {
@@ -60,7 +60,7 @@ public class DiscordWebhookService
             {
                 title = $"🆕 New {manga.Type} Added: {manga.Title}",
                 description = truncatedDescription ?? "No description available.",
-                url = $"{_domainSettings.DomainUrl}/manga/{manga.Id}",
+                url = $"{_domainSettings.DomainUrl}/manga/{manga.Id.Value}",
                 color = 3066993, // Green (Emerald)
                 thumbnail = mangaThumb,
                 fields = new[]
@@ -90,7 +90,7 @@ public class DiscordWebhookService
         }
     }
 
-    public async Task SendNewChaptersNotificationAsync(MangaDocument manga, List<ChapterDocument> newChapters, CancellationToken ct = default)
+    public async Task SendNewChaptersNotificationAsync(Manga manga, List<Chapter> newChapters, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(_settings.WebhookUrl))
         {
@@ -119,7 +119,7 @@ public class DiscordWebhookService
             {
                 title = $"⚡ New Chapters Available: {manga.Title}",
                 description = $"New chapters have been scraped/updated for **{manga.Title}**.",
-                url = $"{_domainSettings.DomainUrl}/manga/{manga.Id}",
+                url = $"{_domainSettings.DomainUrl}/manga/{manga.Id.Value}",
                 color = 15105570, // Orange
                 thumbnail = mangaThumb,
                 fields = new[]

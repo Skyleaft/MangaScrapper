@@ -1,6 +1,7 @@
+using MangaScrapper.Core.Aggregates;
 using MangaScrapper.Core.Configuration;
 using MangaScrapper.Core.Persistence;
-using MangaScrapper.Core.Persistence.Documents;
+using Mapster;
 using MongoDB.Driver;
 using Qdrant.Client;
 using Qdrant.Client.Grpc;
@@ -80,15 +81,17 @@ public class QdrantService
 
         await InitializeAsync(ct);
 
-        var mangas = await _dbContext.Mangas
+        var mangaDocs = await _dbContext.Mangas
             .Find(_ => true)
             .ToListAsync(ct);
 
-        if (mangas.Count == 0)
+        if (mangaDocs.Count == 0)
         {
             _logger.LogWarning("No manga documents found in MongoDB. Nothing to sync to Qdrant.");
             return;
         }
+
+        var mangas = mangaDocs.Select(doc => doc.Adapt<Manga>()).ToList();
 
         const int batchSize = 500;
         for (int i = 0; i < mangas.Count; i += batchSize)
@@ -109,11 +112,11 @@ public class QdrantService
         _logger.LogInformation("Full sync completed. {Count} manga documents synced to Qdrant.", mangas.Count);
     }
 
-    public async Task UpsertMangaAsync(MangaDocument manga, CancellationToken ct = default)
+    public async Task UpsertMangaAsync(Manga manga, CancellationToken ct = default)
     {
         var point = await MapToPointStructAsync(manga, ct);
         await _client.UpsertAsync(CollectionName, new[] { point }, cancellationToken: ct);
-        _logger.LogInformation("Upserted manga '{Title}' (ID: {Id}) to Qdrant.", manga.Title, manga.Id);
+        _logger.LogInformation("Upserted manga '{Title}' (ID: {Id}) to Qdrant.", manga.Title, manga.Id.Value);
     }
 
     public async Task DeleteMangaAsync(Guid id, CancellationToken ct = default)
@@ -178,7 +181,7 @@ public class QdrantService
         return searchResult.Select(r => Guid.Parse(r.Id.Uuid)).ToList();
     }
 
-    private async Task<PointStruct> MapToPointStructAsync(MangaDocument manga, CancellationToken ct = default)
+    private async Task<PointStruct> MapToPointStructAsync(Manga manga, CancellationToken ct = default)
     {
         float[] vector = new float[VectorSize];
 
@@ -198,7 +201,7 @@ public class QdrantService
                 }
                 else
                 {
-                    _logger.LogWarning("Embedding response null or invalid size for manga {Id}", manga.Id);
+                    _logger.LogWarning("Embedding response null or invalid size for manga {Id}", manga.Id.Value);
                 }
             }
             else
@@ -208,12 +211,12 @@ public class QdrantService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting embedding for manga {Id}", manga.Id);
+            _logger.LogError(ex, "Error getting embedding for manga {Id}", manga.Id.Value);
         }
 
         return new PointStruct
         {
-            Id = (PointId)manga.Id,
+            Id = (PointId)manga.Id.Value,
             Vectors = vector,
             Payload =
             {

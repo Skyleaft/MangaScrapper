@@ -1,6 +1,5 @@
 using MangaScrapper.Core.Aggregates;
 using MangaScrapper.Core.Configuration;
-using MangaScrapper.Core.Persistence.Documents;
 using MangaScrapper.Core.Repositories;
 using MangaScrapper.Core.ValueObjects;
 using NovaStack.SharedKernel.Common;
@@ -13,8 +12,6 @@ public class MangaExternalService(ILogger<MangaExternalService> logger,
     IMangaRepository mangaRepository)
     : IMangaExternalRepository
 {
-
-
     public async Task<PagedList<Manga>> SearchAsync(string? search, List<string>? genres, string? status, string? type, string sortBy, string orderBy, int page,
         int pageSize, CancellationToken ct = default)
     {
@@ -26,7 +23,7 @@ public class MangaExternalService(ILogger<MangaExternalService> logger,
     public async Task<List<Manga>> GetRecomendationAsync(List<Guid> readingHistoryIds, int limit, CancellationToken ct = default)
     {
         var recList = await qdrantService.RecommendAsync(readingHistoryIds, limit, ct);
-        var mangas = await mangaRepository.GetByIdsAsync(recList,ct);
+        var mangas = await mangaRepository.GetByIdsAsync(recList, ct);
         return mangas;
     }
 
@@ -58,28 +55,6 @@ public class MangaExternalService(ILogger<MangaExternalService> logger,
 
     public async Task IndexMangaAsync(Manga manga, CancellationToken ct = default)
     {
-        var document = new MangaDocument
-        {
-            Id = manga.Id.Value,
-            MalID = manga.MalId,
-            AnilistID = manga.AnilistId,
-            Title = manga.Title,
-            Author = manga.Author,
-            Type = manga.Type,
-            Genres = manga.Genres,
-            Description = manga.Description,
-            ImageUrl = manga.ImageUrl,
-            LocalImageUrl = manga.LocalImageUrl,
-            ThumbnailSize = manga.ThumbnailSize,
-            Rating = manga.Rating,
-            Popularity = manga.Popularity,
-            ReleaseDate = manga.ReleaseDate,
-            Status = manga.Status,
-            CreatedAt = manga.CreatedAt,
-            UpdatedAt = manga.UpdatedAt,
-            Url = manga.Url
-        };
-
-        await meilisearchService.IndexMangaAsync(document, ct);
+        await meilisearchService.IndexMangaAsync(manga, ct);
     }
 }

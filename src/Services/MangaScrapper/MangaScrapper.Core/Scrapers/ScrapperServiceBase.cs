@@ -5,7 +5,6 @@ using HtmlAgilityPack;
 using MangaScrapper.Core.Aggregates;
 using MangaScrapper.Core.Common.Abstractions;
 using MangaScrapper.Core.Configuration;
-using MangaScrapper.Core.Persistence.Documents;
 using MangaScrapper.Core.Repositories;
 using MangaScrapper.Core.Services;
 using MangaScrapper.Core.Utils;
@@ -501,18 +500,14 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
                 using var scope = ScopeFactory.CreateScope();
                 var webhookService = scope.ServiceProvider.GetService<DiscordWebhookService>();
                 if (webhookService != null)
-                {
-                    var existingDoc = existingManga.Adapt<MangaDocument>();
-                    var newChapterDocs = newChapters.Adapt<List<ChapterDocument>>();
-                    await webhookService.SendNewChaptersNotificationAsync(existingDoc, newChapterDocs, ct);
-                }
+                    await webhookService.SendNewChaptersNotificationAsync(existingManga, newChapters, ct);
             }
 
             existingManga = await UpdateMangaMetaData(existingManga, ct);
             UpdateChapterViews(existingManga, chapters);
             await _mangaRepo.UpdateAsync(existingManga, ct);
-            await MeilisearchService.IndexMangaAsync(existingManga.Adapt<MangaDocument>(), ct);
-            await QdrantService.UpsertMangaAsync(existingManga.Adapt<MangaDocument>(), ct);
+            await MeilisearchService.IndexMangaAsync(existingManga, ct);
+            await QdrantService.UpsertMangaAsync(existingManga, ct);
             return existingManga;
         }
 
@@ -524,9 +519,8 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
 
         var manga = await UpdateMangaMetaData(mangaData, ct);
         await _mangaRepo.AddAsync(manga, ct);
-        var docToSync = manga.Adapt<MangaDocument>();
-        await MeilisearchService.IndexMangaAsync(docToSync, ct);
-        await QdrantService.UpsertMangaAsync(docToSync, ct);
+        await MeilisearchService.IndexMangaAsync(manga, ct);
+        await QdrantService.UpsertMangaAsync(manga, ct);
 
         if (scrapChapters)
             foreach (var chapter in chapters)
@@ -535,7 +529,7 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
         using var webhookScope = ScopeFactory.CreateScope();
         var discord = webhookScope.ServiceProvider.GetService<DiscordWebhookService>();
         if (discord != null)
-            await discord.SendNewMangaNotificationAsync(docToSync, chapters.Adapt<List<ChapterDocument>>(), ct);
+            await discord.SendNewMangaNotificationAsync(manga, chapters, ct);
 
         return manga;
     }
