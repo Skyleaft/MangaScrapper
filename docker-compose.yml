@@ -1,44 +1,80 @@
 version: '3.9'
+
 services:
   api:
     build:
       context: .
-      dockerfile: MangaScrapper/Dockerfile
+      dockerfile: src/Services/MangaScrapper/MangaScrapper.Api/Dockerfile
     ports:
-      - "5000:8080"
+      - "5191:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
-      - MongoSettings__ConnectionString=mongodb://mongodb:27017
-      - MongoSettings__DatabaseName=manga-scrap
-      - JwtSigningKey="I4G5ZR2ZgGtjWWnKtf6InBJpGWwm7IrmM4Mzxu3iUm7"
-      - ScrapperSettings__ImageStoragePath=/app/images
-      - ScrapperSettings__MaxParallelDownloads=10
-      - Cors__AllowedOrigins=*
-      - Cors__AllowCredentials=true
-      - MeiliSettings__Host=http://meilisearch:7700
-      - MeiliSettings__MasterKey=mangas
-      - QdrantSettings__Host=http://qdrant
-      - QdrantSettings__Port=6334
-      - QdrantSettings__ApiKey=mangas_qdrant_key
-      - EmbeddingSettings__Host=http://embedding-service:8222
-      - Firebase__CredentialPath=/app/secrets/firebase.json
+      - MongoDB__ConnectionString=mongodb://mongodb:27017
+      - MongoDB__DatabaseName=manga-scrap
+      - Meili__Host=http://meilisearch:7700
+      - Qdrant__Host=http://qdrant
+      - Qdrant__Port=6334
+      - Embedding__Host=http://embedding-service:8222
+      - FlareSolverr__Host=http://flaresolverr:8191
+      - Messaging__HostName=rabbitmq
+      - Messaging__Port=5672
+      - Messaging__UserName=guest
+      - Messaging__Password=guest
+      - Scrapper__ImageStoragePath=/app/images
+      - Scrapper__MaxParallelDownloads=10
+      - Cors__AllowedOrigins=http://localhost:3000,http://localhost:5191
     volumes:
       - ./images:/app/images
-      - ./MangaScrapper/provider:/app/provider:ro
-      - ./keys:/app/temp-keys
-      - ./MangaScrapper/secrets:/app/secrets:ro
     depends_on:
       - mongodb
+      - meilisearch
+      - qdrant
+      - rabbitmq
+
+  worker:
+    build:
+      context: .
+      dockerfile: src/Workers/Scrapper.Worker/Dockerfile
+    environment:
+      - DOTNET_ENVIRONMENT=Production
+      - MongoDB__ConnectionString=mongodb://mongodb:27017
+      - MongoDB__DatabaseName=manga-scrap
+      - Meili__Host=http://meilisearch:7700
+      - Qdrant__Host=http://qdrant
+      - Qdrant__Port=6334
+      - Embedding__Host=http://embedding-service:8222
+      - FlareSolverr__Host=http://flaresolverr:8191
+      - Messaging__HostName=rabbitmq
+      - Messaging__Port=5672
+      - Messaging__UserName=guest
+      - Messaging__Password=guest
+      - Scrapper__ImageStoragePath=/app/images
+      - Scrapper__MaxParallelDownloads=10
+    volumes:
+      - ./images:/app/images
+    depends_on:
+      - mongodb
+      - rabbitmq
 
   mongodb:
     image: mongo:latest
+    container_name: mongodb
     ports:
       - "27017:27017"
     volumes:
       - mongo-data:/data/db
     environment:
       - MONGO_INITDB_DATABASE=manga-scrap
-  
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
   meilisearch:
     image: getmeili/meilisearch:latest
     container_name: meilisearch
@@ -48,26 +84,32 @@ services:
       MEILI_NO_ANALYTICS: "true"
     volumes:
       - meili_data:/meili_data
-      
+
   qdrant:
     image: qdrant/qdrant:latest
     container_name: qdrant
     ports:
       - "6333:6333"
-    environment:
-      QDRANT__SERVICE__API_KEY: "mangas_qdrant_key"
     volumes:
       - qdrant_data:/qdrant/storage
+
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    ports:
+      - "8191:8191"
 
   embedding-service:
     build:
       context: ./embedding-service
       dockerfile: Dockerfile
+    container_name: embedding-service
     ports:
       - "8222:8222"
     restart: unless-stopped
 
 volumes:
   mongo-data:
+  rabbitmq_data:
   meili_data:
   qdrant_data:

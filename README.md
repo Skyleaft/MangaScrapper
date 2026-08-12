@@ -1,12 +1,14 @@
 # MangaScrapper
 
-MangaScrapper is a comprehensive full-stack solution for scraping, managing, and reading manga. It features a robust ASP.NET Core backend that scrapes metadata and individual chapter pages across multiple sources, storing data in MongoDB and optimizing images locally. The project includes a modern, high-performance Blazor WebAssembly admin panel for seamless management, along with user library and reading progression tracking.
+MangaScrapper is a comprehensive, production-grade full-stack solution for scraping, managing, and reading manga. Built using **Vertical Slice Architecture (VSA)** in .NET 10, it features a robust backend that scrapes metadata and chapter pages across multiple providers, stores BSON documents in MongoDB, indexes full-text search in Meilisearch, vectorizes recommendations in Qdrant, and orchestrates background jobs via Hangfire and RabbitMQ. The project includes a modern, high-performance Blazor WebAssembly admin panel for seamless management, user library tracking, and reading progression.
 
 For the mobile-first reading experience, check out the [Open Manga Reader](https://github.com/Skyleaft/Open-Manga-Reader) client.
 
 > **⚠️ License — Educational Purpose Only**
 >
 > This project is provided **strictly for educational and personal research purposes**. It is not intended for commercial use, redistribution, or deployment in any production environment that violates the terms of service of the scraped websites. The author assumes no responsibility for misuse.
+
+---
 
 ## 🚀 Key Features
 
@@ -17,183 +19,186 @@ For the mobile-first reading experience, check out the [Open Manga Reader](https
   - **MangaDex** — International manga database
 - **Cloudflare Bypass**: Integrated **FlareSolverr** support for scraping Cloudflare-protected sites.
 - **Playwright Automation**: Browser-based scraping with **Microsoft Playwright** for JavaScript-rendered pages.
-- **Image Proxy**: Server-side image proxy that spoofs browser User-Agent headers to bypass hotlink protection on external providers.
+- **Image Proxy**: Server-side image proxy that spoofs browser User-Agent headers to bypass hotlink protection.
 - **Smart Search**: Typo-tolerant, lightning-fast full-text search powered by **Meilisearch**.
 - **AI Recommendations**: Personalized manga recommendations based on reading history using **Qdrant** vector embeddings and a **BGE-Base Embedding Service**.
-- **Smart Background Processing**: Integration with **Hangfire** for reliable, queued background scraping jobs and recurring sync tasks.
+- **Smart Background Processing**: Integration with **Hangfire** (MongoDB storage) for reliable background scraping jobs and recurring sync tasks.
+- **Event Bus Messaging**: Native **RabbitMQ** event bus integration for asynchronous chapter page scraping and deletion tasks.
 - **Discord Notifications**: Webhook-based Discord notifications for scraping events and job completions.
-- **User Library & Progression**: Track per-user manga libraries and reading progression (chapter-level tracking) backed by Firebase authentication.
+- **User Library & Progression**: Track per-user manga libraries and reading progression (chapter-level tracking) backed by custom auth and Firebase authentication.
 - **Admin Dashboard**: Real-time statistics, monthly scrap charts, and recent activity monitoring.
 - **Advanced Management**:
   - Dynamic manga list with pagination, multi-genre filtering, and advanced sorting.
   - Interactive Manga Detail Modal for editing metadata and managing chapters.
   - Manual `TotalView` overrides and chapter availability indicators.
 - **Optimized Storage**: Automatic image conversion using **SkiaSharp** and centralized local storage with optional sync service.
-- **Secure Access**: Cookie-based authentication with Argon2 password hashing, Data Protection key persistence, and a professional login interface.
 - **Observability**: Full **OpenTelemetry** integration with Prometheus metrics scraping (`/metrics`), OTLP trace/metric/log export, and runtime instrumentation.
+
+---
 
 ## 🛠️ Technical Stack
 
-### Backend (MangaScrapper API)
+### Backend Architecture
 
-- **.NET 10** Web API + Blazor Server (WASM host)
-- **FastEndpoints** (minimal API alternative with REPR pattern)
-- **Hangfire** with MongoDB storage for job orchestration and recurring jobs
-- **MongoDB.Driver** v3 for high-performance NoSQL operations
-- **Meilisearch** for lightning-fast, typo-tolerant full-text search
-- **Qdrant** for high-performance vector search and similarity-based recommendations
-- **BGE-Base Embedding Service** for semantic metadata vectorization
-- **SkiaSharp** for WebP conversion and image processing (Linux-compatible)
-- **HtmlAgilityPack** for robust DOM parsing
-- **Microsoft Playwright** for JavaScript-rendered page scraping
-- **FlareSolverr** integration for Cloudflare-protected site bypass
-- **FirebaseAdmin** + **Google.Apis.Auth** for Firebase-based user authentication
-- **Isopoh.Cryptography.Argon2** for secure password hashing
-- **OpenTelemetry** for advanced tracing, metrics (Prometheus), and structured logging
-- **Discord Webhook** integration for event notifications
-- **ASP.NET Core Data Protection** for persistent cookie encryption keys
+- **Runtime & Language**: .NET 10.0, C# 13.0
+- **Architectural Style**: **Vertical Slice Architecture (VSA)** — Unified Two-Tier Structure (`MangaScrapper.Core` + Thin Host Executables)
+- **CQRS & Mediator**: MediatR 14 (with logging and validation pipeline behaviors)
+- **APIs**: ASP.NET Core Minimal APIs with reflection-based endpoint discovery (`IEndpointDefinition`)
+- **Database & Persistence**: MongoDB 8 via `MongoDB.Driver` 3.x, Meilisearch 0.17 (full-text search), Qdrant 1.13 (vector search)
+- **Object Mapping**: Mapster 10.x (centralized in `MangaMappingConfig.cs`)
+- **Validation**: FluentValidation 12
+- **Error Handling**: Railway-oriented `Result<T>` and `Error` types (no domain exceptions for control flow)
+- **Background Jobs**: Hangfire 1.8 with MongoDB Storage (`Hangfire.Mongo`)
+- **Messaging & Event Bus**: Native RabbitMQ EventBus (`NovaStack.Infrastructure`) & Integration Event Handlers
+- **Scrapers & Helpers**: HtmlAgilityPack, Microsoft Playwright, FlareSolverr HTTP client, SkiaSharp image processing
 
 ### Frontend (MangaPanel — Blazor WASM)
 
 - **Blazor WebAssembly** (.NET 10)
 - **Blazored.LocalStorage** for client-side state persistence
 - **Cookie Handler** for transparent cookie forwarding from WASM to the API
-- **JWT Authentication State Provider** for Blazor auth integration
-- **Tailwind CSS** for modern, responsive, and premium UI
-- **Lucide Icons** & Custom SVG iconography
-- **Glassmorphism Design** for a state-of-the-art admin experience
+- **JWT / Custom Auth State Provider** for Blazor auth integration
+- **Tailwind CSS** for modern, responsive UI
+- **Lucide Icons** & Glassmorphic design system
 
-## 📁 Project Structure
+---
 
-- `MangaScrapper/`: The core API + WASM host project.
-  - `Features/`: Organized by feature sets:
-    - `Manga/` — Manga CRUD and metadata endpoints
-    - `Scrapper/` — Generic scraper and file-fix utilities
-    - `ScrapperKomiku/`, `ScrapperKiryuu/`, `ScrapperKomikcast/`, `ScrapperMangadex/` — Source-specific scrapers
-    - `Auth/` — Login, logout, and Firebase-based auth
-    - `Dashboard/` — Stats and activity endpoints
-    - `Images/` — Image proxy endpoint
-    - `UserLibrary/` — User manga library management
-    - `UserProgression/` — Reading progress tracking
-    - `RecurringJobs/` — Scheduled Hangfire recurring job definitions
-  - `Infrastructure/`: Repositories, Mongo context, background job implementations, security utilities.
-  - `provider/`: JSON configurations for scraping selectors.
-  - `secrets/`: Firebase Admin SDK credentials (not committed to source control).
-- `MangaPanel/`: The Blazor WASM client.
-  - `Pages/`: Admin dashboard, Manage Manga, and Login pages.
-  - `Components/`: Reusable UI elements like `MangaCard`, `MangaDetailModal`, and `StatsCard`.
-  - `Layout/`: Professional sidebar-based admin layout with sticky headers.
-- `MangaScrapper.Shared/`: Shared DTOs and models between API and Client.
+## 📂 Project Structure
+
+```text
+NewArchitecture/
+├── src/
+│   ├── BuildingBlocks/
+│   │   ├── NovaStack.SharedKernel/        # Result<T>, Error, ICommand/IQuery, Base Entity, Result extensions
+│   │   ├── NovaStack.Infrastructure/      # Shared Auth, RabbitMQ EventBus, MongoDB base extensions
+│   │   └── NovaStack.Contracts/           # Shared Responses, Integration Events, DTO contracts
+│   │
+│   ├── Services/MangaScrapper/
+│   │   ├── MangaScrapper.Core/            # Unified VSA Core Library Project
+│   │   │   ├── Features/                  # 26 Vertical Feature Slices (Co-located Request, Handler, Endpoint)
+│   │   │   │   ├── Mangas/                # GetPagedManga, GetMangaById, GetChapter, DeleteManga, UpdateManga
+│   │   │   │   ├── ProviderScrapers/      # Komiku, Kiryuu, Komikcast, MangaDex slices
+│   │   │   │   ├── Scrapper/              # GetAllProviders, ScrapChapterPages, GetQueue, FixFile
+│   │   │   │   ├── UserLibrary/           # AddOrUpdateUserLibrary, GetUserLibrary, RemoveUserLibrary
+│   │   │   │   ├── UserProgression/       # UpdateUserProgression, GetUserProgression, GetMangaProgression
+│   │   │   │   ├── Users/                 # GetPagedUser, GetUserById, PatchUserActivity
+│   │   │   │   ├── Providers/             # GetProvider
+│   │   │   │   ├── Dashboard/             # GetStatistics, SyncStorage
+│   │   │   │   ├── Images/                # ProxyImage
+│   │   │   │   └── RecurringJobs/         # GetRecurringJobs, CreateOrUpdate, Delete, Trigger
+│   │   │   │
+│   │   │   ├── Domain/                    # Domain Layer (Manga, Chapter, Page, Value Objects, Domain Events)
+│   │   │   ├── Scrapers/                  # Provider Scraper Implementations (Komiku, Kiryuu, Komikcast, MangaDex)
+│   │   │   ├── Persistence/               # Mongo DbContext, BSON Document schemas (MangaDocument, etc.)
+│   │   │   ├── Repositories/              # MongoMangaRepository, MongoUserRepository, MongoUserLibraryRepository
+│   │   │   ├── Services/                  # MeilisearchService, QdrantService, DiscordWebhookService, StorageSyncService
+│   │   │   ├── BackgroundJobs/            # Hangfire background jobs (MeiliSyncJob, DeleteMangaJob, LatestChapterScrapingJob)
+│   │   │   ├── Messaging/                 # RabbitMQ integration event handlers (ScrapChapterPagesHandler, DeleteMangaHandler)
+│   │   │   ├── Security/                  # Custom Auth validation & JwtAuthTokenService
+│   │   │   └── DependencyInjection/       # CoreExtensions (AddMangaScrapperCore & MapMangaScrapperEndpoints)
+│   │   │
+│   │   ├── MangaScrapper.Api/             # Thin Web API Host entry point (Program.cs, Swagger/Scalar, Auth)
+│   │   └── MangaPanel.Client/             # Blazor WebAssembly Frontend Client
+│   │
+│   └── Workers/
+│       └── Scrapper.Worker/               # Thin Background Worker Host entry point (Hangfire Server & RabbitMQ Consumer)
+│
+└── tests/
+    ├── UnitTests/                         # Business logic tests (Moq + FluentAssertions)
+    ├── IntegrationTests/                  # Integration test harness
+    └── ArchitectureTests/                 # Architectural constraint tests (NetArchTest)
+```
+
+---
 
 ## ⚙️ Configuration
 
-Main configuration is handled via `appsettings.json` in the API project:
+Main configuration is defined in `appsettings.json` within `MangaScrapper.Api` and `Scrapper.Worker`:
 
 ```json
 {
-  "MongoSettings": {
+  "MongoDB": {
     "ConnectionString": "mongodb://localhost:27017",
     "DatabaseName": "manga-scrap"
   },
-  "ScrapperSettings": {
+  "Scrapper": {
     "MaxParallelDownloads": 10,
     "ImageStoragePath": "images"
   },
-  "MeiliSettings": {
+  "Meili": {
     "Host": "http://localhost:7700",
     "ApiKey": "your_meilisearch_key"
   },
-  "QdrantSettings": {
+  "Qdrant": {
     "Host": "localhost",
     "Port": 6334
   },
-  "EmbeddingSettings": {
+  "Embedding": {
     "Host": "http://localhost:8222"
   },
-  "FlareSolverrSettings": {
+  "FlareSolverr": {
     "Host": "http://localhost:8191"
   },
-  "DiscordWebhookSettings": {
+  "Discord": {
     "WebhookUrl": "https://discord.com/api/webhooks/..."
   },
-  "DomainSettings": {
-    "BaseUrl": "http://localhost:5000"
-  },
-  "Firebase": {
-    "CredentialPath": "secrets/mykomikid-firebase-adminsdk.json"
+  "Domain": {
+    "BaseUrl": "http://localhost:5191"
   },
   "Cors": {
-    "AllowedOrigins": ["http://localhost:3000"],
+    "AllowedOrigins": ["http://localhost:3000", "http://localhost:5191"],
     "AllowCredentials": true
-  },
-  "JwtSigningKey": "your_secure_signing_key_here"
+  }
 }
 ```
+
+---
 
 ## 🏁 Getting Started
 
 ### Prerequisites
 
-- .NET 10 SDK
-- MongoDB Server
-- (Optional) Meilisearch, Qdrant, FlareSolverr, Embedding Service
+- **.NET 10 SDK**
+- **MongoDB Server**
+- (Optional) Meilisearch, Qdrant, FlareSolverr, RabbitMQ
 
-### Local Development
+### Local Building & Execution
 
 1. **Clone the repository**
-2. **Setup Database**: Ensure MongoDB is running.
-3. **Add Firebase credentials** (if using user features): Place the Firebase Admin SDK JSON in `MangaScrapper/secrets/`.
-4. **Run the API**:
-
+2. **Build the solution**:
    ```powershell
-   dotnet run --project .\MangaScrapper\MangaScrapper.csproj
+   dotnet build NewArchitecture/MangaScrapperStack.sln
    ```
-
-5. **Run the Panel** (standalone WASM dev):
-
+3. **Run Unit & Architecture Tests**:
    ```powershell
-   dotnet run --project .\MangaPanel\MangaPanel.Client\MangaPanel.Client.csproj
+   dotnet test NewArchitecture/tests/UnitTests/UnitTests.csproj
+   dotnet test NewArchitecture/tests/ArchitectureTests/ArchitectureTests.csproj
    ```
-
-> **Note**: The MangaPanel client is also hosted directly by the API server at the root URL, so running only the API is sufficient for most development workflows.
+4. **Run the API Host**:
+   ```powershell
+   dotnet run --project NewArchitecture/src/Services/MangaScrapper/MangaScrapper.Api/MangaScrapper.Api.csproj
+   ```
+5. **Run the Background Worker Host**:
+   ```powershell
+   dotnet run --project NewArchitecture/src/Workers/Scrapper.Worker/Scrapper.Worker.csproj
+   ```
 
 ### 🐳 Docker Compose
 
-The easiest way to run the entire stack (API, MongoDB, Meilisearch, Qdrant, FlareSolverr, and Embedding Service) is using Docker Compose:
+Run the entire infrastructure stack using Docker Compose:
 
-1. **Clone the repository**
-2. **Setup environment**: Place your Firebase Admin SDK JSON in `MangaScrapper/secrets/`.
-3. **Bring up the services**:
+```bash
+docker-compose up -d --build
+```
 
-   ```bash
-   docker-compose up -d --build
-   ```
-
-4. **Access the services**:
-   - API / Admin Panel: `http://localhost:5000`
-   - Meilisearch: `http://localhost:7700`
-   - Qdrant: `http://localhost:6333`
-   - Embedding Service: `http://localhost:8222`
-   - FlareSolverr: `http://localhost:8191`
-   - Prometheus Metrics: `http://localhost:5000/metrics`
-
-### Admin Access
-
-- **Main URL**: `http://localhost:<port>/`
-- **Hangfire Dashboard**: `http://localhost:<port>/hangfire` (Requires login)
-- **API Documentation**: `/swagger` or `/openapi/v1.json`
-- **Prometheus Metrics**: `/metrics`
-
-## 📊 Management Workflow
-
-1. **Dashboard**: Monitor monthly growth and recent additions.
-2. **Manage Manga**: Search, filter, and find manga to update.
-3. **Manga Detail**:
-   - Edit release date, genres, and status.
-   - Click **"Scrap Missing"** to automatically queue Hangfire jobs for missing chapter pages.
-   - Delete specific chapters or the entire manga including local files.
-4. **User Library**: Users can track their personal manga reading lists via the API.
-5. **User Progression**: Reading progress is saved per-user, per-manga (chapter-level).
+#### Available Endpoints
+- **Web API / Admin Panel**: `http://localhost:5191`
+- **Scalar API Reference**: `http://localhost:5191/scalar/v1`
+- **Hangfire Dashboard**: `http://localhost:5191/hangfire`
+- **Prometheus Metrics**: `http://localhost:5191/metrics`
+- **Meilisearch**: `http://localhost:7700`
+- **Qdrant**: `http://localhost:6333`
+- **FlareSolverr**: `http://localhost:8191`
 
 ---
 
@@ -205,7 +210,5 @@ This project is intended **for educational purposes only**.
 - ❌ You may **not** use it commercially or in violation of any third-party website's Terms of Service.
 - ❌ You may **not** redistribute scraped content or deploy it as a public service.
 
-The author provides no warranty and accepts no liability for any misuse of this software.
-
 ---
-*© 2026 MangaScrapper Engine v2.1*
+*© 2026 MangaScrapper Engine v3.0 (Vertical Slice Architecture)*
