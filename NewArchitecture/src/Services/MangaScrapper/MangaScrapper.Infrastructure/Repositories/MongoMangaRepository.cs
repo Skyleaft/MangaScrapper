@@ -113,6 +113,18 @@ public class MongoMangaRepository(MangaMongoDbContext dbContext) : IMangaReposit
         return docs.Select(MapToDomain).ToList();
     }
 
+    public async Task UpdateChapterPagesAsync(Guid mangaId, Guid chapterId, List<Page> pages, CancellationToken ct = default)
+    {
+        var manga = await GetByIdAsync(MangaId.From(mangaId), ct);
+        if (manga is null) return;
+
+        var chapter = manga.Chapters.FirstOrDefault(c => c.Id.Value == chapterId);
+        if (chapter is null) return;
+
+        chapter.AddPages(pages);
+        await UpdateAsync(manga, ct);
+    }
+
     public async Task<List<string>> GetAllGenresAsync(CancellationToken ct)
     {
         var result = await dbContext.Mangas.Distinct<string>("Genres", Builders<MangaDocument>.Filter.Empty).ToListAsync(ct);

@@ -38,7 +38,8 @@ public class Chapter
         UploadDate = uploadDate;
         Pages = pages ?? [];
     }
-
+    
+    public void AddPages(List<Page>pages) => Pages.AddRange(pages);
     public void AddPage(Page page) => Pages.Add(page);
     public void IncrementView() => TotalView++;
 }

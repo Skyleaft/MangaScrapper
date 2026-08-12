@@ -35,6 +35,7 @@ public interface IMangaRepository
         CancellationToken ct);
 
     Task<List<Manga>> GetAllAsync(CancellationToken ct = default);
+    Task UpdateChapterPagesAsync(Guid mangaId, Guid chapterId, List<Page> pages, CancellationToken ct = default);
 }
 
 public interface IMangaExternalRepository
