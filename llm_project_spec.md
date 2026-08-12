@@ -112,11 +112,12 @@ All services, MediatR handlers, validators, scrapers, background jobs, messaging
 
 ---
 
-### 3. Domain Model Centralization & Mapster Projections
+### 3. Domain Model Centralization & Scraper DDD Pattern
 
-1. **Domain Aggregates**: All business rules and domain operations center on the `Manga` Domain Aggregate (`MangaScrapper.Core.Domain.Aggregates.Manga`).
-2. **Document Mapping**: Mongo persistence converts transparently between `Manga` domain aggregates and `MangaDocument` BSON schemas using Mapster `.Adapt<T>()`.
-3. **Mapster Registration**:
+1. **Domain Aggregates**: All business rules, domain operations, and scraper abstractions center on the `Manga` Domain Aggregate (`MangaScrapper.Core.Aggregates.Manga`), `Chapter`, and `Page`.
+2. **Domain-Driven Scrapers**: Scraper implementations (`KomikuService`, `KiryuuService`, `KomikcastService`, `MangaDexService`) construct and return `Manga`, `Chapter`, and `Page` domain aggregate instances instead of BSON document models.
+3. **Document Mapping**: Mongo persistence converts transparently between `Manga` domain aggregates and `MangaDocument` BSON schemas using Mapster `.Adapt<T>()` or repository mappings.
+4. **Mapster Registration**:
    - `MangaMappingConfig.cs` in Application handles `Manga` $\rightarrow$ `MangaSummaryResponse` / `ChapterResponse`.
    - `MangaInfrastructureMapping.cs` in Repositories handles `Manga` $\leftrightarrow$ `MangaDocument` and `MeiliMangaDocument`.
 

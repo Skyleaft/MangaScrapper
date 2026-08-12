@@ -40,20 +40,7 @@ public sealed class ScrapperQueueService : IScrapperQueueService
         var service = _serviceProvider.GetKeyedService<IScrapperService>(providerKey);
         if (service is null) return;
 
-        // Map domain Chapter -> infrastructure ChapterDocument
-        var chapterDoc = new ChapterDocument
-        {
-            Id              = chapter.Id.Value,
-            Number          = chapter.Number,
-            Link            = chapter.Link,
-            ChapterProvider = chapter.ChapterProvider,
-            ChapterProviderIcon = chapter.ChapterProviderIcon,
-            Language        = chapter.Language,
-            TotalView       = chapter.TotalView,
-            UploadDate      = chapter.UploadDate
-        };
-
-        await service.QueueChapterScraping(mangaId, mangaTitle, chapterDoc);
+        await service.QueueChapterScraping(mangaId, mangaTitle, chapter);
     }
 
     /// <summary>

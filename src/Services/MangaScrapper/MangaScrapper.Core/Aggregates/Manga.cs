@@ -39,9 +39,13 @@ public class Chapter
         Pages = pages ?? [];
     }
     
-    public void AddPages(List<Page>pages) => Pages.AddRange(pages);
+    public void AddPages(List<Page> pages) => Pages.AddRange(pages);
     public void AddPage(Page page) => Pages.Add(page);
     public void IncrementView() => TotalView++;
+    public void UpdateTotalView(int totalView)
+    {
+        if (totalView > TotalView) TotalView = totalView;
+    }
 }
 
 public class Page
@@ -145,12 +149,15 @@ public class Manga : Entity<MangaId>
         List<string>? genres = null,
         string? description = null,
         string? imageUrl = null,
-        string? url = null)
+        string? url = null,
+        double? rating = null,
+        string? status = null)
     {
         var id = MangaId.New();
         var manga = new Manga(
             id, title, author, type, source,
-            malId: malId, anilistId: anilistId, genres: genres, description: description, imageUrl: imageUrl, url: url);
+            malId: malId, anilistId: anilistId, genres: genres, description: description, imageUrl: imageUrl, url: url,
+            rating: rating, status: status);
 
         manga.RaiseDomainEvent(new MangaCreatedDomainEvent(id, title, source));
         return manga;
@@ -215,6 +222,25 @@ public class Manga : Entity<MangaId>
         UpdatedAt = DateTime.UtcNow;
     }
 
+    public void UpdateFromScrapper(
+        int malId,
+        double? rating,
+        int popularity,
+        int members,
+        DateTime? releaseDate,
+        string? status,
+        string? author)
+    {
+        if (malId != 0) MalId = malId;
+        if (rating.HasValue) Rating = rating;
+        if (popularity > 0) Popularity = popularity;
+        if (members > 0) Members = members;
+        if (releaseDate.HasValue) ReleaseDate = releaseDate;
+        if (!string.IsNullOrWhiteSpace(status)) Status = status;
+        if (!string.IsNullOrWhiteSpace(author) && string.IsNullOrWhiteSpace(Author)) Author = author;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
     public void UpdateFromAnilist(AnilistMedia anilistInfo)
     {
         AnilistId = anilistInfo.Id;
@@ -257,6 +283,32 @@ public class Manga : Entity<MangaId>
         RaiseDomainEvent(new ChapterScrapedDomainEvent(Id, chapter.Id, chapter.Number, chapter.ChapterProvider ?? "Unknown"));
     }
 
+    public void AddChapters(List<Chapter> chapters)
+    {
+        foreach (var chap in chapters)
+        {
+            Chapters.RemoveAll(c => c.Number == chap.Number && c.ChapterProvider == chap.ChapterProvider);
+            Chapters.Add(chap);
+        }
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void SetUrl(string url)
+    {
+        Url = url;
+    }
+
+    public void SetType(string type)
+    {
+        Type = type;
+    }
+
+    public void SetDates(DateTime createdAt, DateTime updatedAt)
+    {
+        CreatedAt = createdAt;
+        UpdatedAt = updatedAt;
+    }
+
     public void DeleteChapter(ChapterId chapterId)
     {
         Chapters.RemoveAll(c => c.Id == chapterId);
@@ -274,4 +326,11 @@ public class Manga : Entity<MangaId>
         ThumbnailSize = size;
         UpdatedAt = DateTime.UtcNow;
     }
+
+    public void UpdateImageUrl(string imageUrl)
+    {
+        ImageUrl = imageUrl;
+        UpdatedAt = DateTime.UtcNow;
+    }
 }
+

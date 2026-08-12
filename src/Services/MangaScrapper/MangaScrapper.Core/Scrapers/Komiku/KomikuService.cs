@@ -2,11 +2,12 @@ using System.Globalization;
 using System.Text.RegularExpressions;
 using System.Web;
 using HtmlAgilityPack;
+using MangaScrapper.Core.Aggregates;
 using MangaScrapper.Core.Configuration;
-using MangaScrapper.Core.Persistence.Documents;
 using MangaScrapper.Core.Repositories;
 using MangaScrapper.Core.Services;
 using MangaScrapper.Core.Utils;
+using MangaScrapper.Core.ValueObjects;
 using NovaStack.Infrastructure.Messaging;
 
 namespace MangaScrapper.Core.Scrapers.Komiku;
@@ -33,30 +34,34 @@ public class KomikuService : ScrapperServiceBase
 
     private HtmlDocument? doc;
 
-    protected override MangaDocument ExtractMangaMetadata(string url)
+    protected override Manga ExtractMangaMetadata(string url)
     {
         doc = GetHtml(url).GetAwaiter().GetResult();
-        var mangaData = new MangaDocument
+
+        var title = HttpUtility.HtmlDecode(doc.DocumentNode.SelectSingleNode(Provider.MangaSelectors.Title)?.InnerText.Trim() ?? string.Empty);
+        var author = doc.DocumentNode.SelectSingleNode(Provider.MangaSelectors.Author)?.InnerText.Trim() ?? string.Empty;
+        var description = doc.DocumentNode.SelectSingleNode(Provider.MangaSelectors.Description)?.InnerText.Trim();
+        var type = doc.DocumentNode.SelectSingleNode(Provider.MangaSelectors.Type)?.InnerText.Trim() ?? string.Empty;
+        var imageUrl = doc.DocumentNode.SelectSingleNode(Provider.MangaSelectors.Thumbnail)?.GetAttributeValue("src", string.Empty);
+        var genres = doc.DocumentNode.SelectNodes(Provider.MangaSelectors.Genres)?.Select(n => n.InnerText.Trim()).ToList();
+
+        imageUrl = ThumbnailHelper.RemoveQueryString(imageUrl);
+
+        if (string.IsNullOrEmpty(title))
         {
-            Title = HttpUtility.HtmlDecode(doc.DocumentNode.SelectSingleNode(Provider.MangaSelectors.Title)?.InnerText.Trim() ?? string.Empty),
-            Author = doc.DocumentNode.SelectSingleNode(Provider.MangaSelectors.Author)?.InnerText.Trim() ?? string.Empty,
-            Description = doc.DocumentNode.SelectSingleNode(Provider.MangaSelectors.Description)?.InnerText.Trim(),
-            Type = doc.DocumentNode.SelectSingleNode(Provider.MangaSelectors.Type)?.InnerText.Trim() ?? string.Empty,
-            ImageUrl = doc.DocumentNode.SelectSingleNode(Provider.MangaSelectors.Thumbnail)?.GetAttributeValue("src", string.Empty),
-            Genres = doc.DocumentNode.SelectNodes(Provider.MangaSelectors.Genres)?.Select(n => n.InnerText.Trim()).ToList()
-        };
-        mangaData.ImageUrl = ThumbnailHelper.RemoveQueryString(mangaData.ImageUrl);
-        if (string.IsNullOrEmpty(mangaData.Title))
-        {
-            mangaData.Title =
-                HttpUtility.HtmlDecode(
-                    doc.DocumentNode.SelectSingleNode("//td[text()='Judul:']/following-sibling::td")?.InnerText.Trim() ?? string.Empty);
-            mangaData.Author = doc.DocumentNode.SelectSingleNode("//td[text()='Author:']/following-sibling::td")?.InnerText.Trim() ??
-                               string.Empty;
-            mangaData.Type = doc.DocumentNode.SelectSingleNode("//td[text()='Tipe:']/following-sibling::td")?.InnerText.Trim() ??
-                             string.Empty;
+            title = HttpUtility.HtmlDecode(doc.DocumentNode.SelectSingleNode("//td[text()='Judul:']/following-sibling::td")?.InnerText.Trim() ?? string.Empty);
+            author = doc.DocumentNode.SelectSingleNode("//td[text()='Author:']/following-sibling::td")?.InnerText.Trim() ?? string.Empty;
+            type = doc.DocumentNode.SelectSingleNode("//td[text()='Tipe:']/following-sibling::td")?.InnerText.Trim() ?? string.Empty;
         }
-        return mangaData;
+
+        return Manga.Create(
+            title: title,
+            author: author,
+            type: type,
+            source: ProviderKey,
+            genres: genres,
+            description: description,
+            imageUrl: imageUrl);
     }
     
     private static List<int> GenerateChapterViews(int totalViews, int chapterCount)
@@ -94,9 +99,9 @@ public class KomikuService : ScrapperServiceBase
         return views;
     }
 
-    protected override Task<List<ChapterDocument>> ExtractChaptersMetadata( CancellationToken ct = default)
+    protected override Task<List<Chapter>> ExtractChaptersMetadata(CancellationToken ct = default)
     {
-        var chapters = new List<ChapterDocument>();
+        var chapters = new List<Chapter>();
         var chapterRows = doc.DocumentNode.SelectNodes(Provider.ChapterSelectors.Rows);
         if (chapterRows == null) return Task.FromResult(chapters);
 
@@ -108,7 +113,7 @@ public class KomikuService : ScrapperServiceBase
         var total = int.TryParse(totalText, out var t) ? t : 0;
 
         var viewsGenerated = GenerateChapterViews(total, chapterRows.Count);
-        var index = chapterRows.Count -1;
+        var index = chapterRows.Count - 1;
 
         foreach (var row in chapterRows)
         {
@@ -132,16 +137,15 @@ public class KomikuService : ScrapperServiceBase
                 index--;
             }
 
-            chapters.Add(new ChapterDocument
-            {
-                Number = chapterNumber,
-                Link = link,
-                ChapterProvider = Provider.ProviderName,
-                ChapterProviderIcon = Provider.ProviderIcon,
-                Language = DefaultIndonesianLanguage,
-                TotalView = totalView,
-                UploadDate = uploadDate
-            });
+            chapters.Add(new Chapter(
+                id: ChapterId.New(),
+                number: chapterNumber,
+                link: link,
+                chapterProvider: Provider.ProviderName,
+                chapterProviderIcon: Provider.ProviderIcon,
+                language: DefaultIndonesianLanguage,
+                totalView: totalView,
+                uploadDate: uploadDate));
         }
 
         return Task.FromResult(chapters);
@@ -237,4 +241,5 @@ public class KomikuService : ScrapperServiceBase
         return results;
     }
 }
+
 

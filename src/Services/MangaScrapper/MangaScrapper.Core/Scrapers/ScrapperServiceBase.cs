@@ -26,14 +26,14 @@ public interface IScrapperService
     string GetCleanTitle(string title);
     Task<JikanMangaItem?> GetMangaInfo(string title, string type, CancellationToken ct = default);
     Task<JikanMangaItem?> GetMangaInfoById(int malId, CancellationToken ct = default);
-    Task<MangaDocument> UpdateMangaDocument(MangaDocument manga, CancellationToken ct = default);
-    Task<MangaDocument> ExtractManga(string url, CancellationToken ct, bool scrapChapters = true, string? linkedId = null);
-    Task<MangaDocument> GetDetail(string url, CancellationToken ct);
-    Task<ChapterDocument> GetChapterPage(string mangaTitle, ChapterDocument chapter, CancellationToken ct = default);
-    Task QueueChapterScraping(Guid mangaId, string mangaTitle, ChapterDocument chapter, CancellationToken ct = default);
+    Task<Manga> UpdateMangaMetaData(Manga manga, CancellationToken ct = default);
+    Task<Manga> ExtractManga(string url, CancellationToken ct, bool scrapChapters = true, string? linkedId = null);
+    Task<Manga> GetDetail(string url, CancellationToken ct);
+    Task<Chapter> GetChapterPage(string mangaTitle, Chapter chapter, CancellationToken ct = default);
+    Task QueueChapterScraping(Guid mangaId, string mangaTitle, Chapter chapter, CancellationToken ct = default);
     Task<List<SearchItem>> SearchManga(SearchRequest request, CancellationToken ct);
     Task<List<JikanMangaItem>> SearchJikan(string title, CancellationToken ct = default);
-    Task<List<PageDocument>> GetAllPages(string url, CancellationToken ct = default);
+    Task<List<Page>> GetAllPages(string url, CancellationToken ct = default);
     Task<List<ScrapperProvider>> GetAllProvider();
 }
 
@@ -403,10 +403,10 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
         catch { return null; }
     }
 
-    public async Task<MangaDocument> UpdateMangaDocument(MangaDocument manga, CancellationToken ct = default)
+    public async Task<Manga> UpdateMangaMetaData(Manga manga, CancellationToken ct = default)
     {
-        JikanMangaItem? mangaInfo = manga.MalID != 0
-            ? await GetMangaInfoById(manga.MalID, ct)
+        JikanMangaItem? mangaInfo = manga.MalId != 0
+            ? await GetMangaInfoById(manga.MalId, ct)
             : await GetMangaInfo(manga.Title, manga.Type, ct);
 
         if (mangaInfo?.TitleSynonyms != null)
@@ -416,14 +416,9 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
                 StringHelper.IsSimilar(mangaInfo.TitleEnglish ?? "", manga.Title) ||
                 StringHelper.IsSimilar(combinedSynonyms, manga.Title) ||
                 StringHelper.IsSimilar(mangaInfo.TitleJapanese ?? "", manga.Title) ||
-                mangaInfo.MalId == manga.MalID)
+                mangaInfo.MalId == manga.MalId)
             {
-                manga.MalID = mangaInfo.MalId;
-                manga.Rating = mangaInfo.Score;
-                manga.Popularity = mangaInfo.Popularity;
-                manga.Members = mangaInfo.Members;
-                manga.ReleaseDate = mangaInfo.Published?.From;
-                manga.Status = mangaInfo.Status switch
+                var status = mangaInfo.Status switch
                 {
                     "Complete" or "Finished" => "Completed",
                     "Publishing" => "Ongoing",
@@ -432,53 +427,59 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
                     "Upcoming" => "Upcoming",
                     _ => "Unknown"
                 };
-                if (string.IsNullOrEmpty(manga.Author))
-                    manga.Author = mangaInfo.Authors.FirstOrDefault()?.Name ?? manga.Author;
+
+                manga.UpdateFromScrapper(
+                    mangaInfo.MalId,
+                    mangaInfo.Score,
+                    mangaInfo.Popularity,
+                    mangaInfo.Members,
+                    mangaInfo.Published?.From,
+                    status,
+                    mangaInfo.Authors.FirstOrDefault()?.Name);
             }
         }
         return manga;
     }
 
-    private async Task<MangaDocument> UpdateThumbnail(MangaDocument mangaData, string? imageUrl, CancellationToken ct = default)
+    private async Task<Manga> UpdateThumbnail(Manga manga, string? imageUrl, CancellationToken ct = default)
     {
         if (!string.IsNullOrWhiteSpace(imageUrl))
         {
-            mangaData.ImageUrl = ThumbnailHelper.RemoveResizeParams(imageUrl);
-            var thumb = await DownloadThumbnailAndConvertToWebP(mangaData.Title, imageUrl, ct);
-            mangaData.LocalImageUrl = thumb.path;
-            mangaData.ThumbnailSize = thumb.size;
+            manga.UpdateImageUrl(ThumbnailHelper.RemoveResizeParams(imageUrl));
+            var thumb = await DownloadThumbnailAndConvertToWebP(manga.Title, imageUrl, ct);
+            manga.UpdateLocalImage(thumb.path, thumb.size);
         }
-        return mangaData;
+        return manga;
     }
 
-    private void UpdateChapterViews(MangaDocument existingManga, List<ChapterDocument> chapters)
+    private void UpdateChapterViews(Manga existingManga, List<Chapter> chapters)
     {
         foreach (var item in existingManga.Chapters)
         {
             var chapIndex = chapters.FirstOrDefault(x => x.Number == item.Number);
             if (chapIndex != null && item.TotalView < chapIndex.TotalView)
-                item.TotalView = chapIndex.TotalView;
+                item.UpdateTotalView(chapIndex.TotalView);
         }
     }
 
-    public async Task<MangaDocument> ExtractManga(string url, CancellationToken ct, bool scrapChapters = true, string? linkedId = null)
+    public async Task<Manga> ExtractManga(string url, CancellationToken ct, bool scrapChapters = true, string? linkedId = null)
     {
         var mangaData = ExtractMangaMetadata(url);
-        mangaData.Url = url;
+        mangaData.SetUrl(url);
 
         if (string.IsNullOrEmpty(mangaData.Title))
             throw new ArgumentException("Missing Manga Title!");
 
-        MangaDocument? existingManga = null;
+        Manga? existingManga = null;
         if (!string.IsNullOrEmpty(linkedId) && Guid.TryParse(linkedId, out var parsedGuid))
         {
-            existingManga = (await _mangaRepo.GetByIdAsync(MangaId.From(parsedGuid), ct))?.Adapt<MangaDocument>();
+            existingManga = await _mangaRepo.GetByIdAsync(MangaId.From(parsedGuid), ct);
         }
         else
         {
             var searchManga = await MeilisearchService.SearchTitleAsync(mangaData.Title, ct);
             if (searchManga is not null && StringHelper.CalculateSimilarity(searchManga.Title, mangaData.Title) >= 0.8)
-                existingManga = (await _mangaRepo.GetByIdAsync(MangaId.From(Guid.Parse(searchManga.Id)), ct))?.Adapt<MangaDocument>();
+                existingManga = await _mangaRepo.GetByIdAsync(MangaId.From(Guid.Parse(searchManga.Id)), ct);
         }
 
         var chapters = await ExtractChaptersMetadata(ct);
@@ -486,72 +487,74 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
         if (existingManga != null)
         {
             existingManga = await UpdateThumbnail(existingManga, mangaData.ImageUrl, ct);
-            existingManga.Chapters ??= new List<ChapterDocument>();
             var existingNumbers = existingManga.Chapters.Select(c => c.Number).ToHashSet();
             var newChapters = chapters.Where(c => !existingNumbers.Contains(c.Number)).ToList();
 
             if (newChapters.Any())
             {
-                existingManga.Chapters.AddRange(newChapters);
-                existingManga.UpdatedAt = DateTime.UtcNow;
+                existingManga.AddChapters(newChapters);
 
                 if (scrapChapters)
                     foreach (var chapter in newChapters)
-                        await QueueChapterScraping(existingManga.Id, existingManga.Title, chapter, ct);
+                        await QueueChapterScraping(existingManga.Id.Value, existingManga.Title, chapter, ct);
 
                 using var scope = ScopeFactory.CreateScope();
                 var webhookService = scope.ServiceProvider.GetService<DiscordWebhookService>();
                 if (webhookService != null)
-                    await webhookService.SendNewChaptersNotificationAsync(existingManga, newChapters, ct);
+                {
+                    var existingDoc = existingManga.Adapt<MangaDocument>();
+                    var newChapterDocs = newChapters.Adapt<List<ChapterDocument>>();
+                    await webhookService.SendNewChaptersNotificationAsync(existingDoc, newChapterDocs, ct);
+                }
             }
 
-            existingManga = await UpdateMangaDocument(existingManga, ct);
+            existingManga = await UpdateMangaMetaData(existingManga, ct);
             UpdateChapterViews(existingManga, chapters);
-            await _mangaRepo.UpdateAsync(existingManga.Adapt<Manga>(), ct);
-            await MeilisearchService.IndexMangaAsync(existingManga, ct);
-            await QdrantService.UpsertMangaAsync(existingManga, ct);
+            await _mangaRepo.UpdateAsync(existingManga, ct);
+            await MeilisearchService.IndexMangaAsync(existingManga.Adapt<MangaDocument>(), ct);
+            await QdrantService.UpsertMangaAsync(existingManga.Adapt<MangaDocument>(), ct);
             return existingManga;
         }
 
         mangaData = await UpdateThumbnail(mangaData, mangaData.ImageUrl, ct);
-        mangaData.Chapters = chapters;
-        mangaData.CreatedAt = chapters.OrderBy(x => x.UploadDate).FirstOrDefault()?.UploadDate ?? DateTime.MinValue;
-        mangaData.UpdatedAt = DateTime.UtcNow;
-        if (mangaData.Type.Contains('-')) mangaData.Type = "Manga";
+        mangaData.AddChapters(chapters);
+        var createdAt = chapters.OrderBy(x => x.UploadDate).FirstOrDefault()?.UploadDate ?? DateTime.MinValue;
+        mangaData.SetDates(createdAt, DateTime.UtcNow);
+        if (mangaData.Type.Contains('-')) mangaData.SetType("Manga");
 
-        var manga = await UpdateMangaDocument(mangaData, ct);
-        manga.Id = Guid.NewGuid();
-        await _mangaRepo.AddAsync(manga.Adapt<Manga>(), ct);
-        await MeilisearchService.IndexMangaAsync(manga, ct);
-        await QdrantService.UpsertMangaAsync(manga, ct);
+        var manga = await UpdateMangaMetaData(mangaData, ct);
+        await _mangaRepo.AddAsync(manga, ct);
+        var docToSync = manga.Adapt<MangaDocument>();
+        await MeilisearchService.IndexMangaAsync(docToSync, ct);
+        await QdrantService.UpsertMangaAsync(docToSync, ct);
 
         if (scrapChapters)
             foreach (var chapter in chapters)
-                await QueueChapterScraping(manga.Id, manga.Title, chapter, ct);
+                await QueueChapterScraping(manga.Id.Value, manga.Title, chapter, ct);
 
         using var webhookScope = ScopeFactory.CreateScope();
         var discord = webhookScope.ServiceProvider.GetService<DiscordWebhookService>();
         if (discord != null)
-            await discord.SendNewMangaNotificationAsync(manga, chapters, ct);
+            await discord.SendNewMangaNotificationAsync(docToSync, chapters.Adapt<List<ChapterDocument>>(), ct);
 
         return manga;
     }
 
-    public async Task<MangaDocument> GetDetail(string url, CancellationToken ct)
+    public async Task<Manga> GetDetail(string url, CancellationToken ct)
     {
         var mangaData = ExtractMangaMetadata(url);
         if (string.IsNullOrEmpty(mangaData.Title))
             throw new ArgumentException("Missing Manga Title!");
         var chapters = await ExtractChaptersMetadata(ct);
-        mangaData.Chapters = chapters;
-        if (mangaData.Type.Contains('-')) mangaData.Type = "Manga";
+        mangaData.AddChapters(chapters);
+        if (mangaData.Type.Contains('-')) mangaData.SetType("Manga");
         return mangaData;
     }
 
-    protected abstract MangaDocument ExtractMangaMetadata(string url);
-    protected abstract Task<List<ChapterDocument>> ExtractChaptersMetadata(CancellationToken ct = default);
+    protected abstract Manga ExtractMangaMetadata(string url);
+    protected abstract Task<List<Chapter>> ExtractChaptersMetadata(CancellationToken ct = default);
 
-    public virtual async Task<ChapterDocument> GetChapterPage(string mangaTitle, ChapterDocument chapter, CancellationToken ct = default)
+    public virtual async Task<Chapter> GetChapterPage(string mangaTitle, Chapter chapter, CancellationToken ct = default)
     {
         var url = chapter.Link;
         if (string.IsNullOrWhiteSpace(url)) return chapter;
@@ -565,13 +568,13 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
         var downloadTasks = imageNodes.Select(async (imgNode, index) =>
         {
             var imageUrl = imgNode.GetAttributeValue("src", string.Empty);
-            if (string.IsNullOrWhiteSpace(imageUrl)) return (Index: index, Page: null as PageDocument);
+            if (string.IsNullOrWhiteSpace(imageUrl)) return (Index: index, Page: null as Page);
 
             await Semaphore.WaitAsync(ct);
             try
             {
                 var result = await DownloadAndConvertToWebP(mangaTitle, chapter.Number.ToString(CultureInfo.InvariantCulture), imageUrl, index + 1, ct);
-                return (Index: index, Page: new PageDocument { ImageUrl = imageUrl, LocalImageUrl = result.path, Size = result.size });
+                return (Index: index, Page: new Page(Guid.NewGuid(), imageUrl, result.path, result.size));
             }
             catch (Exception ex)
             {
@@ -582,14 +585,14 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
         });
 
         var results = await Task.WhenAll(downloadTasks);
-        chapter.Pages.AddRange(results.OrderBy(r => r.Index).Where(r => r.Page != null).Select(r => r.Page!));
+        chapter.AddPages(results.OrderBy(r => r.Index).Where(r => r.Page != null).Select(r => r.Page!).ToList());
         return chapter;
     }
 
-    public async Task QueueChapterScraping(Guid mangaId, string mangaTitle, ChapterDocument chapter, CancellationToken ct = default)
+    public async Task QueueChapterScraping(Guid mangaId, string mangaTitle, Chapter chapter, CancellationToken ct = default)
     {
         var integrationEvent = new ScrapChapterPagesIntegrationEvent(
-            mangaId, mangaTitle, chapter.Number, chapter.Id.ToString(), ProviderKey);
+            mangaId, mangaTitle, chapter.Number, chapter.Id.Value.ToString(), ProviderKey);
         await EventBus.PublishAsync(integrationEvent, "scrape-chapter-pages", ct);
     }
 
@@ -610,9 +613,9 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
         }
     }
 
-    public async Task<List<PageDocument>> GetAllPages(string url, CancellationToken ct = default)
+    public async Task<List<Page>> GetAllPages(string url, CancellationToken ct = default)
     {
-        var chapter = new ChapterDocument { Link = url };
+        var chapter = new Chapter(ChapterId.New(), 0, url, null, null, DefaultIndonesianLanguage, 0, DateTime.UtcNow);
         return (await GetChapterPage("temp", chapter, ct)).Pages;
     }
 
@@ -637,14 +640,14 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
 
     async Task<ScrapperMangaDocumentResponse> IProviderScrapperService.ExtractManga(string url, CancellationToken ct, bool scrapChapters, string? linkedId)
     {
-        var doc = await ExtractManga(url, ct, scrapChapters, linkedId);
-        return MapToResponse(doc);
+        var manga = await ExtractManga(url, ct, scrapChapters, linkedId);
+        return MapToResponse(manga);
     }
 
     async Task<ScrapperMangaDocumentResponse> IProviderScrapperService.GetDetail(string url, CancellationToken ct)
     {
-        var doc = await GetDetail(url, ct);
-        return MapToResponse(doc);
+        var manga = await GetDetail(url, ct);
+        return MapToResponse(manga);
     }
 
     async Task<List<SearchItemResponse>> IProviderScrapperService.SearchManga(ScrapperSearchRequest request, CancellationToken ct)
@@ -683,32 +686,32 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
         }).ToList();
     }
 
-    private static ScrapperMangaDocumentResponse MapToResponse(MangaDocument doc)
+    private static ScrapperMangaDocumentResponse MapToResponse(Manga manga)
     {
         return new ScrapperMangaDocumentResponse
         {
-            Id = doc.Id,
-            MalID = doc.MalID,
-            Title = doc.Title,
-            Author = doc.Author,
-            Type = doc.Type,
-            Rating = doc.Rating,
-            Popularity = doc.Popularity,
-            Members = doc.Members,
-            Genres = doc.Genres,
-            Description = doc.Description,
-            ImageUrl = doc.ImageUrl,
-            LocalImageUrl = doc.LocalImageUrl,
-            ThumbnailSize = doc.ThumbnailSize,
-            Status = doc.Status,
-            ReleaseDate = doc.ReleaseDate,
-            TotalView = doc.TotalView,
-            CreatedAt = doc.CreatedAt,
-            UpdatedAt = doc.UpdatedAt,
-            Url = doc.Url,
-            Chapters = doc.Chapters?.Select(c => new ScrapperChapterDocumentResponse
+            Id = manga.Id.Value,
+            MalID = manga.MalId,
+            Title = manga.Title,
+            Author = manga.Author,
+            Type = manga.Type,
+            Rating = manga.Rating,
+            Popularity = manga.Popularity,
+            Members = manga.Members,
+            Genres = manga.Genres,
+            Description = manga.Description,
+            ImageUrl = manga.ImageUrl,
+            LocalImageUrl = manga.LocalImageUrl,
+            ThumbnailSize = manga.ThumbnailSize,
+            Status = manga.Status,
+            ReleaseDate = manga.ReleaseDate,
+            TotalView = manga.TotalView,
+            CreatedAt = manga.CreatedAt,
+            UpdatedAt = manga.UpdatedAt,
+            Url = manga.Url,
+            Chapters = manga.Chapters?.Select(c => new ScrapperChapterDocumentResponse
             {
-                Id = c.Id,
+                Id = c.Id.Value,
                 Number = c.Number,
                 Link = c.Link,
                 ChapterProvider = c.ChapterProvider,
@@ -726,3 +729,4 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
         };
     }
 }
+

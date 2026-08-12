@@ -3,11 +3,12 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Web;
 using HtmlAgilityPack;
+using MangaScrapper.Core.Aggregates;
 using MangaScrapper.Core.Configuration;
-using MangaScrapper.Core.Persistence.Documents;
 using MangaScrapper.Core.Repositories;
 using MangaScrapper.Core.Services;
 using MangaScrapper.Core.Utils;
+using MangaScrapper.Core.ValueObjects;
 using NovaStack.Infrastructure.Messaging;
 
 namespace MangaScrapper.Core.Scrapers.Kiryuu;
@@ -34,36 +35,37 @@ public class KiryuuService : ScrapperServiceBase
 
     private HtmlDocument? doc;
 
-    protected override MangaDocument ExtractMangaMetadata(string url)
+    protected override Manga ExtractMangaMetadata(string url)
     {
         doc = GetHtml(url).GetAwaiter().GetResult();
-        var manga = new MangaDocument
-        {
-            Title = HttpUtility.HtmlDecode(doc.DocumentNode.SelectSingleNode("//h1[@itemprop='name']")?.InnerText.Trim() ?? string.Empty),
-            ImageUrl = doc.DocumentNode.SelectSingleNode("//div[@itemprop='image']//img")?.GetAttributeValue("src", "")?.Trim(),
-            Description = doc.DocumentNode.SelectSingleNode("//div[@itemprop='description']")?.InnerText.Trim()
-        };
 
+        var title = HttpUtility.HtmlDecode(doc.DocumentNode.SelectSingleNode("//h1[@itemprop='name']")?.InnerText.Trim() ?? string.Empty);
+        var imageUrl = doc.DocumentNode.SelectSingleNode("//div[@itemprop='image']//img")?.GetAttributeValue("src", "")?.Trim();
+        var description = doc.DocumentNode.SelectSingleNode("//div[@itemprop='description']")?.InnerText.Trim();
+
+        double? rating = null;
         var rate = doc.DocumentNode.SelectSingleNode("//small[normalize-space()='Ratings']/preceding-sibling::span[1]/text()")?.InnerText.Trim();
-        if (!string.IsNullOrEmpty(rate))
-            manga.Rating = Convert.ToDouble(rate);
+        if (!string.IsNullOrEmpty(rate) && double.TryParse(rate, CultureInfo.InvariantCulture, out var parsedRate))
+            rating = parsedRate;
 
+        List<string>? genres = null;
         var genreNodes = doc.DocumentNode.SelectNodes("//a[@itemprop='genre']/span");
         if (genreNodes != null)
         {
-            manga.Genres = genreNodes.Select(g => g.InnerText.Trim()).ToList();
+            genres = genreNodes.Select(g => g.InnerText.Trim()).ToList();
         }
 
+        string type = string.Empty;
         var typeNode = doc.DocumentNode.SelectSingleNode(
             "//h4/span[normalize-space()='Type']/ancestor::div[contains(@class,'flex')][1]//p"
         );
-
         if (typeNode != null)
         {
-            manga.Type = typeNode.InnerText.Trim();
+            type = typeNode.InnerText.Trim();
         }
 
-        manga.Status = "Ongoing";
+        string status = "Ongoing";
+        string author = string.Empty;
 
         var infoNodes = doc.DocumentNode.SelectNodes("//div[contains(@class,'grid')]//h4");
         if (infoNodes != null)
@@ -73,24 +75,33 @@ public class KiryuuService : ScrapperServiceBase
                 var label = node.InnerText.Trim();
                 var value = node.ParentNode.SelectSingleNode(".//p")?.InnerText.Trim();
 
-                if (label.Contains("Author")) manga.Author = value ?? string.Empty;
-                if (label.Contains("Status")) manga.Status = value ?? "Ongoing";
+                if (label.Contains("Author")) author = value ?? string.Empty;
+                if (label.Contains("Status")) status = value ?? "Ongoing";
             }
         }
 
-        return manga;
+        return Manga.Create(
+            title: title,
+            author: author,
+            type: type,
+            source: ProviderKey,
+            genres: genres,
+            description: description,
+            imageUrl: imageUrl,
+            rating: rating,
+            status: status);
     }
 
-    protected override async Task<List<ChapterDocument>> ExtractChaptersMetadata(CancellationToken ct = default)
+    protected override async Task<List<Chapter>> ExtractChaptersMetadata(CancellationToken ct = default)
     {
         var hxNode = doc.DocumentNode.SelectSingleNode("//div[contains(@hx-get,'manga_id=')]");
         var hxGet = hxNode?.GetAttributeValue("hx-get", "");
         var match = Regex.Match(hxGet ?? "", @"manga_id=(\d+)");
         var mangaId = match.Success ? int.Parse(match.Groups[1].Value) : 0;
 
-        if (mangaId == 0) return new List<ChapterDocument>();
+        if (mangaId == 0) return new List<Chapter>();
 
-        var data = new List<ChapterDocument>();
+        var data = new List<Chapter>();
         var cUrl = $"{Provider.BaseUrl}/wp-admin/admin-ajax.php?manga_id={mangaId}&page=1&action=chapter_list";
         var chaptersDoc = await GetHtml(cUrl, ct: ct);
 
@@ -109,16 +120,15 @@ public class KiryuuService : ScrapperServiceBase
             var uri = new Uri(link);
             var path = uri.PathAndQuery;
 
-            data.Add(new ChapterDocument
-            {
-                Number = number,
-                Link = path,
-                ChapterProvider = Provider.ProviderName,
-                ChapterProviderIcon = Provider.ProviderIcon,
-                Language = DefaultIndonesianLanguage,
-                UploadDate = DateTime.TryParse(time, out var parsedDate) ? parsedDate : DateTime.MinValue,
-                TotalView = IntHelper.ParseCount(views ?? string.Empty)
-            });
+            data.Add(new Chapter(
+                id: ChapterId.New(),
+                number: number,
+                link: path,
+                chapterProvider: Provider.ProviderName,
+                chapterProviderIcon: Provider.ProviderIcon,
+                language: DefaultIndonesianLanguage,
+                totalView: IntHelper.ParseCount(views ?? string.Empty),
+                uploadDate: DateTime.TryParse(time, out var parsedDate) ? parsedDate : DateTime.MinValue));
         }
 
         return data;
@@ -194,4 +204,5 @@ public class KiryuuService : ScrapperServiceBase
         return data;
     }
 }
+
 

@@ -1,6 +1,6 @@
 # MangaScrapper
 
-MangaScrapper is a comprehensive, production-grade full-stack solution for scraping, managing, and reading manga. Built using **Vertical Slice Architecture (VSA)** in .NET 10, it features a robust backend that scrapes metadata and chapter pages across multiple providers, stores BSON documents in MongoDB, indexes full-text search in Meilisearch, vectorizes recommendations in Qdrant, and orchestrates background jobs via Hangfire and RabbitMQ. The project includes a modern, high-performance Blazor WebAssembly admin panel for seamless management, user library tracking, and reading progression.
+MangaScrapper is a comprehensive, production-grade full-stack solution for scraping, managing, and reading manga. Built using **Vertical Slice Architecture (VSA)** and **Domain-Driven Design (DDD)** in .NET 10, it features a robust backend where provider scrapers instantiate and return domain aggregates (`Manga`, `Chapter`, `Page`), store BSON documents in MongoDB, index full-text search in Meilisearch, vectorize recommendations in Qdrant, and orchestrate background jobs via Hangfire and RabbitMQ. The project includes a modern, high-performance Blazor WebAssembly admin panel for seamless management, user library tracking, and reading progression.
 
 For the mobile-first reading experience, check out the [Open Manga Reader](https://github.com/Skyleaft/Open-Manga-Reader) client.
 
@@ -12,7 +12,7 @@ For the mobile-first reading experience, check out the [Open Manga Reader](https
 
 ## 🚀 Key Features
 
-- **Multi-Source Scraping**: Provider-based design supporting multiple manga sources:
+- **Multi-Source Scraping**: Provider-based design with Domain-Driven scraper services returning domain aggregates:
   - **Komiku** — Indonesian comics aggregator
   - **Kiryuu** — Popular Indonesian manga site
   - **Komikcast** — Indonesian manga platform
@@ -41,11 +41,12 @@ For the mobile-first reading experience, check out the [Open Manga Reader](https
 ### Backend Architecture
 
 - **Runtime & Language**: .NET 10.0, C# 13.0
-- **Architectural Style**: **Vertical Slice Architecture (VSA)** — Unified Two-Tier Structure (`MangaScrapper.Core` + Thin Host Executables)
+- **Architectural Style**: **Vertical Slice Architecture (VSA)** & **Domain-Driven Design (DDD)** — Unified Two-Tier Structure (`MangaScrapper.Core` + Thin Host Executables)
 - **CQRS & Mediator**: MediatR 14 (with logging and validation pipeline behaviors)
 - **APIs**: ASP.NET Core Minimal APIs with reflection-based endpoint discovery (`IEndpointDefinition`)
 - **Database & Persistence**: MongoDB 8 via `MongoDB.Driver` 3.x, Meilisearch 0.17 (full-text search), Qdrant 1.13 (vector search)
-- **Object Mapping**: Mapster 10.x (centralized in `MangaMappingConfig.cs`)
+- **Domain Aggregates**: Centralized domain aggregates (`Manga`, `Chapter`, `Page`) produced directly by provider scrapers and mapped transparently to BSON documents for MongoDB persistence.
+- **Object Mapping**: Mapster 10.x (centralized in `MangaMappingConfig.cs` and `MangaInfrastructureMapping.cs`)
 - **Validation**: FluentValidation 12
 - **Error Handling**: Railway-oriented `Result<T>` and `Error` types (no domain exceptions for control flow)
 - **Background Jobs**: Hangfire 1.8 with MongoDB Storage (`Hangfire.Mongo`)
@@ -87,8 +88,8 @@ NewArchitecture/
 │   │   │   │   ├── Images/                # ProxyImage
 │   │   │   │   └── RecurringJobs/         # GetRecurringJobs, CreateOrUpdate, Delete, Trigger
 │   │   │   │
-│   │   │   ├── Domain/                    # Domain Layer (Manga, Chapter, Page, Value Objects, Domain Events)
-│   │   │   ├── Scrapers/                  # Provider Scraper Implementations (Komiku, Kiryuu, Komikcast, MangaDex)
+│   │   │   ├── Domain/                    # Domain Aggregates (Manga, Chapter, Page, Value Objects, Domain Events)
+│   │   │   ├── Scrapers/                  # Provider Scrapers producing Domain Aggregates (Komiku, Kiryuu, Komikcast, MangaDex)
 │   │   │   ├── Persistence/               # Mongo DbContext, BSON Document schemas (MangaDocument, etc.)
 │   │   │   ├── Repositories/              # MongoMangaRepository, MongoUserRepository, MongoUserLibraryRepository
 │   │   │   ├── Services/                  # MeilisearchService, QdrantService, DiscordWebhookService, StorageSyncService

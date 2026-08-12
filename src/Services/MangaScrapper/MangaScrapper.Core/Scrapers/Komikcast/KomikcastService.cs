@@ -1,9 +1,10 @@
 using System.Globalization;
+using MangaScrapper.Core.Aggregates;
 using MangaScrapper.Core.Configuration;
-using MangaScrapper.Core.Persistence.Documents;
 using MangaScrapper.Core.Repositories;
 using MangaScrapper.Core.Services;
 using MangaScrapper.Core.Utils;
+using MangaScrapper.Core.ValueObjects;
 using Microsoft.AspNetCore.WebUtilities;
 using NovaStack.Infrastructure.Messaging;
 
@@ -32,48 +33,46 @@ public class KomikcastService : ScrapperServiceBase
     private const string BaseUrl = "https://be.komikcast.cc/series";
     private string _fullUrl = BaseUrl + "/";
 
-    protected override MangaDocument ExtractMangaMetadata(string url)
+    protected override Manga ExtractMangaMetadata(string url)
     {
         _fullUrl = url.StartsWith("http", StringComparison.OrdinalIgnoreCase)
             ? url
             : $"{BaseUrl}/{url.TrimStart('/')}";
         var seriesData = GetFromJsonAsync<KomikcastResponse<KomikcastModel>>(_fullUrl).GetAwaiter().GetResult();
-        var mangaData = new MangaDocument
-        {
-            Title = seriesData.Data.Data.Title,
-            Author = seriesData.Data.Data.Author,
-            Description = seriesData.Data.Data.Synopsis,
-            Type = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(seriesData.Data.Data.Format),
-            ImageUrl = seriesData.Data.Data.CoverImage,
-            Genres = seriesData.Data.Data.Genres.Select(x => x.Data.Name).ToList(),
-            Rating = seriesData.Data.Data.Rating,
-            Status = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(seriesData.Data.Data.Status),
-        };
-        return mangaData;
+
+        return Manga.Create(
+            title: seriesData.Data.Data.Title,
+            author: seriesData.Data.Data.Author,
+            type: CultureInfo.CurrentCulture.TextInfo.ToTitleCase(seriesData.Data.Data.Format),
+            source: ProviderKey,
+            genres: seriesData.Data.Data.Genres.Select(x => x.Data.Name).ToList(),
+            description: seriesData.Data.Data.Synopsis,
+            imageUrl: seriesData.Data.Data.CoverImage,
+            rating: seriesData.Data.Data.Rating,
+            status: CultureInfo.CurrentCulture.TextInfo.ToTitleCase(seriesData.Data.Data.Status));
     }
 
-    protected override async Task<List<ChapterDocument>> ExtractChaptersMetadata(CancellationToken ct = default)
+    protected override async Task<List<Chapter>> ExtractChaptersMetadata(CancellationToken ct = default)
     {
         var chaptersUrl = _fullUrl.EndsWith("/chapters") ? _fullUrl : $"{_fullUrl}/chapters";
         var chapterData = await GetFromJsonAsync<KomikcastResponse<List<KomikcastChapters>>>(chaptersUrl, cancellationToken: ct);
-        var chapters = new List<ChapterDocument>();
+        var chapters = new List<Chapter>();
         foreach (var item in chapterData.Data)
         {
-            chapters.Add(new ChapterDocument
-            {
-                Number = item.Data.Index,
-                Link = $"{chaptersUrl}/{item.Data.Index}",
-                ChapterProvider = Provider.ProviderName,
-                ChapterProviderIcon = Provider.ProviderIcon,
-                Language = DefaultIndonesianLanguage,
-                TotalView = item.Views?.Total ?? 0,
-                UploadDate = item.CreatedAt
-            });
+            chapters.Add(new Chapter(
+                id: ChapterId.New(),
+                number: item.Data.Index,
+                link: $"{chaptersUrl}/{item.Data.Index}",
+                chapterProvider: Provider.ProviderName,
+                chapterProviderIcon: Provider.ProviderIcon,
+                language: DefaultIndonesianLanguage,
+                totalView: item.Views?.Total ?? 0,
+                uploadDate: item.CreatedAt));
         }
         return chapters;
     }
 
-    public override async Task<ChapterDocument> GetChapterPage(string mangaTitle, ChapterDocument chapter, CancellationToken ct = default)
+    public override async Task<Chapter> GetChapterPage(string mangaTitle, Chapter chapter, CancellationToken ct = default)
     {
         var url = chapter.Link;
         if (string.IsNullOrWhiteSpace(url)) return chapter;
@@ -87,7 +86,7 @@ public class KomikcastService : ScrapperServiceBase
         var images = response.Data.Data.Images;
         var downloadTasks = images.Select(async (imageUrl, index) =>
         {
-            if (string.IsNullOrWhiteSpace(imageUrl)) return (Index: index, Page: null as PageDocument);
+            if (string.IsNullOrWhiteSpace(imageUrl)) return (Index: index, Page: null as Page);
 
             await Semaphore.WaitAsync(ct);
             try
@@ -99,12 +98,7 @@ public class KomikcastService : ScrapperServiceBase
                     index + 1,
                     ct);
 
-                return (Index: index, Page: new PageDocument
-                {
-                    ImageUrl = imageUrl,
-                    LocalImageUrl = result.path,
-                    Size = result.size
-                });
+                return (Index: index, Page: new Page(Guid.NewGuid(), imageUrl, result.path, result.size));
             }
             catch (Exception ex)
             {
@@ -125,7 +119,7 @@ public class KomikcastService : ScrapperServiceBase
             .Select(r => r.Page!)
             .ToList();
 
-        chapter.Pages.AddRange(orderedPages);
+        chapter.AddPages(orderedPages);
         return chapter;
     }
 
@@ -176,4 +170,5 @@ public class KomikcastService : ScrapperServiceBase
         return resp;
     }
 }
+
 

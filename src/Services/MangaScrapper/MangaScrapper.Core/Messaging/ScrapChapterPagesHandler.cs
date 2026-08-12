@@ -38,19 +38,7 @@ public sealed class ScrapChapterPagesHandler(
         if (chapter is null)
             throw new InvalidOperationException($"Chapter '{evt.ChapterId}' not found in manga '{evt.MangaTitle}'.");
 
-        var docChapter = new ChapterDocument
-        {
-            Id = chapter.Id.Value,
-            Number = chapter.Number,
-            Link = chapter.Link,
-            ChapterProvider = chapter.ChapterProvider,
-            ChapterProviderIcon = chapter.ChapterProviderIcon,
-            Language = chapter.Language,
-            TotalView = chapter.TotalView,
-            UploadDate = chapter.UploadDate
-        };
-
-        var processedChapter = await scrapper.GetChapterPage(evt.MangaTitle, docChapter, ct);
+        var processedChapter = await scrapper.GetChapterPage(evt.MangaTitle, chapter, ct);
 
         if (processedChapter.Pages is not { Count: > 0 })
         {
@@ -60,8 +48,7 @@ public sealed class ScrapChapterPagesHandler(
             return;
         }
 
-        var domainPages = processedChapter.Pages.Select(p => new Page(Guid.NewGuid(), p.ImageUrl, p.LocalImageUrl, p.Size)).ToList();
-        await repo.UpdateChapterPagesAsync(evt.MangaId, chapterId, domainPages, ct);
+        await repo.UpdateChapterPagesAsync(evt.MangaId, chapterId, processedChapter.Pages, ct);
 
         logger.LogInformation(
             "Finished ScrapChapterPages: Manga={MangaTitle}, Chapter={ChapterNumber}, Pages={PageCount}",

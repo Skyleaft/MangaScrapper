@@ -1,10 +1,12 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
+using MangaScrapper.Core.Aggregates;
 using MangaScrapper.Core.Configuration;
 using MangaScrapper.Core.Persistence.Documents;
 using MangaScrapper.Core.Repositories;
 using MangaScrapper.Core.Services;
 using MangaScrapper.Core.Utils;
+using MangaScrapper.Core.ValueObjects;
 using Microsoft.AspNetCore.WebUtilities;
 using NovaStack.Infrastructure.Messaging;
 
@@ -41,7 +43,7 @@ public class MangaDexService : ScrapperServiceBase
 
     // â”€â”€â”€ Detail â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-    protected override MangaDocument ExtractMangaMetadata(string url)
+    protected override Manga ExtractMangaMetadata(string url)
     {
         _mangaId = ExtractMangaIdFromUrl(url);
 
@@ -74,24 +76,24 @@ public class MangaDexService : ScrapperServiceBase
             Logger.LogWarning(ex, "Failed to fetch MangaDex statistics for manga '{MangaId}'", _mangaId);
         }
 
-        return MapMangaToDocument(response.Data, rating);
+        return MapMangaToDomain(response.Data, rating);
     }
 
-    protected override async Task<List<ChapterDocument>> ExtractChaptersMetadata(CancellationToken ct = default)
+    protected override async Task<List<Chapter>> ExtractChaptersMetadata(CancellationToken ct = default)
     {
         if (string.IsNullOrEmpty(_mangaId))
-            return new List<ChapterDocument>();
+            return new List<Chapter>();
 
         var feedChapters = await FetchAllMangaChaptersAsync(_mangaId, ct);
         if (feedChapters.Count == 0)
-            return new List<ChapterDocument>();
+            return new List<Chapter>();
 
-        var chapters = new List<ChapterDocument>();
+        var chapters = new List<Chapter>();
 
         foreach (var group in feedChapters.GroupBy(GetChapterNumber).Where(g => g.Key >= 0))
         {
             var selected = SelectChapterByLanguagePriority(group);
-            chapters.Add(MapChapterToDocument(selected));
+            chapters.Add(MapChapterToDomain(selected));
         }
 
         return chapters
@@ -147,7 +149,7 @@ public class MangaDexService : ScrapperServiceBase
         return allChapters;
     }
 
-    private static MangaDocument MapMangaToDocument(MangaDexManga manga, double? rating = null)
+    private Manga MapMangaToDomain(MangaDexManga manga, double? rating = null)
     {
         var attrs = manga.Attributes;
         var coverRel = manga.Relationships.FirstOrDefault(r => r.Type == "cover_art");
@@ -166,31 +168,30 @@ public class MangaDexService : ScrapperServiceBase
             .Where(n => !string.IsNullOrEmpty(n))
             .ToList();
 
-        return new MangaDocument
-        {
-            Title = ResolveTitle(attrs.Title),
-            Author = string.Join(", ", authors),
-            Description = ResolveDescription(attrs.Description),
-            Type = MapOriginalLanguageToType(attrs.OriginalLanguage),
-            ImageUrl = imageUrl,
-            Genres = genres,
-            Status = MapMangaStatus(attrs.Status),
-            Url = $"https://mangadex.org/title/{manga.Id}",
-            Rating = rating,
-        };
+        return Manga.Create(
+            title: ResolveTitle(attrs.Title),
+            author: string.Join(", ", authors),
+            type: MapOriginalLanguageToType(attrs.OriginalLanguage),
+            source: ProviderKey,
+            genres: genres,
+            description: ResolveDescription(attrs.Description),
+            imageUrl: imageUrl,
+            url: $"https://mangadex.org/title/{manga.Id}",
+            rating: rating,
+            status: MapMangaStatus(attrs.Status));
     }
 
-    private ChapterDocument MapChapterToDocument(MangaDexChapter chapter)
+    private Chapter MapChapterToDomain(MangaDexChapter chapter)
     {
-        return new ChapterDocument
-        {
-            Number = GetChapterNumber(chapter),
-            Link = $"https://mangadex.org/chapter/{chapter.Id}",
-            ChapterProvider = Provider.ProviderName,
-            ChapterProviderIcon = Provider.ProviderIcon,
-            Language = chapter.Attributes.TranslatedLanguage,
-            UploadDate = chapter.Attributes.ReadableAt,
-        };
+        return new Chapter(
+            id: ChapterId.New(),
+            number: GetChapterNumber(chapter),
+            link: $"https://mangadex.org/chapter/{chapter.Id}",
+            chapterProvider: Provider.ProviderName,
+            chapterProviderIcon: Provider.ProviderIcon,
+            language: chapter.Attributes.TranslatedLanguage,
+            totalView: 0,
+            uploadDate: chapter.Attributes.ReadableAt);
     }
 
     private static MangaDexChapter SelectChapterByLanguagePriority(IEnumerable<MangaDexChapter> chapters)
@@ -252,9 +253,10 @@ public class MangaDexService : ScrapperServiceBase
         _ => "Unknown",
     };
 
-    // â”€â”€â”€ Chapter pages â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ──────────────────────────────────────────────
+    // Chapter pages ────────────────────────────────
 
-    public override async Task<ChapterDocument> GetChapterPage(string mangaTitle, ChapterDocument chapter, CancellationToken ct = default)
+    public override async Task<Chapter> GetChapterPage(string mangaTitle, Chapter chapter, CancellationToken ct = default)
     {
         var url = chapter.Link;
         if (string.IsNullOrWhiteSpace(url))
@@ -274,7 +276,7 @@ public class MangaDexService : ScrapperServiceBase
         var downloadTasks = imageUrls.Select(async (imageUrl, index) =>
         {
             if (string.IsNullOrWhiteSpace(imageUrl))
-                return (Index: index, Page: null as PageDocument);
+                return (Index: index, Page: null as Page);
 
             await Semaphore.WaitAsync(ct);
             try
@@ -286,12 +288,7 @@ public class MangaDexService : ScrapperServiceBase
                     index + 1,
                     ct);
 
-                return (Index: index, Page: new PageDocument
-                {
-                    ImageUrl = imageUrl,
-                    LocalImageUrl = result.path,
-                    Size = result.size
-                });
+                return (Index: index, Page: new Page(Guid.NewGuid(), imageUrl, result.path, result.size));
             }
             catch (Exception ex)
             {
@@ -312,9 +309,10 @@ public class MangaDexService : ScrapperServiceBase
             .Select(r => r.Page!)
             .ToList();
 
-        chapter.Pages.AddRange(orderedPages);
+        chapter.AddPages(orderedPages);
         return chapter;
     }
+
 
     private static string ExtractChapterIdFromUrl(string url)
     {
