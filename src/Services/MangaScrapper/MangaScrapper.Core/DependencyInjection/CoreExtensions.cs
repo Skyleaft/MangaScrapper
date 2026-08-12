@@ -29,9 +29,13 @@ using MongoDB.Bson.Serialization.Conventions;
 using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Driver;
 using NovaStack.Contracts.IntegrationEvents;
+using NovaStack.Infrastructure.Authentication;
 using NovaStack.Infrastructure.DependencyInjection;
 using NovaStack.Infrastructure.Messaging.Options;
 using NovaStack.Infrastructure.Persistence.MongoDb;
+using NovaStack.SharedKernel.Abstractions;
+using CustomAuthSchemeOptions = MangaScrapper.Core.Security.CustomAuthSchemeOptions;
+using CustomAuthValidation = MangaScrapper.Core.Security.CustomAuthValidation;
 
 namespace MangaScrapper.Core.DependencyInjection;
 
@@ -295,6 +299,9 @@ public static class CoreExtensions
 
         services.AddRouting();
         services.AddAuthorization();
+
+        services.AddHttpContextAccessor();
+        services.AddScoped<IClaimService, ClaimService>();
 
         services.AddScoped<IAuthTokenService, JwtAuthTokenService>();
 
