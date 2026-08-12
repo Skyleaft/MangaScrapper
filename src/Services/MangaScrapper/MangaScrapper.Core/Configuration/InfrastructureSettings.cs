@@ -46,3 +46,9 @@ public class DomainSettings
 {
     public string DomainUrl { get; set; } = string.Empty;
 }
+
+public class FirebaseSettings
+{
+    public string? CredentialPath { get; set; }
+}
+

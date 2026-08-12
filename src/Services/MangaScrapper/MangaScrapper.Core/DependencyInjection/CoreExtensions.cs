@@ -64,7 +64,8 @@ public static class CoreExtensions
             .AddScraperServices(configuration)
             .AddHangfireWithMongo(configuration, includeHangfireServer)
             .AddRabbitMqMessaging(configuration, includeRabbitMqConsumer)
-            .AddSecurityServices();
+            .AddSecurityServices()
+            .AddFirebaseApp(configuration);
 
         return services;
     }
@@ -302,4 +303,71 @@ public static class CoreExtensions
 
         return services;
     }
+
+    private static IServiceCollection AddFirebaseApp(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.Configure<FirebaseSettings>(configuration.GetSection("Firebase"));
+
+        try
+        {
+            var credentialPath = configuration["Firebase:CredentialPath"];
+            if (!string.IsNullOrEmpty(credentialPath) && File.Exists(credentialPath))
+            {
+                Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", credentialPath);
+                if (FirebaseAdmin.FirebaseApp.DefaultInstance is null)
+                {
+                    FirebaseAdmin.FirebaseApp.Create();
+                    Console.WriteLine($"FirebaseApp initialized with credentials from: {credentialPath}");
+                }
+            }
+            else
+            {
+                string? fallbackPath = null;
+                if (!string.IsNullOrEmpty(credentialPath))
+                {
+                    var directory = Path.GetDirectoryName(credentialPath);
+                    if (!string.IsNullOrEmpty(directory) && Directory.Exists(directory))
+                    {
+                        fallbackPath = Directory.GetFiles(directory, "*.json").FirstOrDefault();
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(fallbackPath) && File.Exists(fallbackPath))
+                {
+                    Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", fallbackPath);
+                    if (FirebaseAdmin.FirebaseApp.DefaultInstance is null)
+                    {
+                        FirebaseAdmin.FirebaseApp.Create();
+                        Console.WriteLine($"FirebaseApp initialized with fallback credentials from: {fallbackPath}");
+                    }
+                }
+                else
+                {
+                    var hasGcpDefault = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS")) ||
+                                        !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("GAE_INSTANCE")) ||
+                                        !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("K_SERVICE"));
+
+                    if (hasGcpDefault)
+                    {
+                        if (FirebaseAdmin.FirebaseApp.DefaultInstance is null)
+                        {
+                            FirebaseAdmin.FirebaseApp.Create();
+                            Console.WriteLine("FirebaseApp initialized with GCP default credentials.");
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine("FirebaseApp was NOT initialized: No credentials file found and not running on GCP.");
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"FirebaseApp initialization failed: {ex.Message}");
+        }
+
+        return services;
+    }
 }
+
