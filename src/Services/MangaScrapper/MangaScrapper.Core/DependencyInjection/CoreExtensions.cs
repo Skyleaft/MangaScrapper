@@ -256,6 +256,10 @@ public static class CoreExtensions
         services.AddScoped<ScrapChapterPagesHandler>();
         services.AddScoped<DeleteMangaHandler>();
         services.AddScoped<DeleteChapterHandler>();
+        
+        services.AddScoped<SyncStorageHandler>();
+        services.AddScoped<SyncQdrantHandler>();
+        services.AddScoped<SyncMeilisearchHandler>();
 
         if (includeConsumer)
         {
@@ -267,6 +271,15 @@ public static class CoreExtensions
                 
             services.AddRabbitMqConsumer<DeleteChapterIntegrationEvent, DeleteChapterHandler>(
                 "delete-chapter");
+                
+            services.AddRabbitMqConsumer<SyncStorageIntegrationEvent, SyncStorageHandler>(
+                "sync-storage");
+                
+            services.AddRabbitMqConsumer<SyncQdrantIntegrationEvent, SyncQdrantHandler>(
+                "sync-qdrant");
+                
+            services.AddRabbitMqConsumer<SyncMeilisearchIntegrationEvent, SyncMeilisearchHandler>(
+                "sync-meilisearch");
         }
 
         return services;

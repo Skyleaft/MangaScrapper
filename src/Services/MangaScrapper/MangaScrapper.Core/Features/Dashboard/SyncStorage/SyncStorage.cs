@@ -1,21 +1,23 @@
+using MangaScrapper.Core.Aggregates;
 using MangaScrapper.Core.Common.Abstractions;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
-using NovaStack.Contracts.Responses;
+using NovaStack.Contracts.IntegrationEvents;
+using NovaStack.Infrastructure.Messaging;
 using NovaStack.SharedKernel.Results;
 
 namespace MangaScrapper.Core.Features.Dashboard.SyncStorage;
 
-public record SyncStorageCommand : ICommand<StorageSyncReportResponse>;
+public record SyncStorageCommand : ICommand<Unit>;
 
-internal sealed class SyncStorageCommandHandler : ICommandHandler<SyncStorageCommand, StorageSyncReportResponse>
+internal sealed class SyncStorageCommandHandler(IEventBus eventBus) : ICommandHandler<SyncStorageCommand, Unit>
 {
-    public Task<Result<StorageSyncReportResponse>> Handle(SyncStorageCommand command, CancellationToken ct)
+    public async Task<Result<Unit>> Handle(SyncStorageCommand command, CancellationToken ct)
     {
-        var report = new StorageSyncReportResponse(0, 0, 0, 0, []);
-        return Task.FromResult<Result<StorageSyncReportResponse>>(report);
+        await eventBus.PublishAsync(new SyncStorageIntegrationEvent(), ct);
+        return Result.Success(Unit.Value);
     }
 }
 
@@ -28,7 +30,7 @@ public sealed class SyncStorageEndpoints : IEndpointDefinition
         group.MapPost("/sync-storage", async (ISender sender, CancellationToken ct) =>
         {
             var res = await sender.Send(new SyncStorageCommand(), ct);
-            return res.IsSuccess ? Results.Ok(ApiResponse.Ok(res.Value)) : res.Error.ToHttpResult();
-        }).WithName("SyncStorage");
+            return res.IsSuccess ? Results.Accepted() : res.Error.ToHttpResult();
+        }).RequireAuthorization(User.UserRoles.SuperUser).WithName("SyncStorage");
     }
 }

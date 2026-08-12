@@ -1,0 +1,40 @@
+namespace NovaStack.Contracts.IntegrationEvents;
+
+/// <summary>
+/// Integration event published to trigger storage synchronization.
+/// Consumed by the Scrapper.Worker via RabbitMQ.
+/// </summary>
+public sealed record SyncStorageIntegrationEvent : IIntegrationEvent
+{
+    public Guid EventId { get; init; } = Guid.NewGuid();
+    public DateTime OccurredOn { get; init; } = DateTime.UtcNow;
+    public string EventType { get; init; } = nameof(SyncStorageIntegrationEvent);
+
+    public SyncStorageIntegrationEvent() { }
+}
+
+/// <summary>
+/// Integration event published to trigger Qdrant (vector db) synchronization.
+/// Consumed by the Scrapper.Worker via RabbitMQ.
+/// </summary>
+public sealed record SyncQdrantIntegrationEvent : IIntegrationEvent
+{
+    public Guid EventId { get; init; } = Guid.NewGuid();
+    public DateTime OccurredOn { get; init; } = DateTime.UtcNow;
+    public string EventType { get; init; } = nameof(SyncQdrantIntegrationEvent);
+
+    public SyncQdrantIntegrationEvent() { }
+}
+
+/// <summary>
+/// Integration event published to trigger Meilisearch (search db) synchronization.
+/// Consumed by the Scrapper.Worker via RabbitMQ.
+/// </summary>
+public sealed record SyncMeilisearchIntegrationEvent : IIntegrationEvent
+{
+    public Guid EventId { get; init; } = Guid.NewGuid();
+    public DateTime OccurredOn { get; init; } = DateTime.UtcNow;
+    public string EventType { get; init; } = nameof(SyncMeilisearchIntegrationEvent);
+
+    public SyncMeilisearchIntegrationEvent() { }
+}
