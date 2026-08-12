@@ -9,7 +9,7 @@ public class MangaDocument
     [BsonRepresentation(BsonType.String)]
     public Guid Id { get; set; }
     public int MalID { get; set; }
-    public int? AnilistID { get; set; } 
+    public int? AnilistID { get; set; }
     public string Title { get; set; } = string.Empty;
     public string Author { get; set; } = string.Empty;
     public string Type { get; set; } = string.Empty;
@@ -60,6 +60,9 @@ public class ChapterDocument
 
     [BsonDateTimeOptions(Kind = DateTimeKind.Utc)]
     public DateTime UploadDate { get; set; }
+
+    [BsonElement("pages")]
+    [BsonIgnoreIfNull]
     public List<PageDocument> Pages { get; set; } = new();
 }
 
@@ -88,6 +91,8 @@ public class UserDocument
 
     [BsonDateTimeOptions(Kind = DateTimeKind.Utc)]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    [BsonDateTimeOptions(Kind = DateTimeKind.Utc)]
+    public DateTime? LastActiveAt { get; set; }
 }
 
 public class UserLibraryDocument

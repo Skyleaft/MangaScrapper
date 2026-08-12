@@ -93,18 +93,21 @@ public sealed class UserProgressionEndpoints : IEndpointDefinition
         {
             var res = await sender.Send(cmd, ct);
             return res.IsSuccess ? Results.Ok(ApiResponse.Ok(res.Value)) : res.Error.ToHttpResult();
-        }).WithName("UpdateUserProgression");
+        }).WithName("UpdateUserProgression")
+        .Produces<ApiResponse<UserProgressionResponse>>();
 
         group.MapGet("/{userId}", async (string userId, ISender sender, CancellationToken ct) =>
         {
             var res = await sender.Send(new GetUserProgressionQuery(userId), ct);
             return res.IsSuccess ? Results.Ok(ApiResponse.Ok(res.Value)) : res.Error.ToHttpResult();
-        }).WithName("GetUserProgression");
+        }).WithName("GetUserProgression")
+        .Produces<ApiResponse<List<UserProgressionResponse>>>();
 
         group.MapGet("/{userId}/{mangaId:guid}", async (string userId, Guid mangaId, ISender sender, CancellationToken ct) =>
         {
             var res = await sender.Send(new GetMangaProgressionQuery(userId, mangaId), ct);
             return res.IsSuccess ? Results.Ok(ApiResponse.Ok(res.Value)) : res.Error.ToHttpResult();
-        }).WithName("GetMangaProgression");
+        }).WithName("GetMangaProgression")
+        .Produces<ApiResponse<UserProgressionResponse>>();
     }
 }

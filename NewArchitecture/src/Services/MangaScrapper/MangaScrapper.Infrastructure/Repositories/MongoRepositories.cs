@@ -3,6 +3,7 @@ using MangaScrapper.Domain.Repositories;
 using MangaScrapper.Domain.ValueObjects;
 using MangaScrapper.Infrastructure.Persistence;
 using MangaScrapper.Infrastructure.Persistence.Documents;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using NovaStack.SharedKernel.Common;
 
@@ -28,6 +29,40 @@ public class MongoUserRepository(MangaMongoDbContext dbContext) : IUserRepositor
         return doc is null ? null : MapToDomain(doc);
     }
 
+    public async Task<PagedList<User>> GetPagedAsync(string? search, string sortBy, string orderBy, int page, int pageSize,
+        CancellationToken ct = default)
+    {
+        var builder = Builders<UserDocument>.Filter;
+        var filter = builder.Empty;
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            filter &= builder.Regex(m => m.Username, new BsonRegularExpression(search, "i"));
+        }
+        
+        var totalCount = await dbContext.Users.CountDocumentsAsync(filter, cancellationToken: ct);
+        var sortBuilder = Builders<UserDocument>.Sort;
+        SortDefinition<UserDocument> sortDefinition = sortBy.ToLowerInvariant() switch
+        {
+            "username" => orderBy == "asc"
+                ? sortBuilder.Ascending(m => m.Username)
+                : sortBuilder.Descending(m => m.Username),
+            "createdat" => orderBy == "asc"
+                ? sortBuilder.Ascending(m => m.CreatedAt)
+                : sortBuilder.Descending(m => m.CreatedAt),
+            _ => orderBy == "asc"
+                ? sortBuilder.Ascending(m => m.Id)
+                : sortBuilder.Descending(m => m.Id),
+        };
+        var docs = await dbContext.Users.Find(filter)
+            .Sort(sortDefinition)
+            .Skip((page - 1) * pageSize)
+            .Limit(pageSize)
+            .ToListAsync(ct);
+        var items = docs.Select(MapToDomain).ToList();
+        return new PagedList<User>(items, page, pageSize, (int)totalCount);
+    }
+
     public async Task<User?> GetByFirebaseUidOrEmailAsync(string firebaseUid, string email, CancellationToken ct = default)
     {
         var doc = await dbContext.Users.Find(u => u.FirebaseUid == firebaseUid || u.Email == email).FirstOrDefaultAsync(ct);
@@ -50,7 +85,7 @@ public class MongoUserRepository(MangaMongoDbContext dbContext) : IUserRepositor
         var doc = MapToDocument(user);
         await dbContext.Users.ReplaceOneAsync(u => u.Id == doc.Id, doc, cancellationToken: ct);
     }
-
+    
     private static User MapToDomain(UserDocument doc)
     {
         return User.Reconstitute(
@@ -61,7 +96,8 @@ public class MongoUserRepository(MangaMongoDbContext dbContext) : IUserRepositor
             doc.Roles ?? new List<string>(),
             doc.IsActive,
             doc.FirebaseUid,
-            doc.CreatedAt);
+            doc.CreatedAt,
+            doc.LastActiveAt);
     }
 
     private static UserDocument MapToDocument(User user)
@@ -75,7 +111,8 @@ public class MongoUserRepository(MangaMongoDbContext dbContext) : IUserRepositor
             Roles = user.Roles ?? new List<string>(),
             IsActive = user.IsActive,
             FirebaseUid = user.FirebaseUid,
-            CreatedAt = user.CreatedAt
+            CreatedAt = user.CreatedAt,
+            LastActiveAt = user.LastActiveAt
         };
     }
 }
@@ -95,15 +132,54 @@ public class MongoUserLibraryRepository(MangaMongoDbContext dbContext) : IUserLi
         return doc is null ? null : MapToDomain(doc);
     }
 
-    public async Task<PagedList<UserLibrary>> GetPagedByUserIdAsync(string userId, int page, int pageSize, CancellationToken ct = default)
+    public async Task<PagedList<UserLibrary>> GetPagedByUserIdAsync(string userId,string? search,string? type,string? status,bool? isFavorite,string sortBy, string orderBy, int page, int pageSize, CancellationToken ct = default)
     {
         if (!Guid.TryParse(userId, out var userGuid))
             return new PagedList<UserLibrary>([], page, pageSize, 0);
 
-        var filter = Builders<UserLibraryDocument>.Filter.Eq(l => l.UserId, userGuid);
+        var builder = Builders<UserLibraryDocument>.Filter;
+        var filter = builder.Empty;
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            filter &= builder.Regex(m => m.MangaTitle, new BsonRegularExpression(search, "i"));
+        }
+        
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            filter &= builder.Eq(m => m.Status, status);
+        }
+
+        if (!string.IsNullOrWhiteSpace(type))
+        {
+            filter &= builder.Eq(m => m.Type, type);
+        }
+        
+        if (isFavorite is not null)
+        {
+            filter &= builder.Eq(m => m.IsFavorite, isFavorite);
+        }
+        
+        var sortBuilder = Builders<UserLibraryDocument>.Sort;
+        SortDefinition<UserLibraryDocument> sortDefinition = sortBy.ToLowerInvariant() switch
+        {
+            "mangatitle" => orderBy == "asc"
+                ? sortBuilder.Ascending(m => m.MangaTitle)
+                : sortBuilder.Descending(m => m.MangaTitle),
+            "addedat" => orderBy == "asc"
+                ? sortBuilder.Ascending(m => m.AddedAt)
+                : sortBuilder.Descending(m => m.AddedAt),
+            "updatedat" => orderBy == "asc"
+                ? sortBuilder.Ascending(m => m.UpdatedAt)
+                : sortBuilder.Descending(m => m.UpdatedAt),
+            _ => orderBy == "asc"
+                ? sortBuilder.Ascending(m => m.Id)
+                : sortBuilder.Descending(m => m.Id),
+        };
+        
         var totalCount = await dbContext.UserLibraries.CountDocumentsAsync(filter, cancellationToken: ct);
         var docs = await dbContext.UserLibraries.Find(filter)
-            .SortByDescending(l => l.AddedAt)
+            .Sort(sortDefinition)
             .Skip((page - 1) * pageSize)
             .Limit(pageSize)
             .ToListAsync(ct);
@@ -118,6 +194,12 @@ public class MongoUserLibraryRepository(MangaMongoDbContext dbContext) : IUserLi
         await dbContext.UserLibraries.InsertOneAsync(doc, cancellationToken: ct);
     }
 
+    public async Task UpdateAsync(UserLibrary userLibrary, CancellationToken ct = default)
+    {
+        var doc = MapToDocument(userLibrary);
+        await dbContext.UserLibraries.ReplaceOneAsync(u => u.Id == doc.Id, doc, cancellationToken: ct);
+    }
+
     public async Task DeleteAsync(Guid id, CancellationToken ct = default)
     {
         await dbContext.UserLibraries.DeleteOneAsync(l => l.Id == id, ct);
@@ -125,7 +207,7 @@ public class MongoUserLibraryRepository(MangaMongoDbContext dbContext) : IUserLi
 
     private static UserLibrary MapToDomain(UserLibraryDocument doc)
     {
-        return UserLibrary.Reconstitute(doc.Id, doc.UserId.ToString(), MangaId.From(doc.MangaId), doc.AddedAt);
+        return UserLibrary.Reconstitute(doc.Id, doc.UserId.ToString(), MangaId.From(doc.MangaId), doc.AddedAt,doc.UpdatedAt,doc.Status,doc.IsFavorite);
     }
 
     private static UserLibraryDocument MapToDocument(UserLibrary library)
@@ -137,7 +219,9 @@ public class MongoUserLibraryRepository(MangaMongoDbContext dbContext) : IUserLi
             UserId = userGuid,
             MangaId = library.MangaId.Value,
             AddedAt = library.AddedAt,
-            UpdatedAt = DateTime.UtcNow
+            UpdatedAt = DateTime.UtcNow,
+            Status = library.Status,
+            IsFavorite = library.IsFavorite,
         };
     }
 }

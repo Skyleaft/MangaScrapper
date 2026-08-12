@@ -21,22 +21,12 @@ public record MangaSummaryResponse(
     DateTime UpdatedAt,
     string? Url,
     int TotalView,
-    LatestChapterSummaryResponse LatestChapter);
-
-public record LatestChapterSummaryResponse(
-    Guid Id,
-    double Number,
-    int TotalView,
-    string? ChapterProvider,
-    string? ChapterProviderIcon,
-    string Language,
-    DateTime UploadDate);
+    ChapterResponse LatestChapter);
 
 public record ChapterResponse(
     Guid Id,
     double Number,
-    string? Title,
-    string? Url,
+    string? Link,
     List<string> Pages,
     string Language,
     string? ChapterProvider,
@@ -49,6 +39,9 @@ public record UserLibraryResponse(
     string UserId,
     Guid MangaId,
     DateTime AddedAt,
+    DateTime UpdatedAt,
+    string? Status,
+    bool? IsFavorite,
     MangaSummaryResponse? Manga);
 
 public record UserProgressionResponse(

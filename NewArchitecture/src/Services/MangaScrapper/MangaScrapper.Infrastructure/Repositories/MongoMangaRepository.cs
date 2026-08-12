@@ -13,7 +13,8 @@ public class MongoMangaRepository(MangaMongoDbContext dbContext) : IMangaReposit
 {
     public async Task<Manga?> GetByIdAsync(MangaId id, CancellationToken ct = default)
     {
-        var doc = await dbContext.Mangas.Find(m => m.Id == id.Value).FirstOrDefaultAsync(ct);
+        var doc = await dbContext.Mangas.Find(m => m.Id == id.Value)
+            .FirstOrDefaultAsync(ct);
         return doc is null ? null : MapToDomain(doc);
     }
 

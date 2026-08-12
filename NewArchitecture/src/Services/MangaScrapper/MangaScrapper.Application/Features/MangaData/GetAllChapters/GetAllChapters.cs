@@ -1,6 +1,7 @@
 using MangaScrapper.Application.Common.Abstractions;
 using MangaScrapper.Domain.Repositories;
 using MangaScrapper.Domain.ValueObjects;
+using Mapster;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -21,18 +22,7 @@ internal sealed class GetAllChaptersQueryHandler(IMangaRepository mangaRepositor
         if (manga is null)
             return Error.NotFound("Manga.NotFound", $"Manga with Id '{query.MangaId}' was not found.");
 
-        var chapters = manga.Chapters.OrderByDescending(c => c.Number).Select(c => new ChapterResponse(
-            c.Id.Value,
-            c.Number,
-            $"Chapter {c.Number}",
-            c.Link,
-            c.Pages.Select(p => p.ImageUrl).ToList(),
-            c.Language,
-            c.ChapterProvider,
-            c.ChapterProviderIcon,
-            c.UploadDate,
-            c.TotalView
-        )).ToList();
+        var chapters = manga.Chapters.OrderByDescending(c => c.Number).Select(c => c.Adapt<ChapterResponse>()).ToList();
 
         return chapters;
     }

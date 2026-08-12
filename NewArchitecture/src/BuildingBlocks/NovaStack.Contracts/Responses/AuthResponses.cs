@@ -19,3 +19,12 @@ public record UserInfoResponse(
     string Email,
     List<string> Roles,
     string FirebaseUid);
+
+public record UserResponse(
+    Guid UserId,
+    string Username,
+    string Email,
+    List<string> Roles,
+    bool IsActive,
+    string FirebaseUid,
+    DateTime CreatedAt);
