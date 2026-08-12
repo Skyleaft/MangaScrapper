@@ -1,0 +1,937 @@
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject IJSRuntime JS
+
+@* Removed top-level if to allow opening animation to trigger immediately *@
+
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm opacity-0 @(_isClosing ? "animate-backdrop-out" : "animate-backdrop-in")">
+        <div class="bg-surface rounded-2xl shadow-2xl w-full max-w-5xl max-h-[95vh] overflow-hidden flex flex-col border border-border-main opacity-0
+                    @(_isClosing ? "animate-modal-out" : "animate-modal-in")">
+
+            <!-- Modal Header -->
+            <div class="px-6 py-4 border-b border-border-main flex items-center justify-between bg-surface shadow-sm z-10 transition-colors duration-300">
+                <div class="flex items-center gap-3 overflow-hidden">
+                    <span class="px-2 py-1 bg-primary/10 text-primary text-[10px] font-bold rounded uppercase">Details</span>
+                    <h2 class="text-xl font-bold text-text-main truncate">@(Manga?.Title ?? "Loading...")</h2>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button @onclick="ConfirmDeleteManga" class="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-colors flex items-center gap-1.5 px-3" title="Delete Manga">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        <span class="text-xs font-bold">Delete</span>
+                    </button>
+                    <div class="w-px h-6 bg-border-main mx-1"></div>
+                    <button @onclick="Close" class="p-2 hover:bg-bg-app rounded-full transition-colors">
+                        <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="flex-grow overflow-y-auto bg-bg-app transition-colors duration-300">
+
+                @if (IsLoading)
+                {
+                    <div class="flex flex-col items-center justify-center py-24">
+                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
+                        <p class="text-slate-500 font-medium">Loading manga details...</p>
+                    </div>
+                }
+                else
+                {
+                    <!-- Hero: Cover + Quick Info -->
+                    <div class="p-6 pb-0">
+                        <div class="flex gap-6">
+                            <!-- Cover Image -->
+                            <div class="flex-shrink-0 w-36 lg:w-44">
+                                <div class="rounded-xl overflow-hidden shadow-lg border border-border-main bg-surface aspect-[3/4] relative group transition-colors duration-300">
+                                    @if (!string.IsNullOrEmpty(Manga.LocalImageUrl))
+                                    {
+                                        <img src="/images/@Manga.LocalImageUrl" alt="@Manga.Title" class="w-full h-full object-cover" />
+                                    }
+                                    else if (!string.IsNullOrEmpty(Manga.ImageUrl))
+                                    {
+                                        <img src="@Manga.ImageUrl" alt="@Manga.Title" class="w-full h-full object-cover" />
+                                    }
+                                    <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-3">
+                                        <span class="text-white text-[10px] font-medium">Cover Image</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Quick Info -->
+                            <div class="flex-grow min-w-0 space-y-3">
+                                <!-- Stats Row -->
+                                <div class="flex flex-wrap gap-2">
+                                    @if (!string.IsNullOrEmpty(Manga.Type))
+                                    {
+                                        <span class="px-2.5 py-1 bg-primary/10 text-primary text-[10px] font-bold rounded-lg uppercase">@Manga.Type</span>
+                                    }
+                                    @if (!string.IsNullOrEmpty(Manga.Status))
+                                    {
+                                        <span class="px-2.5 py-1 text-[10px] font-bold rounded-lg uppercase @GetStatusClass(Manga.Status)">@Manga.Status</span>
+                                    }
+                                    @if (Manga.Rating.HasValue)
+                                    {
+                                        <span class="px-2.5 py-1 bg-amber-500/10 text-amber-600 text-[10px] font-bold rounded-lg flex items-center gap-1">
+                                            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
+                                            @Manga.Rating.Value.ToString("0.0")
+                                        </span>
+                                    }
+                                    @if (Chapters.Count > 0)
+                                    {
+                                        <span class="px-2.5 py-1 bg-slate-500/10 text-slate-500 text-[10px] font-bold rounded-lg">@Chapters.Count chapters</span>
+                                    }
+                                </div>
+
+                                <!-- Metadata Grid -->
+                                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                    <div class="bg-surface rounded-xl p-3 border border-border-main">
+                                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Author</label>
+                                        <p class="text-xs font-semibold text-text-main truncate">@(string.IsNullOrEmpty(Manga.Author) ? "—" : Manga.Author)</p>
+                                    </div>
+                                    <div class="bg-surface rounded-xl p-3 border border-border-main">
+                                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Created</label>
+                                        <p class="text-xs font-semibold text-text-main">@Manga.CreatedAt.ToLocalTime().ToString("MMM dd, yyyy")</p>
+                                    </div>
+                                    <div class="bg-surface rounded-xl p-3 border border-border-main">
+                                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Updated</label>
+                                        <p class="text-xs font-semibold text-text-main">@Manga.UpdatedAt.ToLocalTime().ToString("MMM dd, yyyy")</p>
+                                    </div>
+                                    <div class="bg-surface rounded-xl p-3 border border-border-main">
+                                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Views</label>
+                                        <p class="text-xs font-semibold text-text-main">@Manga.TotalView.ToString("N0")</p>
+                                    </div>
+                                </div>
+
+                                <!-- Source & Thumbnail -->
+                                <div class="flex flex-wrap items-center gap-3 text-xs">
+                                    @if (!string.IsNullOrEmpty(Manga.Url))
+                                    {
+                                        <a href="@Manga.Url" target="_blank" class="text-primary hover:underline flex items-center gap-1">
+                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                                            <span>Source</span>
+                                        </a>
+                                    }
+                                    @if (Manga.ThumbnailSize > 0)
+                                    {
+                                        <span class="text-slate-400">•</span>
+                                        <span class="text-slate-500">Thumbnail: @FormatFileSize(Manga.ThumbnailSize)</span>
+                                    }
+                                    @if (Manga.MalId > 0)
+                                    {
+                                        <span class="text-slate-400">•</span>
+                                        <span class="text-slate-500">MAL #@Manga.MalId</span>
+                                    }
+                                </div>
+
+                                <!-- Genres -->
+                                @if (Manga.Genres != null && Manga.Genres.Any())
+                                {
+                                    <div class="flex flex-wrap gap-1.5">
+                                        @foreach (var genre in Manga.Genres)
+                                        {
+                                            <span class="px-2 py-0.5 bg-surface border border-border-main text-slate-500 text-[10px] font-bold rounded">@genre</span>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab Navigation -->
+                    <div class="px-6 pt-5">
+                        <div class="flex gap-1 border-b border-border-main">
+                            <button @onclick="() => _activeTab = 0"
+                                    class="px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-all relative
+                                           @(_activeTab == 0 ? "text-primary" : "text-slate-400 hover:text-slate-600")">
+                                <span class="flex items-center gap-1.5">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                                    Edit Info
+                                </span>
+                                @if (_activeTab == 0)
+                                {
+                                    <span class="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full"></span>
+                                }
+                            </button>
+                            <button @onclick="() => _activeTab = 1"
+                                    class="px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-all relative
+                                           @(_activeTab == 1 ? "text-primary" : "text-slate-400 hover:text-slate-600")">
+                                <span class="flex items-center gap-1.5">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
+                                    Chapters
+                                    <span class="px-1.5 py-0.5 bg-primary/10 text-primary text-[9px] font-bold rounded-full leading-none">@Chapters.Count</span>
+                                </span>
+                                @if (_activeTab == 1)
+                                {
+                                    <span class="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full"></span>
+                                }
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Tab Content -->
+                    <div class="p-6">
+                        @if (_activeTab == 0)
+                        {
+                            <!-- Edit Information -->
+                            <div class="bg-surface rounded-2xl border border-border-main shadow-sm overflow-hidden transition-colors duration-300">
+                                <div class="p-6 space-y-6">
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                                        <div class="space-y-1.5">
+                                            <label class="text-xs font-bold text-slate-600 dark:text-slate-400 ml-1">MAL ID</label>
+                                            <div class="flex gap-2">
+                                                <input type="number" @bind="EditModel.MalId" class="flex-grow px-4 py-2.5 bg-bg-app border border-border-main rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-400 text-sm text-text-main" placeholder="e.g. 123456" />
+                                                <button @onclick="OpenJikanSearch" class="p-2.5 bg-primary/10 text-primary hover:bg-primary/20 rounded-xl transition-all" title="Search MyAnimeList">
+                                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="space-y-1.5">
+                                            <label class="text-xs font-bold text-slate-600 dark:text-slate-400 ml-1">Anilist ID</label>
+                                            <div class="flex gap-2">
+                                                <input type="number" @bind="EditModel.AnilistId" class="flex-grow px-4 py-2.5 bg-bg-app border border-border-main rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-400 text-sm text-text-main" placeholder="e.g. 98396" />
+                                                <button @onclick="OpenAnilistSearch" class="p-2.5 bg-teal-500/10 text-teal-600 hover:bg-teal-500/20 rounded-xl transition-all" title="Search Anilist">
+                                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="space-y-1.5">
+                                            <label class="text-xs font-bold text-slate-600 dark:text-slate-400 ml-1">Author</label>
+                                            <input type="text" @bind="EditModel.Author" class="w-full px-4 py-2.5 bg-bg-app border border-border-main rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-400 text-sm text-text-main" placeholder="Author name" />
+                                        </div>
+                                        <div class="space-y-1.5">
+                                            <label class="text-xs font-bold text-slate-600 dark:text-slate-400 ml-1">Type</label>
+                                            <input type="text" @bind="EditModel.Type" class="w-full px-4 py-2.5 bg-bg-app border border-border-main rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-400 text-sm text-text-main" placeholder="Manga, Manhwa, etc." />
+                                        </div>
+                                        <div class="space-y-1.5">
+                                            <label class="text-xs font-bold text-slate-600 dark:text-slate-400 ml-1">Status</label>
+                                            <input type="text" @bind="EditModel.Status" class="w-full px-4 py-2.5 bg-bg-app border border-border-main rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-400 text-sm text-text-main" placeholder="Ongoing, Completed, etc." />
+                                        </div>
+                                        <div class="space-y-1.5">
+                                            <label class="text-xs font-bold text-slate-600 dark:text-slate-400 ml-1">Rating</label>
+                                            <input type="number" step="0.1" @bind="EditModel.Rating" class="w-full px-4 py-2.5 bg-bg-app border border-border-main rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-400 text-sm text-text-main" />
+                                        </div>
+                                        <div class="space-y-1.5">
+                                            <label class="text-xs font-bold text-slate-600 dark:text-slate-400 ml-1">Release Date</label>
+                                            <input type="date" @bind="EditModel.ReleaseDate" class="w-full px-4 py-2.5 bg-bg-app border border-border-main rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm text-text-main" />
+                                        </div>
+                                        <div class="space-y-1.5">
+                                            <label class="text-xs font-bold text-slate-600 dark:text-slate-400 ml-1">Total View</label>
+                                            <input type="number" @bind="EditModel.TotalView" class="w-full px-4 py-2.5 bg-bg-app border border-border-main rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-400 text-sm text-text-main" />
+                                        </div>
+                                        <div class="space-y-1.5">
+                                            <label class="text-xs font-bold text-slate-600 dark:text-slate-400 ml-1">Popularity</label>
+                                            <input type="number" @bind="EditModel.Popularity" class="w-full px-4 py-2.5 bg-bg-app border border-border-main rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-400 text-sm text-text-main" />
+                                        </div>
+                                        <div class="space-y-1.5">
+                                            <label class="text-xs font-bold text-slate-600 dark:text-slate-400 ml-1">Members</label>
+                                            <input type="number" @bind="EditModel.Members" class="w-full px-4 py-2.5 bg-bg-app border border-border-main rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-400 text-sm text-text-main" />
+                                        </div>
+                                    </div>
+
+                                    <div class="space-y-1.5">
+                                        <label class="text-xs font-bold text-slate-600 dark:text-slate-400 ml-1">Genres</label>
+                                        <div class="relative">
+                                            <input type="text" value="@GenresString" @onchange="OnGenresChanged" class="w-full px-4 py-2.5 bg-bg-app border border-border-main rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-400 text-sm text-text-main" placeholder="Action, Adventure, etc." />
+                                            <div class="mt-2 flex flex-wrap gap-1.5">
+                                                @if (EditModel.Genres != null)
+                                                {
+                                                    @foreach (var genre in EditModel.Genres)
+                                                    {
+                                                        <span class="px-2 py-0.5 bg-bg-app border border-border-main text-slate-600 dark:text-slate-400 text-[10px] font-bold rounded">@genre</span>
+                                                    }
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="space-y-1.5">
+                                        <label class="text-xs font-bold text-slate-600 dark:text-slate-400 ml-1">Description</label>
+                                        <textarea @bind="EditModel.Description" rows="4" class="w-full px-4 py-3 bg-bg-app border border-border-main rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-400 text-sm text-text-main resize-none" placeholder="Enter manga description..."></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <!-- Chapters List -->
+                            <div class="bg-surface rounded-2xl border border-border-main shadow-sm overflow-hidden transition-colors duration-300">
+                                <!-- Chapters Header -->
+                                <div class="px-6 py-3 border-b border-border-main/50 flex items-center justify-between bg-bg-app transition-colors duration-300">
+                                    <div class="flex items-center gap-3">
+                                        <span class="text-xs text-slate-400">
+                                            @{ var availableCount = Chapters.Count(c => c.Pages.Count>0); }
+                                            <span class="font-bold text-emerald-500">@availableCount</span> available
+                                            <span class="mx-1">·</span>
+                                            <span class="font-bold text-rose-400">@(Chapters.Count - availableCount)</span> missing
+                                        </span>
+                                    </div>
+                                    <button @onclick="ScrapMissingChapters" class="flex items-center gap-1.5 px-3 py-1.5 bg-secondary/10 text-secondary hover:bg-secondary/20 rounded-lg transition-all text-[10px] font-bold uppercase tracking-wider">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                                        Scrap Missing
+                                    </button>
+                                </div>
+
+                                <!-- Chapters Table -->
+                                <div class="overflow-x-auto">
+                                    <table class="w-full text-left text-sm">
+                                        <thead class="bg-bg-app/50 border-b border-border-main">
+                                            <tr>
+                                                <th class="px-5 py-2.5 font-bold text-slate-400 text-[10px] uppercase tracking-wider w-24">Ch.</th>
+                                                <th class="px-5 py-2.5 font-bold text-slate-400 text-[10px] uppercase tracking-wider w-20">Lang</th>
+                                                <th class="px-5 py-2.5 font-bold text-slate-400 text-[10px] uppercase tracking-wider">Status</th>
+                                                <th class="px-5 py-2.5 font-bold text-slate-400 text-[10px] uppercase tracking-wider">Provider</th>
+                                                <th class="px-5 py-2.5 font-bold text-slate-400 text-[10px] uppercase tracking-wider">Date</th>
+                                                <th class="px-5 py-2.5 font-bold text-slate-400 text-[10px] uppercase tracking-wider text-right w-20">Views</th>
+                                                <th class="px-5 py-2.5 w-12"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-border-main/50">
+                                            @if (!Chapters.Any())
+                                            {
+                                                <tr>
+                                                    <td colspan="7" class="px-5 py-12 text-center">
+                                                        <div class="flex flex-col items-center gap-2">
+                                                            <svg class="w-8 h-8 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                                                            <p class="text-slate-400 text-xs">No chapters found</p>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            }
+                                            else
+                                            {
+                                                @foreach (var chapter in Chapters)
+                                                {
+                                                    <tr class="hover:bg-bg-app/50 transition-colors group">
+                                                        <td class="px-5 py-2.5">
+                                                            <span class="font-bold text-text-main text-sm">@chapter.Number</span>
+                                                        </td>
+                                                        <td class="px-5 py-2.5">
+                                                            <span class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-500 text-[10px] font-bold rounded uppercase">@(string.IsNullOrEmpty(chapter.Language) ? "—" : chapter.Language)</span>
+                                                        </td>
+                                                        <td class="px-5 py-2.5">
+                                                            @if (chapter.Pages.Count>0)
+                                                            {
+                                                                <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 rounded-full text-[10px] font-bold">
+                                                                    <span class="w-1 h-1 rounded-full bg-emerald-500"></span>
+                                                                    @chapter.Pages.Count pg
+                                                                </span>
+                                                            }
+                                                            else
+                                                            {
+                                                                <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-rose-50 dark:bg-rose-900/20 text-rose-500 rounded-full text-[10px] font-bold">
+                                                                    <span class="w-1 h-1 rounded-full bg-rose-400 animate-pulse"></span>
+                                                                    Missing
+                                                                </span>
+                                                            }
+                                                        </td>
+                                                        <td class="px-5 py-2.5">
+                                                            @if (!string.IsNullOrEmpty(chapter.ChapterProvider))
+                                                            {
+                                                                <span class="flex items-center gap-1.5 text-xs text-slate-500">
+                                                                    @if (!string.IsNullOrEmpty(chapter.ChapterProviderIcon))
+                                                                    {
+                                                                        <img src="@chapter.ChapterProviderIcon" class="w-3.5 h-3.5 rounded" alt="" />
+                                                                    }
+                                                                    @chapter.ChapterProvider
+                                                                </span>
+                                                            }
+                                                            else
+                                                            {
+                                                                <span class="text-slate-300 text-xs">—</span>
+                                                            }
+                                                        </td>
+                                                        <td class="px-5 py-2.5 text-slate-500 text-xs whitespace-nowrap">@chapter.UploadDate.ToLocalTime().ToString("MMM dd, yyyy")</td>
+                                                        <td class="px-5 py-2.5 text-slate-500 text-xs text-right font-medium">@chapter.TotalView.ToString("N0")</td>
+                                                        <td class="px-5 py-2.5 text-right">
+                                                            <button @onclick="() => ConfirmDeleteChapter(chapter)" class="p-1 text-slate-300 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-all opacity-0 group-hover:opacity-100" title="Delete Chapter">
+                                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="px-6 py-4 border-t border-border-main flex items-center justify-end gap-3 bg-surface z-10 shadow-[0_-1px_10px_rgba(0,0,0,0.02)] transition-colors duration-300">
+                <button @onclick="Close" class="px-5 py-2 text-slate-500 dark:text-slate-400 font-bold text-xs uppercase tracking-widest hover:bg-bg-app rounded-xl transition-all">
+                    Cancel
+                </button>
+                <button @onclick="Save" disabled="@IsSaving" class="px-8 py-2.5 bg-primary text-white font-bold text-xs uppercase tracking-widest rounded-xl hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 flex items-center gap-2 disabled:opacity-50">
+                    @if (IsSaving)
+                    {
+                        <div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    }
+                    Save Changes
+                </button>
+            </div>
+        </div>
+
+        @if (_isSearchJikanOpen)
+        {
+            <div class="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-backdrop-in">
+                <div class="bg-surface rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col border border-border-main animate-modal-in z-[210]">
+                    <div class="px-6 py-4 border-b border-border-main flex items-center justify-between bg-surface">
+                        <h3 class="text-lg font-bold text-text-main">Search MyAnimeList</h3>
+                        <button @onclick="() => _isSearchJikanOpen = false" class="p-2 hover:bg-bg-app rounded-full transition-colors">
+                            <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div>
+                    
+                    <div class="p-4 bg-bg-app border-b border-border-main">
+                        <div class="relative">
+                            <input type="text" @bind="_jikanSearchQuery" @bind:event="oninput" @onkeyup="HandleJikanSearchKeyUp" class="w-full pl-10 pr-4 py-3 bg-surface border border-border-main rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm text-text-main" placeholder="Manga title..." />
+                            <svg class="absolute left-3.5 top-3.5 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                            @if (_isSearchingJikan)
+                            {
+                                <div class="absolute right-3.5 top-3.5 w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="flex-grow overflow-y-auto p-4 space-y-3">
+                        @if (!_jikanSearchResults.Any())
+                        {
+                            @if (_isSearchingJikan)
+                            {
+                                <div class="py-12 text-center text-slate-400">Searching Jikan...</div>
+                            }
+                            else
+                            {
+                                <div class="py-12 text-center text-slate-400 italic">No results found or search started</div>
+                            }
+                        }
+                        else
+                        {
+                            @foreach (var item in _jikanSearchResults)
+                            {
+                                <div class="flex gap-4 p-3 bg-surface border border-border-main rounded-xl hover:border-primary/50 transition-colors group">
+                                    <img src="@item.Images?.Jpg?.ImageUrl" class="w-16 h-24 object-cover rounded-lg shadow-sm" />
+                                    <div class="flex-grow min-w-0">
+                                        <h4 class="font-bold text-sm text-text-main truncate">@item.Title</h4>
+                                        <div class="text-[10px] text-slate-400 flex flex-wrap gap-2 mt-1">
+                                            <span>@item.Type</span>
+                                            <span>•</span>
+                                            <span>@item.Authors.FirstOrDefault()?.Name</span>
+                                            <span>•</span>
+                                            <span>@item.Status</span>
+                                            <span>•</span>
+                                            <span class="text-amber-500 font-bold">★ @item.Score</span>
+                                        </div>
+                                        <p class="text-[10px] text-slate-500 line-clamp-2 mt-1">@item.Synopsis</p>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <button @onclick="() => SyncJikanResult(item)" class="flex items-center gap-1.5 px-3 py-1.5 text-primary hover:bg-primary/10 font-bold text-xs rounded-xl transition-all" title="Sync this result">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if (_isSearchAnilistOpen)
+        {
+            <div class="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-backdrop-in">
+                <div class="bg-surface rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col border border-border-main animate-modal-in z-[210]">
+                    <div class="px-6 py-4 border-b border-border-main flex items-center justify-between bg-surface">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-teal-500"></span>
+                            <h3 class="text-lg font-bold text-text-main">Search Anilist</h3>
+                        </div>
+                        <button @onclick="() => _isSearchAnilistOpen = false" class="p-2 hover:bg-bg-app rounded-full transition-colors">
+                            <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div>
+
+                    <div class="p-4 bg-bg-app border-b border-border-main">
+                        <div class="relative">
+                            <input type="text" @bind="_anilistSearchQuery" @bind:event="oninput" @onkeyup="HandleAnilistSearchKeyUp" class="w-full pl-10 pr-4 py-3 bg-surface border border-border-main rounded-xl focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none transition-all text-sm text-text-main" placeholder="Manga title..." />
+                            <svg class="absolute left-3.5 top-3.5 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                            @if (_isSearchingAnilist)
+                            {
+                                <div class="absolute right-3.5 top-3.5 w-4 h-4 border-2 border-teal-500/30 border-t-teal-500 rounded-full animate-spin"></div>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="flex-grow overflow-y-auto p-4 space-y-3">
+                        @if (!_anilistSearchResults.Any())
+                        {
+                            @if (_isSearchingAnilist)
+                            {
+                                <div class="py-12 text-center text-slate-400">Searching Anilist...</div>
+                            }
+                            else
+                            {
+                                <div class="py-12 text-center text-slate-400 italic">No results found or search not started</div>
+                            }
+                        }
+                        else
+                        {
+                            @foreach (var item in _anilistSearchResults)
+                            {
+                                <div class="flex gap-4 p-3 bg-surface border border-border-main rounded-xl hover:border-teal-500/50 transition-colors group">
+                                    @if (!string.IsNullOrEmpty(item.CoverImage?.Large ?? item.CoverImage?.Medium))
+                                    {
+                                        <img src="@(item.CoverImage?.Large ?? item.CoverImage?.Medium)" class="w-16 h-24 object-cover rounded-lg shadow-sm flex-shrink-0" />
+                                    }
+                                    <div class="flex-grow min-w-0">
+                                        <h4 class="font-bold text-sm text-text-main truncate">@(item.Title?.English ?? item.Title?.Romaji ?? item.Title?.Native)</h4>
+                                        <div class="text-[10px] text-slate-400 flex flex-wrap gap-2 mt-1">
+                                            <span>@item.Format</span>
+                                            <span>•</span>
+                                            <span>@item.Status</span>
+                                            @if (item.AverageScore.HasValue)
+                                            {
+                                                <span>•</span>
+                                                <span class="text-amber-500 font-bold">★ @(item.AverageScore.Value / 10.0)</span>
+                                            }
+                                            @if (item.Popularity.HasValue)
+                                            {
+                                                <span>•</span>
+                                                <span>@item.Popularity.Value.ToString("N0") members</span>
+                                            }
+                                        </div>
+                                        @if (item.Genres != null && item.Genres.Any())
+                                        {
+                                            <div class="flex flex-wrap gap-1 mt-1.5">
+                                                @foreach (var g in item.Genres.Take(4))
+                                                {
+                                                    <span class="px-1.5 py-0.5 bg-teal-500/10 text-teal-600 text-[9px] font-bold rounded">@g</span>
+                                                }
+                                            </div>
+                                        }
+                                    </div>
+                                    <div class="flex items-center flex-shrink-0">
+                                        <button @onclick="() => SyncAnilistResult(item)" class="flex items-center gap-1.5 px-3 py-1.5 text-teal-600 hover:bg-teal-500/10 font-bold text-xs rounded-xl transition-all" title="Sync this result">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
+                                            Sync
+                                        </button>
+                                    </div>
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+@* End of modal *@
+
+
+@code {
+    [Parameter] public Guid MangaId { get; set; }
+    [Parameter] public EventCallback OnClosed { get; set; }
+    [Parameter] public EventCallback OnSaved { get; set; }
+
+    private MangaSummary? Manga { get; set; }
+    private UpdateModel EditModel { get; set; } = new();
+    private List<ChapterResponse> Chapters { get; set; } = new();
+    private bool IsLoading { get; set; } = true;
+    private bool IsSaving { get; set; } = false;
+    private bool _isClosing = false;
+    private int _activeTab = 0;
+    
+    private bool _isSearchJikanOpen = false;
+    private string _jikanSearchQuery = "";
+    private List<JikanMangaItem> _jikanSearchResults = new();
+    private bool _isSearchingJikan = false;
+
+    private bool _isSearchAnilistOpen = false;
+    private string _anilistSearchQuery = "";
+    private List<AnilistMedia> _anilistSearchResults = new();
+    private bool _isSearchingAnilist = false;
+
+
+    private string GenresString => EditModel.Genres != null ? string.Join(", ", EditModel.Genres) : "";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (MangaId != Guid.Empty)
+        {
+            await LoadManga();
+        }
+    }
+
+    private async Task LoadManga()
+    {
+        IsLoading = true;
+        try
+        {
+            var mangaTask = Http.GetApiDataAsync<MangaSummary>($"/api/v1/manga/{MangaId}");
+            var chaptersTask = Http.GetApiDataAsync<List<ChapterResponse>>($"/api/v1/manga/{MangaId}/chapters");
+            
+            await Task.WhenAll(mangaTask, chaptersTask);
+
+            Manga = await mangaTask;
+            Chapters = await chaptersTask ?? new();
+
+            if (Manga != null)
+            {
+                EditModel = new UpdateModel
+                {
+                    Id = Manga.Id,
+                    MalId = Manga.MalId,
+                    AnilistId = Manga.AnilistId ?? 0,
+                    Author = Manga.Author,
+                    Type = Manga.Type,
+                    Genres = Manga.Genres ?? new List<string>(),
+                    Description = Manga.Description,
+                    Rating = Manga.Rating,
+                    ReleaseDate = Manga.ReleaseDate,
+                    Status = Manga.Status,
+                    TotalView = Manga.TotalView,
+                    Popularity = Manga.Popularity,
+                    Members = Manga.Members
+                };
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading manga: {ex.Message}");
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private void OnGenresChanged(ChangeEventArgs e)
+    {
+        var val = e.Value?.ToString();
+        if (!string.IsNullOrEmpty(val))
+        {
+            EditModel.Genres = val.Split(',').Select(x => x.Trim()).ToList();
+        }
+        else
+        {
+            EditModel.Genres = new List<string>();
+        }
+    }
+
+    private async Task Save()
+    {
+        IsSaving = true;
+        try
+        {
+            var response = await Http.PutAsJsonAsync($"/api/v1/manga/{MangaId}", EditModel);
+            if (response.IsSuccessStatusCode)
+            {
+                await OnSaved.InvokeAsync();
+                await Close();
+            }
+            else
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"Error saving: {content}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error saving: {ex.Message}");
+        }
+        finally
+        {
+            IsSaving = false;
+        }
+    }
+
+    private async Task ConfirmDeleteManga()
+    {
+        if (Manga == null) return;
+        
+        var confirmed = await JS.InvokeAsync<bool>("confirm", $"Are you sure you want to delete the entire manga '{Manga.Title}'?\n\nThis will also delete ALL downloaded chapters and images. This action cannot be undone.");
+        if (confirmed)
+        {
+            try
+            {
+                var response = await Http.DeleteAsync($"/api/v1/manga/{MangaId}");
+                if (response.IsSuccessStatusCode)
+                {
+                    await OnSaved.InvokeAsync();
+                    await Close();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error deleting manga: {ex.Message}");
+            }
+        }
+    }
+
+    private async Task ConfirmDeleteChapter(ChapterResponse chapter)
+    {
+        var confirmed = await JS.InvokeAsync<bool>("confirm", $"Delete Chapter {chapter.Number} from storage and database?");
+        if (confirmed)
+        {
+            try
+            {
+                var response = await Http.DeleteAsync($"/api/v1/manga/{MangaId}/chapter/{chapter.Id}");
+                if (response.IsSuccessStatusCode)
+                {
+                    Chapters.Remove(chapter);
+                    StateHasChanged();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error deleting chapter: {ex.Message}");
+            }
+        }
+    }
+
+    private async Task ScrapMissingChapters()
+    {
+        try 
+        {
+            var response = await Http.GetAsync($"/api/v1/scrapper/manga/{MangaId}/chapter-pages");
+            if (response.IsSuccessStatusCode)
+            {
+                await JS.InvokeVoidAsync("alert", "Scraping jobs have been queued for missing chapters!");
+                await Close();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error triggering scrap: {ex.Message}");
+        }
+    }
+
+    private async Task Close()
+    {
+        _isClosing = true;
+        StateHasChanged();
+        await Task.Delay(300); // Wait for animation
+        await OnClosed.InvokeAsync();
+    }
+
+    private void OpenJikanSearch()
+    {
+        _jikanSearchQuery = Manga?.Title ?? "";
+        _jikanSearchResults.Clear();
+        _isSearchJikanOpen = true;
+        if (!string.IsNullOrEmpty(_jikanSearchQuery))
+        {
+            _ = SearchJikan();
+        }
+    }
+
+    private async Task HandleJikanSearchKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await SearchJikan();
+        }
+    }
+
+    private async Task SearchJikan()
+    {
+        if (string.IsNullOrWhiteSpace(_jikanSearchQuery)) return;
+        
+        _isSearchingJikan = true;
+        StateHasChanged();
+        
+        try
+        {
+            var results = await Http.GetApiDataAsync<List<JikanMangaItem>>($"/api/v1/scrapper/jikan/search?title={Uri.EscapeDataString(_jikanSearchQuery)}");
+            _jikanSearchResults = results ?? new();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error searching Jikan: {ex.Message}");
+        }
+        finally
+        {
+            _isSearchingJikan = false;
+            StateHasChanged();
+        }
+    }
+    
+    private void OpenAnilistSearch()
+    {
+        _anilistSearchQuery = Manga?.Title ?? "";
+        _anilistSearchResults.Clear();
+        _isSearchAnilistOpen = true;
+        if (!string.IsNullOrEmpty(_anilistSearchQuery))
+        {
+            _ = SearchAnilist();
+        }
+    }
+
+    private async Task HandleAnilistSearchKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await SearchAnilist();
+        }
+    }
+
+    private async Task SearchAnilist()
+    {
+        if (string.IsNullOrWhiteSpace(_anilistSearchQuery)) return;
+
+        _isSearchingAnilist = true;
+        StateHasChanged();
+
+        try
+        {
+            var results = await Http.GetApiDataAsync<List<AnilistMedia>>($"/api/v1/scrapper/anilist/search?title={Uri.EscapeDataString(_anilistSearchQuery)}");
+            _anilistSearchResults = results ?? new();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error searching Anilist: {ex.Message}");
+        }
+        finally
+        {
+            _isSearchingAnilist = false;
+            StateHasChanged();
+        }
+    }
+
+    private void SyncAnilistResult(AnilistMedia item)
+    {
+        EditModel.AnilistId = item.Id;
+        EditModel.MalId = item.IdMal ?? EditModel.MalId;
+
+        if (item.AverageScore.HasValue)
+            EditModel.Rating = item.AverageScore.Value / 10.0;
+
+        if (item.Popularity.HasValue)
+            EditModel.Popularity = item.Popularity.Value;
+
+        EditModel.Status = item.Status switch
+        {
+            "FINISHED" => "Completed",
+            "RELEASING" => "Ongoing",
+            "HIATUS" => "On Hiatus",
+            "CANCELLED" => "Discontinued",
+            "NOT_YET_RELEASED" => "Upcoming",
+            _ => EditModel.Status
+        };
+
+        if (item.StartDate?.Year != null)
+        {
+            EditModel.ReleaseDate = new DateTime(
+                item.StartDate.Year.Value,
+                item.StartDate.Month ?? 1,
+                item.StartDate.Day ?? 1);
+        }
+
+        if (item.Genres != null && item.Genres.Any())
+        {
+            var merged = (EditModel.Genres ?? new List<string>()).Union(item.Genres).ToList();
+            EditModel.Genres = merged;
+        }
+
+        if (string.IsNullOrEmpty(EditModel.Description) && !string.IsNullOrEmpty(item.Description))
+        {
+            EditModel.Description = item.Description;
+        }
+
+        _isSearchAnilistOpen = false;
+        StateHasChanged();
+    }
+
+    private void SyncJikanResult(JikanMangaItem item)
+    {
+        EditModel.MalId = item.MalId;
+        EditModel.Author = item.Authors.FirstOrDefault()?.Name ?? EditModel.Author;
+        EditModel.Rating = item.Score;
+        EditModel.ReleaseDate = item.Published?.From;
+        EditModel.Popularity = item.Popularity;
+        EditModel.Members = item.Members;
+        
+        EditModel.Status = item.Status switch
+        {
+            "Finished" => "Completed",
+            "Complete" => "Completed",
+            "Publishing" => "Ongoing",
+            "On Hiatus" => "On Hiatus",
+            "Hiatus" => "On Hiatus",
+            "Discontinued" => "Discontinued",
+            "Upcoming" => "Upcoming",
+            _ => item.Status
+        };
+
+
+        if (item.Genres != null)
+        {
+            EditModel.Genres = item.Genres.Select(x => x.Name).Where(x => x != null).Cast<string>().ToList();
+        }
+        
+        if (string.IsNullOrEmpty(EditModel.Description))
+        {
+            EditModel.Description = item.Synopsis;
+        }
+
+        _isSearchJikanOpen = false;
+        StateHasChanged();
+    }
+
+    private static string FormatFileSize(long bytes)
+    {
+        string[] sizes = ["B", "KB", "MB", "GB"];
+        double len = bytes;
+        int order = 0;
+        while (len >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            len /= 1024;
+        }
+        return $"{len:0.##} {sizes[order]}";
+    }
+
+    private static string GetStatusClass(string status) => status?.ToLower() switch
+    {
+        "ongoing" or "publishing" => "bg-emerald-500/10 text-emerald-600",
+        "completed" or "finished" => "bg-sky-500/10 text-sky-600",
+        "on hiatus" or "hiatus" => "bg-amber-500/10 text-amber-600",
+        "discontinued" or "cancelled" => "bg-rose-500/10 text-rose-600",
+        "upcoming" => "bg-violet-500/10 text-violet-600",
+        _ => "bg-slate-500/10 text-slate-500"
+    };
+
+    public class UpdateModel
+    {
+        public Guid Id { get; set; }
+        public int MalId { get; set; }
+        public int? AnilistId { get; set; }
+        public string Author { get; set; } = string.Empty;
+        public string Type { get; set; } = string.Empty;
+        public List<string>? Genres { get; set; }
+        public string? Description { get; set; }
+        public double? Rating { get; set; }
+        public DateTime? ReleaseDate { get; set; }
+        public string? Status { get; set; }
+        public int TotalView { get; set; }
+        public int Popularity { get; set; }
+        public int Members { get; set; }
+    }
+
+    public class ChapterResponse
+    {
+        public Guid Id { get; set; }
+        public double Number { get; set; }
+        public string? Title { get; set; }
+        public string? Url { get; set; }
+        public List<string> Pages { get; set; } = new();
+        public string Language { get; set; } = string.Empty;
+        public string? ChapterProvider { get; set; }
+        public string? ChapterProviderIcon { get; set; }
+        public DateTime UploadDate { get; set; }
+        public int TotalView { get; set; }
+    }
+}
