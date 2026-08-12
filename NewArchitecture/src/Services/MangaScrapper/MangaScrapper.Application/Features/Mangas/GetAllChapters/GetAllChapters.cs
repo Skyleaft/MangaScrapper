@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Routing;
 using NovaStack.Contracts.Responses;
 using NovaStack.SharedKernel.Results;
 
-namespace MangaScrapper.Application.Features.MangaData.GetAllChapters;
+namespace MangaScrapper.Application.Features.Mangas.GetAllChapters;
 
 public record GetAllChaptersQuery(Guid MangaId) : IQuery<List<ChapterResponse>>;
 

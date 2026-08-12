@@ -151,7 +151,7 @@ public class MeilisearchService
     /// <summary>
     /// Searches the Meilisearch index with filters, sorting, and pagination.
     /// </summary>
-    public async Task<(List<MeiliMangaDocument> Items, long TotalCount)> SearchAsync(
+    public async Task<(List<MeiliMangaDocument> Items, int TotalCount)> SearchAsync(
         string? search,
         List<string>? genres,
         string? status,

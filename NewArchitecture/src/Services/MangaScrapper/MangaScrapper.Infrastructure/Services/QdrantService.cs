@@ -26,7 +26,27 @@ public class QdrantService
         IHttpClientFactory httpClientFactory,
         IOptions<EmbeddingConfig> embeddingConfig)
     {
-        _client = new QdrantClient(config.Value.Host, port: config.Value.Port, apiKey: config.Value.ApiKey);
+        var host = config.Value.Host;
+        bool isHttps = false;
+
+        if (host.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+        {
+            isHttps = true;
+            host = host.Substring(8);
+        }
+        else if (host.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+        {
+            host = host.Substring(7);
+        }
+
+        var port = config.Value.Port;
+        if (port == 6333)
+        {
+            // Auto-correct to gRPC port if REST port is provided
+            port = 6334;
+        }
+
+        _client = new QdrantClient(host, port: port, https: isHttps, apiKey: config.Value.ApiKey);
         _dbContext = dbContext;
         _logger = logger;
         _httpClientFactory = httpClientFactory;

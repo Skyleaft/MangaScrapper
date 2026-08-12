@@ -3,16 +3,16 @@ using MangaScrapper.Domain.Repositories;
 using NovaStack.Contracts.Responses;
 using NovaStack.SharedKernel.Results;
 
-namespace MangaScrapper.Application.Features.MangaData.GetPagedManga;
+namespace MangaScrapper.Application.Features.Mangas.GetPagedManga;
 
-public sealed class GetPagedMangaQueryHandler(IMangaRepository mangaRepository, IMangaSearchRepository mangaSearchRepository)
+public sealed class GetPagedMangaQueryHandler(IMangaRepository mangaRepository, IMangaExternalRepository mangaExternalRepository)
     : IQueryHandler<GetPagedMangaQuery, PagedResponse<MangaSummaryResponse>>
 {
     public async Task<Result<PagedResponse<MangaSummaryResponse>>> Handle(
         GetPagedMangaQuery query,
         CancellationToken ct)
     {
-        var data = await mangaSearchRepository.SearchAsync(query.Search,
+        var data = await mangaExternalRepository.SearchAsync(query.Search,
             query.Genres,
             query.Status,
             query.Type,

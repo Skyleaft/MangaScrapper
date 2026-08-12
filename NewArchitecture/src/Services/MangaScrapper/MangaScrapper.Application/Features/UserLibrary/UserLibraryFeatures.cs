@@ -93,7 +93,7 @@ public sealed class UserLibraryEndpoints : IEndpointDefinition
         .RequireAuthorization()
         .WithName("AddUserLibrary");
 
-        group.MapGet("/{userId}", async (string userId, ISender sender, CancellationToken ct,string? search,string? type,string? status,bool? isFavorite,string sortBy="UpdatedAt",string orderBy="desc", int page = 1, int pageSize = 10) =>
+        group.MapGet("/", async (string userId, ISender sender, CancellationToken ct,string? search,string? type,string? status,bool? isFavorite,string sortBy="UpdatedAt",string orderBy="desc", int page = 1, int pageSize = 10) =>
         {
             var res = await sender.Send(new GetUserLibraryQuery(userId, search,type,status,isFavorite,sortBy, orderBy, page, pageSize), ct);
             return res.IsSuccess ? Results.Ok(ApiResponse.Ok(res.Value)) : res.Error.ToHttpResult();

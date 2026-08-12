@@ -37,7 +37,7 @@ public interface IMangaRepository
     Task<List<Manga>> GetAllAsync(CancellationToken ct = default);
 }
 
-public interface IMangaSearchRepository
+public interface IMangaExternalRepository
 {
     Task<PagedList<Manga>> SearchAsync(
         string? search,
@@ -49,6 +49,8 @@ public interface IMangaSearchRepository
         int page,
         int pageSize,
         CancellationToken ct = default);
+
+    Task<List<Manga>> GetRecomendationAsync(List<Guid>readingHistoryIds,int limit,  CancellationToken ct = default);
 }
 
 public interface IUserRepository

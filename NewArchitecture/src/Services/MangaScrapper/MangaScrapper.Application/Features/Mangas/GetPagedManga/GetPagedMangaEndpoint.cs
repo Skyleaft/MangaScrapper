@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using NovaStack.Contracts.Responses;
 
-namespace MangaScrapper.Application.Features.MangaData.GetPagedManga;
+namespace MangaScrapper.Application.Features.Mangas.GetPagedManga;
 
 public sealed class GetPagedMangaEndpoint : IEndpointDefinition
 {

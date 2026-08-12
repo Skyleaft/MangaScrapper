@@ -1,5 +1,5 @@
 using FluentAssertions;
-using MangaScrapper.Application.Features.MangaData.GetPagedManga;
+using MangaScrapper.Application.Features.Mangas.GetPagedManga;
 using NetArchTest.Rules;
 using Xunit;
 

@@ -1,5 +1,5 @@
 using FluentAssertions;
-using MangaScrapper.Application.Features.MangaData.GetPagedManga;
+using MangaScrapper.Application.Features.Mangas.GetPagedManga;
 using MangaScrapper.Domain.Aggregates;
 using MangaScrapper.Domain.Repositories;
 using MangaScrapper.Domain.ValueObjects;
@@ -12,13 +12,13 @@ namespace UnitTests.MangaScrapper.Application;
 public class GetPagedMangaQueryHandlerTests
 {
     private readonly Mock<IMangaRepository> _mangaRepositoryMock;
-    private readonly Mock<IMangaSearchRepository> _searchRepositoryMock;
+    private readonly Mock<IMangaExternalRepository> _searchRepositoryMock;
     private readonly GetPagedMangaQueryHandler _handler;
 
     public GetPagedMangaQueryHandlerTests()
     {
         _mangaRepositoryMock = new Mock<IMangaRepository>();
-        _searchRepositoryMock = new Mock<IMangaSearchRepository>();
+        _searchRepositoryMock = new Mock<IMangaExternalRepository>();
         _handler = new GetPagedMangaQueryHandler(_mangaRepositoryMock.Object,_searchRepositoryMock.Object);
     }
 

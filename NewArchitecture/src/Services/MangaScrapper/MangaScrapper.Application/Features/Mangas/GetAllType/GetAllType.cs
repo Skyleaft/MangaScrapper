@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Routing;
 using NovaStack.Contracts.Responses;
 using NovaStack.SharedKernel.Results;
 
-namespace MangaScrapper.Application.Features.MangaData.GetAllType;
+namespace MangaScrapper.Application.Features.Mangas.GetAllType;
 
 public record GetAllTypeQuery : IQuery<List<string>>;
 
