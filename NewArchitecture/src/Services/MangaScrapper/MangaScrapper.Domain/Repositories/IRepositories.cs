@@ -51,6 +51,7 @@ public interface IMangaExternalRepository
         CancellationToken ct = default);
 
     Task<List<Manga>> GetRecomendationAsync(List<Guid>readingHistoryIds,int limit,  CancellationToken ct = default);
+    Task IndexMangaAsync(Manga manga, CancellationToken ct = default);
 }
 
 public interface IUserRepository

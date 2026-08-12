@@ -31,14 +31,17 @@ public class DetailRequest
 public class MeiliMangaDocument
 {
     public string Id { get; set; } = string.Empty;
+    public int MalId { get; set; }
+    public int? AnilistId { get; set; }
     public string Title { get; set; } = string.Empty;
     public string Author { get; set; } = string.Empty;
     public string Type { get; set; } = string.Empty;
+    public double? Rating { get; set; }
+    public int Popularity { get; set; }
+    public int Members { get; set; }
     public List<string> Genres { get; set; } = new();
     public string? Description { get; set; }
     public string? Status { get; set; }
-    public double? Rating { get; set; }
-    public int Popularity { get; set; }
     public int TotalView { get; set; }
     public long ReleaseDate { get; set; }
     public string? ImageUrl { get; set; }
@@ -47,6 +50,20 @@ public class MeiliMangaDocument
     public double LatestChapterNumber { get; set; }
     public long CreatedAtTimestamp { get; set; }
     public long UpdatedAtTimestamp { get; set; }
+    public string? Url { get; set; }
+    public List<MeiliChapterDocument> LatestChapter { get; set; } = new();
+}
+
+public class MeiliChapterDocument
+{
+    public string Id { get; set; } = string.Empty;
+    public double Number { get; set; }
+    public string? Link { get; set; }
+    public string? ChapterProvider { get; set; }
+    public string? ChapterProviderIcon { get; set; }
+    public string Language { get; set; } = string.Empty;
+    public int TotalView { get; set; }
+    public long UploadDateTimestamp { get; set; }
 }
 
 public class ScrapperProvider

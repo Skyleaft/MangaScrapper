@@ -108,6 +108,7 @@ public static class InfrastructureExtensions
         services.AddScoped<StorageSyncService>();
 
         services.AddScoped<IMangaExternalRepository, MangaExternalService>();
+        services.AddScoped<IMangaMessagePublisher, MangaMessagePublisher>();
 
         services.AddHttpClient<DiscordWebhookService>();
 
@@ -214,14 +215,22 @@ public static class InfrastructureExtensions
         // Register the event bus singleton (publisher) — used by both API and Worker
         services.AddNativeRabbitMqEventBus();
 
-        // Register the event handler (scoped — created per message in the consumer)
+        // Register the event handlers (scoped — created per message in the consumer)
         services.AddScoped<ScrapChapterPagesHandler>();
+        services.AddScoped<DeleteMangaHandler>();
+        services.AddScoped<DeleteChapterHandler>();
 
         if (includeConsumer)
         {
             // Register the background consumer service — runs only in Scrapper.Worker
             services.AddRabbitMqConsumer<ScrapChapterPagesIntegrationEvent, ScrapChapterPagesHandler>(
                 "scrape-chapter-pages");
+                
+            services.AddRabbitMqConsumer<DeleteMangaIntegrationEvent, DeleteMangaHandler>(
+                "delete-manga");
+                
+            services.AddRabbitMqConsumer<DeleteChapterIntegrationEvent, DeleteChapterHandler>(
+                "delete-chapter");
         }
 
         return services;

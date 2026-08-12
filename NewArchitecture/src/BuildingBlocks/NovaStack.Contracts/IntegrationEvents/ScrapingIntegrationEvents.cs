@@ -34,3 +34,51 @@ public sealed record ScrapChapterPagesIntegrationEvent : IIntegrationEvent
         Provider = provider;
     }
 }
+
+/// <summary>
+/// Integration event published when a manga is deleted.
+/// Consumed by the Scrapper.Worker via RabbitMQ — handles file cleanup + removal from all stores.
+/// </summary>
+public sealed record DeleteMangaIntegrationEvent : IIntegrationEvent
+{
+    public Guid EventId { get; init; } = Guid.NewGuid();
+    public DateTime OccurredOn { get; init; } = DateTime.UtcNow;
+    public string EventType { get; init; } = nameof(DeleteMangaIntegrationEvent);
+
+    public Guid MangaId { get; init; }
+    public string MangaTitle { get; init; } = string.Empty;
+
+    public DeleteMangaIntegrationEvent() { }
+
+    public DeleteMangaIntegrationEvent(Guid mangaId, string mangaTitle)
+    {
+        MangaId = mangaId;
+        MangaTitle = mangaTitle;
+    }
+}
+
+/// <summary>
+/// Integration event published when a chapter within a manga is deleted.
+/// Consumed by the Scrapper.Worker via RabbitMQ — handles file cleanup + removal from MongoDB.
+/// </summary>
+public sealed record DeleteChapterIntegrationEvent : IIntegrationEvent
+{
+    public Guid EventId { get; init; } = Guid.NewGuid();
+    public DateTime OccurredOn { get; init; } = DateTime.UtcNow;
+    public string EventType { get; init; } = nameof(DeleteChapterIntegrationEvent);
+
+    public Guid MangaId { get; init; }
+    public string MangaTitle { get; init; } = string.Empty;
+    public Guid ChapterId { get; init; }
+    public double ChapterNumber { get; init; }
+
+    public DeleteChapterIntegrationEvent() { }
+
+    public DeleteChapterIntegrationEvent(Guid mangaId, string mangaTitle, Guid chapterId, double chapterNumber)
+    {
+        MangaId = mangaId;
+        MangaTitle = mangaTitle;
+        ChapterId = chapterId;
+        ChapterNumber = chapterNumber;
+    }
+}

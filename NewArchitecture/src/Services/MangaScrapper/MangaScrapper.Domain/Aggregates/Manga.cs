@@ -187,20 +187,30 @@ public class Manga : Entity<MangaId>
 
     public void UpdateMetadata(
         int malId,
+        int? anilistId,
+        string author,
+        string type,
+        List<string> genres,
         string? description,
         double? rating,
         int popularity,
         int members,
         string? status,
-        DateTime? releaseDate)
+        DateTime? releaseDate,
+        int totalView)
     {
         MalId = malId;
+        AnilistId = anilistId;
+        Author = author;
+        Type = type;
+        Genres = genres ?? [];
         Description = description ?? Description;
         Rating = rating ?? Rating;
         Popularity = popularity > 0 ? popularity : Popularity;
         Members = members > 0 ? members : Members;
         Status = status ?? Status;
         ReleaseDate = releaseDate ?? ReleaseDate;
+        TotalView = totalView;
         UpdatedAt = DateTime.UtcNow;
     }
 

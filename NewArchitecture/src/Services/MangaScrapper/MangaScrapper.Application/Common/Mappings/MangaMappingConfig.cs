@@ -10,6 +10,7 @@ public sealed class MangaMappingConfig : IRegister
     {
         config.NewConfig<Manga, MangaSummaryResponse>()
             .Map(dest => dest.Id, src => src.Id.Value)
+            .Map(dest=>dest.TotalView, src=>src.Chapters.Sum(x=>x.TotalView))
             .Map(dest => dest.LatestChapter, src => src.Chapters.OrderByDescending(c => c.Number).FirstOrDefault().Adapt<ChapterResponse>());
 
         config.NewConfig<Chapter, ChapterResponse>()

@@ -1,4 +1,4 @@
-﻿using MangaScrapper.Domain.Aggregates;
+using MangaScrapper.Domain.Aggregates;
 using MangaScrapper.Domain.Repositories;
 using MangaScrapper.Domain.ValueObjects;
 using MangaScrapper.Infrastructure.Persistence;
@@ -55,5 +55,32 @@ public class MangaExternalService(ILogger<MangaExternalService> logger,
             DateTimeOffset.FromUnixTimeSeconds(doc.UpdatedAtTimestamp).UtcDateTime,
             "",
             null);
+    }
+
+    public async Task IndexMangaAsync(Manga manga, CancellationToken ct = default)
+    {
+        var document = new MangaDocument
+        {
+            Id = manga.Id.Value,
+            MalID = manga.MalId,
+            AnilistID = manga.AnilistId,
+            Title = manga.Title,
+            Author = manga.Author,
+            Type = manga.Type,
+            Genres = manga.Genres,
+            Description = manga.Description,
+            ImageUrl = manga.ImageUrl,
+            LocalImageUrl = manga.LocalImageUrl,
+            ThumbnailSize = manga.ThumbnailSize,
+            Rating = manga.Rating,
+            Popularity = manga.Popularity,
+            ReleaseDate = manga.ReleaseDate,
+            Status = manga.Status,
+            CreatedAt = manga.CreatedAt,
+            UpdatedAt = manga.UpdatedAt,
+            Url = manga.Url
+        };
+
+        await meilisearchService.IndexMangaAsync(document, ct);
     }
 }
