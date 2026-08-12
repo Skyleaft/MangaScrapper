@@ -1,13 +1,10 @@
-using MangaScrapper.Domain.Repositories;
-using MangaScrapper.Domain.ValueObjects;
-using MangaScrapper.Infrastructure.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
+using MangaScrapper.Core.Configuration;
+using MangaScrapper.Core.Repositories;
+using MangaScrapper.Core.ValueObjects;
 using NovaStack.Contracts.IntegrationEvents;
 using NovaStack.Infrastructure.Messaging;
 
-namespace MangaScrapper.Infrastructure.Messaging;
+namespace MangaScrapper.Core.Messaging;
 
 /// <summary>
 /// Handles <see cref="DeleteChapterIntegrationEvent"/> messages received from RabbitMQ.

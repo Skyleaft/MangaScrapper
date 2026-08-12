@@ -1,16 +1,13 @@
-using System.Security.Claims;
-using System.Text.Encodings.Web;
 using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using System.Text;
-using MangaScrapper.Infrastructure.Persistence;
+using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
-namespace MangaScrapper.Infrastructure.Security;
+namespace MangaScrapper.Core.Security;
 
 public class CustomAuthSchemeOptions : AuthenticationSchemeOptions { }
 

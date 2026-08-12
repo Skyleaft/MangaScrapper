@@ -2,7 +2,7 @@ using FluentValidation;
 using MediatR;
 using NovaStack.SharedKernel.Results;
 
-namespace MangaScrapper.Application.Common.Behaviors;
+namespace MangaScrapper.Core.Common.Behaviors;
 
 public sealed class ValidationBehavior<TRequest, TResponse>(
     IEnumerable<IValidator<TRequest>> validators)

@@ -1,8 +1,8 @@
-using MangaScrapper.Domain.Aggregates;
-using MangaScrapper.Domain.ValueObjects;
+using MangaScrapper.Core.Aggregates;
+using MangaScrapper.Core.ValueObjects;
 using NovaStack.SharedKernel.Common;
 
-namespace MangaScrapper.Domain.Repositories;
+namespace MangaScrapper.Core.Repositories;
 
 public interface IMangaRepository
 {
@@ -25,7 +25,7 @@ public interface IMangaRepository
     Task<List<string>> GetAllGenresAsync(CancellationToken ct);
     Task<List<string>> GetAllTypesAsync(CancellationToken ct);
     Task<DashboardStatistic> GetStatisticsAsync(CancellationToken ct);
-    Task<(List<Manga> Items, long TotalCount)> GetTrendingAsync(
+    Task<(List<Manga> Items, int TotalCount)> GetTrendingAsync(
         string? search, 
         List<string>? genres, 
         string? status, 

@@ -1,4 +1,4 @@
-﻿namespace MangaScrapper.Infrastructure.Scrapers;
+﻿namespace MangaScrapper.Core.Scrapers.Komikcast;
 
 public class KomikcastModel
 {

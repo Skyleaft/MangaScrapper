@@ -1,7 +1,7 @@
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 
-namespace MangaScrapper.Infrastructure.Persistence.Documents;
+namespace MangaScrapper.Core.Persistence.Documents;
 
 public class MangaDocument
 {

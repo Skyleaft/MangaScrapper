@@ -1,5 +1,5 @@
-using MangaScrapper.Application.Common.Abstractions;
-using MangaScrapper.Domain.Repositories;
+using MangaScrapper.Core.Common.Abstractions;
+using MangaScrapper.Core.Repositories;
 using Mapster;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Routing;
 using NovaStack.Contracts.Responses;
 using NovaStack.SharedKernel.Results;
 
-namespace MangaScrapper.Application.Features.Dashboard.GetStatistics;
+namespace MangaScrapper.Core.Features.Dashboard.GetStatistics;
 
 public record GetStatisticsQuery : IQuery<DashboardStatisticResponse>;
 

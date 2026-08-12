@@ -1,7 +1,7 @@
 using MediatR;
 using NovaStack.SharedKernel.Results;
 
-namespace MangaScrapper.Application.Common.Abstractions;
+namespace MangaScrapper.Core.Common.Abstractions;
 
 public interface ICommand : IRequest<Result>
 {

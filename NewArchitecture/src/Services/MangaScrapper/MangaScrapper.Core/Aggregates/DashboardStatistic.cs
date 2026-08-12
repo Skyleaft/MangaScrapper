@@ -1,4 +1,4 @@
-﻿namespace MangaScrapper.Domain.Aggregates;
+﻿namespace MangaScrapper.Core.Aggregates;
 
 public class DashboardStatistic
 {

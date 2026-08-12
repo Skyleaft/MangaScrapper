@@ -1,7 +1,6 @@
-using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 
-namespace MangaScrapper.Infrastructure.Services;
+namespace MangaScrapper.Core.Services;
 
 public class FlareSolverrService
 {

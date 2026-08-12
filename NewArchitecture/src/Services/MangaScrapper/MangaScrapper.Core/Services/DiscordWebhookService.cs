@@ -1,12 +1,9 @@
-using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using MangaScrapper.Infrastructure.Configuration;
-using MangaScrapper.Infrastructure.Persistence.Documents;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
+using MangaScrapper.Core.Configuration;
+using MangaScrapper.Core.Persistence.Documents;
 
-namespace MangaScrapper.Infrastructure.Services;
+namespace MangaScrapper.Core.Services;
 
 public class DiscordWebhookService
 {

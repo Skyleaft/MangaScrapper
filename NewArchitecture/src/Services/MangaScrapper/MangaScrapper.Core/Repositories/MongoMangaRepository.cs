@@ -1,14 +1,13 @@
-using MangaScrapper.Domain.Aggregates;
-using MangaScrapper.Domain.Repositories;
-using MangaScrapper.Domain.ValueObjects;
-using MangaScrapper.Infrastructure.Persistence;
-using MangaScrapper.Infrastructure.Persistence.Documents;
+using MangaScrapper.Core.Aggregates;
+using MangaScrapper.Core.Persistence;
+using MangaScrapper.Core.Persistence.Documents;
+using MangaScrapper.Core.ValueObjects;
 using Mapster;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using NovaStack.SharedKernel.Common;
 
-namespace MangaScrapper.Infrastructure.Repositories;
+namespace MangaScrapper.Core.Repositories;
 
 public class MongoMangaRepository(MangaMongoDbContext dbContext) : IMangaRepository
 {
@@ -226,7 +225,7 @@ public class MongoMangaRepository(MangaMongoDbContext dbContext) : IMangaReposit
         };
     }
 
-    public async Task<(List<Manga> Items, long TotalCount)> GetTrendingAsync(string? search, List<string>? genres, string? status, string? type, int page, int pageSize,
+    public async Task<(List<Manga> Items, int TotalCount)> GetTrendingAsync(string? search, List<string>? genres, string? status, string? type, int page, int pageSize,
         CancellationToken ct)
     {
         var builder = Builders<MangaDocument>.Filter;
@@ -300,7 +299,7 @@ public class MongoMangaRepository(MangaMongoDbContext dbContext) : IMangaReposit
 
         var aggregationResult = await dbContext.Mangas.Aggregate<BsonDocument>(pipeline, cancellationToken: ct).FirstOrDefaultAsync(ct);
 
-        long totalCount = 0;
+        int totalCount = 0;
         var items = new List<Manga>();
 
         if (aggregationResult != null)
@@ -314,8 +313,8 @@ public class MongoMangaRepository(MangaMongoDbContext dbContext) : IMangaReposit
             var dataArray = aggregationResult["data"].AsBsonArray;
             foreach (var doc in dataArray)
             {
-                var mangaDoc = MongoDB.Bson.Serialization.BsonSerializer.Deserialize<Manga>(doc.AsBsonDocument);
-                items.Add(mangaDoc);
+                var mangaDoc = MongoDB.Bson.Serialization.BsonSerializer.Deserialize<MangaDocument>(doc.AsBsonDocument);
+                items.Add(MapToDomain(mangaDoc));
             }
         }
 

@@ -1,8 +1,8 @@
-using MangaScrapper.Application.Common.Abstractions;
+using MangaScrapper.Core.Common.Abstractions;
 using NovaStack.Contracts.IntegrationEvents;
 using NovaStack.Infrastructure.Messaging;
 
-namespace MangaScrapper.Infrastructure.Services;
+namespace MangaScrapper.Core.Services;
 
 public sealed class MangaMessagePublisher(IEventBus eventBus) : IMangaMessagePublisher
 {

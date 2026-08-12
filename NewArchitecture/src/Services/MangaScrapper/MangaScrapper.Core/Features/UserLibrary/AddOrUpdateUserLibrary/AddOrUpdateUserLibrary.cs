@@ -1,7 +1,7 @@
 using FluentValidation;
-using MangaScrapper.Application.Common.Abstractions;
-using MangaScrapper.Domain.Repositories;
-using MangaScrapper.Domain.ValueObjects;
+using MangaScrapper.Core.Common.Abstractions;
+using MangaScrapper.Core.Repositories;
+using MangaScrapper.Core.ValueObjects;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Routing;
 using NovaStack.Contracts.Responses;
 using NovaStack.SharedKernel.Results;
 
-namespace MangaScrapper.Application.Features.UserLibrary.AddOrUpdateUserLibrary;
+namespace MangaScrapper.Core.Features.UserLibrary.AddOrUpdateUserLibrary;
 
 public record AddOrUpdateUserLibraryCommand(string UserId, Guid MangaId, string Status, bool IsFavorite) : ICommand<UserLibraryResponse>;
 
@@ -36,7 +36,7 @@ internal sealed class AddOrUpdateUserLibraryCommandHandler(
             return new UserLibraryResponse(existing.Id, existing.UserId, existing.MangaId.Value, existing.AddedAt, existing.UpdatedAt, existing.Status, existing.IsFavorite, null);
         }
 
-        var library = Domain.Aggregates.UserLibrary.Create(command.UserId, MangaId.From(command.MangaId), status: command.Status);
+        var library = Aggregates.UserLibrary.Create(command.UserId, MangaId.From(command.MangaId), status: command.Status);
         await libraryRepository.AddAsync(library, ct);
 
         return new UserLibraryResponse(library.Id, library.UserId, library.MangaId.Value, library.AddedAt, library.UpdatedAt, library.Status, library.IsFavorite, null);

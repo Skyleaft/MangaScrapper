@@ -3,16 +3,20 @@ using Hangfire;
 using Hangfire.Mongo;
 using Hangfire.Mongo.Migration.Strategies;
 using Hangfire.Mongo.Migration.Strategies.Backup;
-using MangaScrapper.Application.Common.Abstractions;
-using MangaScrapper.Application.Common.Behaviors;
-using MangaScrapper.Domain.Repositories;
-using MangaScrapper.Infrastructure.Configuration;
-using MangaScrapper.Infrastructure.Messaging;
-using MangaScrapper.Infrastructure.Persistence;
-using MangaScrapper.Infrastructure.Repositories;
-using MangaScrapper.Infrastructure.Scrapers;
-using MangaScrapper.Infrastructure.Security;
-using MangaScrapper.Infrastructure.Services;
+using MangaScrapper.Core.BackgroundJobs;
+using MangaScrapper.Core.Common.Abstractions;
+using MangaScrapper.Core.Common.Behaviors;
+using MangaScrapper.Core.Configuration;
+using MangaScrapper.Core.Messaging;
+using MangaScrapper.Core.Persistence;
+using MangaScrapper.Core.Repositories;
+using MangaScrapper.Core.Scrapers;
+using MangaScrapper.Core.Scrapers.Kiryuu;
+using MangaScrapper.Core.Scrapers.Komikcast;
+using MangaScrapper.Core.Scrapers.Komiku;
+using MangaScrapper.Core.Scrapers.MangaDex;
+using MangaScrapper.Core.Security;
+using MangaScrapper.Core.Services;
 using MediatR;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Builder;
@@ -227,9 +231,9 @@ public static class CoreExtensions
             });
         }
 
-        services.AddTransient<Infrastructure.BackgroundJobs.MeiliSyncJob>();
-        services.AddTransient<Infrastructure.BackgroundJobs.DeleteMangaJob>();
-        services.AddTransient<Infrastructure.BackgroundJobs.LatestChapterScrapingJob>();
+        services.AddTransient<MeiliSyncJob>();
+        services.AddTransient<DeleteMangaJob>();
+        services.AddTransient<LatestChapterScrapingJob>();
 
         return services;
     }

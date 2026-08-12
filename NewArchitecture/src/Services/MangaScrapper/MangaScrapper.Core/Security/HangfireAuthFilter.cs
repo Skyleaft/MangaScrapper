@@ -1,6 +1,6 @@
 using Hangfire.Dashboard;
 
-namespace MangaScrapper.Infrastructure.Security;
+namespace MangaScrapper.Core.Security;
 
 /// <summary>
 /// Hangfire dashboard authorization filter — only authenticated users can access the dashboard.

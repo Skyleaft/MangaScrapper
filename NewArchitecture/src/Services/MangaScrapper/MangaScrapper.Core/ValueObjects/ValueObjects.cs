@@ -1,4 +1,4 @@
-namespace MangaScrapper.Domain.ValueObjects;
+namespace MangaScrapper.Core.ValueObjects;
 
 public readonly record struct MangaId(Guid Value)
 {

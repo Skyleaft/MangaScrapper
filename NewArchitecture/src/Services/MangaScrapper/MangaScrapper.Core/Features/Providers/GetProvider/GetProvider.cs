@@ -1,13 +1,11 @@
-using System.IO;
-using MangaScrapper.Application.Common.Abstractions;
+using MangaScrapper.Core.Common.Abstractions;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
-using NovaStack.Contracts.Responses;
 using NovaStack.SharedKernel.Results;
 
-namespace MangaScrapper.Application.Features.Providers.GetProvider;
+namespace MangaScrapper.Core.Features.Providers.GetProvider;
 
 public record GetProviderQuery(string FileName) : IQuery<string>;
 

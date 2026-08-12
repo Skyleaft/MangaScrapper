@@ -1,9 +1,9 @@
-using MangaScrapper.Domain.DomainEvents;
-using MangaScrapper.Domain.ValueObjects;
+using MangaScrapper.Core.DomainEvents;
+using MangaScrapper.Core.ValueObjects;
 using NovaStack.Contracts.Responses;
 using NovaStack.SharedKernel.Common;
 
-namespace MangaScrapper.Domain.Aggregates;
+namespace MangaScrapper.Core.Aggregates;
 
 public class Chapter
 {

@@ -1,5 +1,5 @@
-using MangaScrapper.Application.Common.Abstractions;
-using MangaScrapper.Domain.Repositories;
+using MangaScrapper.Core.Common.Abstractions;
+using MangaScrapper.Core.Repositories;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Routing;
 using NovaStack.Contracts.Responses;
 using NovaStack.SharedKernel.Results;
 
-namespace MangaScrapper.Application.Features.Users.GetPagedUser;
+namespace MangaScrapper.Core.Features.Users.GetPagedUser;
 
 public record GetPagedUserQuery(
     string? Search = null,

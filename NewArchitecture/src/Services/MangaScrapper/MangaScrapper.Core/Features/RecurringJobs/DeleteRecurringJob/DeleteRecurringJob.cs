@@ -1,4 +1,4 @@
-using MangaScrapper.Application.Common.Abstractions;
+using MangaScrapper.Core.Common.Abstractions;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Routing;
 using NovaStack.Contracts.Responses;
 using NovaStack.SharedKernel.Results;
 
-namespace MangaScrapper.Application.Features.RecurringJobs.DeleteRecurringJob;
+namespace MangaScrapper.Core.Features.RecurringJobs.DeleteRecurringJob;
 
 public record DeleteRecurringJobCommand(string JobId) : ICommand;
 

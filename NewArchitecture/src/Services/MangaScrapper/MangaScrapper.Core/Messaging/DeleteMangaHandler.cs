@@ -1,13 +1,10 @@
-using MangaScrapper.Infrastructure.Configuration;
-using MangaScrapper.Domain.Repositories;
-using MangaScrapper.Infrastructure.Scrapers;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
+using MangaScrapper.Core.Configuration;
+using MangaScrapper.Core.Repositories;
+using MangaScrapper.Core.ValueObjects;
 using NovaStack.Contracts.IntegrationEvents;
 using NovaStack.Infrastructure.Messaging;
 
-namespace MangaScrapper.Infrastructure.Messaging;
+namespace MangaScrapper.Core.Messaging;
 
 /// <summary>
 /// Handles <see cref="DeleteMangaIntegrationEvent"/> messages received from RabbitMQ.
@@ -34,7 +31,7 @@ public sealed class DeleteMangaHandler(
         var meilisearch = scope.ServiceProvider.GetRequiredService<Services.MeilisearchService>();
         var qdrant = scope.ServiceProvider.GetRequiredService<Services.QdrantService>();
 
-        var manga = await repo.GetByIdAsync(Domain.ValueObjects.MangaId.From(evt.MangaId), ct);
+        var manga = await repo.GetByIdAsync(MangaId.From(evt.MangaId), ct);
         if (manga == null)
         {
             logger.LogWarning(
@@ -78,7 +75,7 @@ public sealed class DeleteMangaHandler(
         }
 
         // Remove from all stores
-        await repo.DeleteAsync(Domain.ValueObjects.MangaId.From(evt.MangaId), ct);
+        await repo.DeleteAsync(MangaId.From(evt.MangaId), ct);
         await meilisearch.DeleteMangaAsync(evt.MangaId, ct);
         await qdrant.DeleteMangaAsync(evt.MangaId, ct);
 

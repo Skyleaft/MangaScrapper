@@ -1,6 +1,4 @@
-using MangaScrapper.Domain.Aggregates;
-
-namespace MangaScrapper.Application.Common.Abstractions;
+namespace MangaScrapper.Core.Common.Abstractions;
 
 public interface IMangaMessagePublisher
 {

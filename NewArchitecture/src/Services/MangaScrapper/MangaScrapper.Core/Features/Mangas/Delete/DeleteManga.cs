@@ -1,6 +1,6 @@
-using MangaScrapper.Application.Common.Abstractions;
-using MangaScrapper.Domain.Repositories;
-using MangaScrapper.Domain.ValueObjects;
+using MangaScrapper.Core.Common.Abstractions;
+using MangaScrapper.Core.Repositories;
+using MangaScrapper.Core.ValueObjects;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Routing;
 using NovaStack.Contracts.Responses;
 using NovaStack.SharedKernel.Results;
 
-namespace MangaScrapper.Application.Features.Mangas.Delete;
+namespace MangaScrapper.Core.Features.Mangas.Delete;
 
 public record DeleteMangaCommand(Guid MangaId) : ICommand;
 

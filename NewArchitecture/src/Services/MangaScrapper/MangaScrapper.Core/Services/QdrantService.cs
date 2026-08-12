@@ -1,13 +1,11 @@
-using MangaScrapper.Infrastructure.Configuration;
-using MangaScrapper.Infrastructure.Persistence;
-using MangaScrapper.Infrastructure.Persistence.Documents;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
+using MangaScrapper.Core.Configuration;
+using MangaScrapper.Core.Persistence;
+using MangaScrapper.Core.Persistence.Documents;
 using MongoDB.Driver;
 using Qdrant.Client;
 using Qdrant.Client.Grpc;
 
-namespace MangaScrapper.Infrastructure.Services;
+namespace MangaScrapper.Core.Services;
 
 public class QdrantService
 {

@@ -1,8 +1,8 @@
 using System.Security.Claims;
 using FluentValidation;
 using Isopoh.Cryptography.Argon2;
-using MangaScrapper.Application.Common.Abstractions;
-using MangaScrapper.Domain.Repositories;
+using MangaScrapper.Core.Common.Abstractions;
+using MangaScrapper.Core.Repositories;
 using MediatR;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -12,7 +12,7 @@ using Microsoft.AspNetCore.Routing;
 using NovaStack.Contracts.Responses;
 using NovaStack.SharedKernel.Results;
 
-namespace MangaScrapper.Application.Features.Auth.Login;
+namespace MangaScrapper.Core.Features.Auth.Login;
 
 public record LoginCommand(string Username, string Password) : ICommand<LoginResponse>;
 

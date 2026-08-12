@@ -1,10 +1,10 @@
 using System.ComponentModel;
 using Hangfire;
-using MangaScrapper.Infrastructure.Scrapers;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
+using MangaScrapper.Core.Repositories;
+using MangaScrapper.Core.Scrapers;
+using MangaScrapper.Core.ValueObjects;
 
-namespace MangaScrapper.Infrastructure.BackgroundJobs;
+namespace MangaScrapper.Core.BackgroundJobs;
 
 public class MeiliSyncJob(
     IServiceProvider serviceProvider,
@@ -38,11 +38,11 @@ public class DeleteMangaJob(
         logger.LogInformation("Starting deletion for manga: {MangaTitle} (ID: {MangaId})", mangaTitle, mangaId);
 
         using var scope = serviceProvider.CreateScope();
-        var repo = scope.ServiceProvider.GetRequiredService<Domain.Repositories.IMangaRepository>();
+        var repo = scope.ServiceProvider.GetRequiredService<IMangaRepository>();
         var meilisearch = scope.ServiceProvider.GetRequiredService<Services.MeilisearchService>();
         var qdrant = scope.ServiceProvider.GetRequiredService<Services.QdrantService>();
 
-        var manga = await repo.GetByIdAsync(Domain.ValueObjects.MangaId.From(mangaId), ct);
+        var manga = await repo.GetByIdAsync(MangaId.From(mangaId), ct);
         if (manga == null)
         {
             logger.LogWarning("Manga with ID {MangaId} not found. It might have been deleted already.", mangaId);
@@ -69,7 +69,7 @@ public class DeleteMangaJob(
         }
 
         // Delete from all stores
-        await repo.DeleteAsync(Domain.ValueObjects.MangaId.From(mangaId), ct);
+        await repo.DeleteAsync(MangaId.From(mangaId), ct);
         await meilisearch.DeleteMangaAsync(mangaId, ct);
         await qdrant.DeleteMangaAsync(mangaId, ct);
 

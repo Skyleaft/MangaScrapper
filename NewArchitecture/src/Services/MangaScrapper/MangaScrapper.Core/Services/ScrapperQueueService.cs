@@ -1,13 +1,11 @@
-using MangaScrapper.Application.Common.Abstractions;
-using MangaScrapper.Domain.Aggregates;
-using MangaScrapper.Infrastructure.Persistence.Documents;
-using MangaScrapper.Infrastructure.Scrapers;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
+using MangaScrapper.Core.Aggregates;
+using MangaScrapper.Core.Common.Abstractions;
+using MangaScrapper.Core.Persistence.Documents;
+using MangaScrapper.Core.Scrapers;
 using NovaStack.Infrastructure.Messaging.Options;
 using RabbitMQ.Client;
 
-namespace MangaScrapper.Infrastructure.Services;
+namespace MangaScrapper.Core.Services;
 
 /// <summary>
 /// Infrastructure implementation that routes chapter scraping to the correct provider

@@ -1,8 +1,7 @@
-using MangaScrapper.Application.Common.Abstractions;
-using MangaScrapper.Infrastructure.Configuration;
-using Microsoft.Extensions.Options;
+using MangaScrapper.Core.Common.Abstractions;
+using MangaScrapper.Core.Configuration;
 
-namespace MangaScrapper.Infrastructure.Services;
+namespace MangaScrapper.Core.Services;
 
 public sealed class ScrapperSettingsProvider : IScrapperSettingsProvider
 {

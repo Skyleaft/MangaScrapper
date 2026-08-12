@@ -1,8 +1,7 @@
 using FluentValidation;
-using MangaScrapper.Application.Common.Abstractions;
-using MangaScrapper.Domain.Aggregates;
-using MangaScrapper.Domain.Repositories;
-using MangaScrapper.Domain.ValueObjects;
+using MangaScrapper.Core.Common.Abstractions;
+using MangaScrapper.Core.Repositories;
+using MangaScrapper.Core.ValueObjects;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -10,7 +9,7 @@ using Microsoft.AspNetCore.Routing;
 using NovaStack.Contracts.Responses;
 using NovaStack.SharedKernel.Results;
 
-namespace MangaScrapper.Application.Features.UserProgression.UpdateUserProgression;
+namespace MangaScrapper.Core.Features.UserProgression.UpdateUserProgression;
 
 public record UpdateUserProgressionCommand(
     string UserId,
@@ -44,7 +43,7 @@ internal sealed class UpdateUserProgressionCommandHandler(IUserProgressionReposi
             return new UserProgressionResponse(existing.Id, existing.UserId, existing.MangaId.Value, existing.LastReadChapterId.Value, existing.LastReadChapterNumber, existing.LastReadAt);
         }
 
-        var progression = Domain.Aggregates.UserProgression.Create(command.UserId, mangaId, chapterId, command.LastReadChapterNumber);
+        var progression = Aggregates.UserProgression.Create(command.UserId, mangaId, chapterId, command.LastReadChapterNumber);
         await progressionRepository.AddOrUpdateAsync(progression, ct);
 
         return new UserProgressionResponse(progression.Id, progression.UserId, progression.MangaId.Value, progression.LastReadChapterId.Value, progression.LastReadChapterNumber, progression.LastReadAt);

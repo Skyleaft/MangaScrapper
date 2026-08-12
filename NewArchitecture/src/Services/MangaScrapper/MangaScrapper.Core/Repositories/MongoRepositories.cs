@@ -1,13 +1,12 @@
-using MangaScrapper.Domain.Aggregates;
-using MangaScrapper.Domain.Repositories;
-using MangaScrapper.Domain.ValueObjects;
-using MangaScrapper.Infrastructure.Persistence;
-using MangaScrapper.Infrastructure.Persistence.Documents;
+using MangaScrapper.Core.Aggregates;
+using MangaScrapper.Core.Persistence;
+using MangaScrapper.Core.Persistence.Documents;
+using MangaScrapper.Core.ValueObjects;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using NovaStack.SharedKernel.Common;
 
-namespace MangaScrapper.Infrastructure.Repositories;
+namespace MangaScrapper.Core.Repositories;
 
 public class MongoUserRepository(MangaMongoDbContext dbContext) : IUserRepository
 {

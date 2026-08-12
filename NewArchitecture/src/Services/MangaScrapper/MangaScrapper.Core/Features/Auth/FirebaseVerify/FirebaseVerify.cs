@@ -1,9 +1,9 @@
 using System.Security.Claims;
 using FirebaseAdmin.Auth;
-using MangaScrapper.Application.Common.Abstractions;
-using MangaScrapper.Domain.Aggregates;
-using MangaScrapper.Domain.Repositories;
-using MangaScrapper.Domain.ValueObjects;
+using MangaScrapper.Core.Aggregates;
+using MangaScrapper.Core.Common.Abstractions;
+using MangaScrapper.Core.Repositories;
+using MangaScrapper.Core.ValueObjects;
 using MediatR;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -13,7 +13,7 @@ using Microsoft.AspNetCore.Routing;
 using NovaStack.Contracts.Responses;
 using NovaStack.SharedKernel.Results;
 
-namespace MangaScrapper.Application.Features.Auth.FirebaseVerify;
+namespace MangaScrapper.Core.Features.Auth.FirebaseVerify;
 
 public record FirebaseVerifyCommand(string IdToken) : ICommand<LoginResponse>;
 

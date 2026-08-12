@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Routing;
 
-namespace MangaScrapper.Application.Common.Abstractions;
+namespace MangaScrapper.Core.Common.Abstractions;
 
 public interface IEndpointDefinition
 {

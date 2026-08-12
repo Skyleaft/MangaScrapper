@@ -1,12 +1,12 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using MangaScrapper.Application.Common.Abstractions;
-using MangaScrapper.Domain.Aggregates;
+using MangaScrapper.Core.Aggregates;
+using MangaScrapper.Core.Common.Abstractions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 
-namespace MangaScrapper.Infrastructure.Security;
+namespace MangaScrapper.Core.Security;
 
 public class JwtAuthTokenService(IConfiguration configuration) : IAuthTokenService
 {

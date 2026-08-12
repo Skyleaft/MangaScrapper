@@ -1,13 +1,12 @@
-using MangaScrapper.Application.Common.Abstractions;
+using MangaScrapper.Core.Common.Abstractions;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.DependencyInjection;
 using NovaStack.Contracts.Responses;
 using NovaStack.SharedKernel.Results;
 
-namespace MangaScrapper.Application.Features.ProviderScrapers.Komiku;
+namespace MangaScrapper.Core.Features.ProviderScrapers.Komiku;
 
 public record ScrapKomikuMangaCommand(string MangaUrl, bool ScrapChapterPages = true, string? LinkId = null) : ICommand<ScrapperMangaDocumentResponse>;
 public record GetKomikuDetailQuery(string MangaUrl) : IQuery<ScrapperMangaDocumentResponse>;

@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using NovaStack.SharedKernel.Results;
 
-namespace MangaScrapper.Application;
+namespace MangaScrapper.Core;
 
 public static class ErrorExtensions
 {

@@ -1,13 +1,10 @@
+using MangaScrapper.Core.Configuration;
+using MangaScrapper.Core.Persistence;
+using MangaScrapper.Core.Persistence.Documents;
 using Meilisearch;
-using Meilisearch.QueryParameters;
-using MangaScrapper.Infrastructure.Configuration;
-using MangaScrapper.Infrastructure.Persistence.Documents;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using MongoDB.Driver;
-using MangaScrapper.Infrastructure.Persistence;
 
-namespace MangaScrapper.Infrastructure.Services;
+namespace MangaScrapper.Core.Services;
 
 public class MeilisearchService
 {

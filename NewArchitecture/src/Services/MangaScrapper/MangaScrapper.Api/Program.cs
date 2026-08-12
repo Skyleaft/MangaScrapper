@@ -1,7 +1,7 @@
 using Hangfire;
 using MangaScrapper.Api.Components;
 using MangaScrapper.Core.DependencyInjection;
-using MangaScrapper.Infrastructure.Security;
+using MangaScrapper.Core.Security;
 using Microsoft.Extensions.FileProviders;
 using NovaStack.Infrastructure.DependencyInjection;
 using NovaStack.Infrastructure.Logging;

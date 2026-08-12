@@ -1,8 +1,7 @@
 using System.Diagnostics;
 using MediatR;
-using Microsoft.Extensions.Logging;
 
-namespace MangaScrapper.Application.Common.Behaviors;
+namespace MangaScrapper.Core.Common.Behaviors;
 
 public sealed class LoggingBehavior<TRequest, TResponse>(
     ILogger<LoggingBehavior<TRequest, TResponse>> logger)

@@ -1,22 +1,13 @@
 using System.Globalization;
-using System.Text.Json;
-using System.Text.RegularExpressions;
-using System.Web;
-using NovaStack.Infrastructure.Messaging;
-using HtmlAgilityPack;
-
-using MangaScrapper.Infrastructure.Persistence.Documents;
-
-
-using MangaScrapper.Infrastructure.Utils;
-using Microsoft.AspNetCore.Http.Extensions;
+using MangaScrapper.Core.Configuration;
+using MangaScrapper.Core.Persistence.Documents;
+using MangaScrapper.Core.Repositories;
+using MangaScrapper.Core.Services;
+using MangaScrapper.Core.Utils;
 using Microsoft.AspNetCore.WebUtilities;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
+using NovaStack.Infrastructure.Messaging;
 
-using MangaScrapper.Domain.Repositories;
-
-namespace MangaScrapper.Infrastructure.Scrapers;
+namespace MangaScrapper.Core.Scrapers.Komikcast;
 
 public class KomikcastService : ScrapperServiceBase
 {

@@ -1,5 +1,6 @@
-using MangaScrapper.Application.Common.Abstractions;
-using MangaScrapper.Domain.Repositories;
+using MangaScrapper.Core.Aggregates;
+using MangaScrapper.Core.Common.Abstractions;
+using MangaScrapper.Core.Repositories;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -7,7 +8,7 @@ using Microsoft.AspNetCore.Routing;
 using NovaStack.Contracts.Responses;
 using NovaStack.SharedKernel.Results;
 
-namespace MangaScrapper.Application.Features.Mangas.GetPagedManga;
+namespace MangaScrapper.Core.Features.Mangas.GetPagedManga;
 
 public record GetPagedMangaQuery(
     string? Search = null,
@@ -41,7 +42,7 @@ public sealed class GetPagedMangaQueryHandler(
 
         var ids = data.Items.Select(x => x.Id.Value).ToList();
 
-        var mongoDocs = new Dictionary<Guid, Domain.Aggregates.Manga>();
+        var mongoDocs = new Dictionary<Guid, Manga>();
         if (ids.Count > 0)
         {
             var fullDocs = await mangaRepository.GetByIdsAsync(ids, ct);

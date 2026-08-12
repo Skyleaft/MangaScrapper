@@ -1,11 +1,11 @@
-using MangaScrapper.Application.Common.Abstractions;
+using MangaScrapper.Core.Common.Abstractions;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using NovaStack.SharedKernel.Results;
 
-namespace MangaScrapper.Application.Features.Images.ProxyImage;
+namespace MangaScrapper.Core.Features.Images.ProxyImage;
 
 public record ProxyImageQuery(string Url) : IQuery<(byte[] Bytes, string ContentType)>;
 

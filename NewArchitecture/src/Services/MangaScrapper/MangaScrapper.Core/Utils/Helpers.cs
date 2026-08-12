@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
 
-namespace MangaScrapper.Infrastructure.Utils;
+namespace MangaScrapper.Core.Utils;
 
 public static class ThumbnailHelper
 {

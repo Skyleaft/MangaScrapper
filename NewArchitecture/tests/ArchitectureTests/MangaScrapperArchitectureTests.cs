@@ -1,5 +1,6 @@
 using FluentAssertions;
-using MangaScrapper.Application.Features.Mangas.GetPagedManga;
+using MangaScrapper.Core.Common.Abstractions;
+using MangaScrapper.Core.Features.Mangas.GetPagedManga;
 using NetArchTest.Rules;
 using Xunit;
 
@@ -27,7 +28,7 @@ public sealed class MangaScrapperArchitectureTests
             .That()
             .HaveNameEndingWith("Endpoint")
             .Should()
-            .ImplementInterface(typeof(MangaScrapper.Application.Common.Abstractions.IEndpointDefinition))
+            .ImplementInterface(typeof(IEndpointDefinition))
             .GetResult();
 
         result.IsSuccessful.Should().BeTrue("All Minimal API endpoint classes should implement IEndpointDefinition.");

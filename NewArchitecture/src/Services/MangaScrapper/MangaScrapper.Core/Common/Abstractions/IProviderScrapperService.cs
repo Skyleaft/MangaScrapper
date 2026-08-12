@@ -1,7 +1,6 @@
 using NovaStack.Contracts.Responses;
-using MangaScrapper.Domain.ValueObjects;
 
-namespace MangaScrapper.Application.Common.Abstractions;
+namespace MangaScrapper.Core.Common.Abstractions;
 
 public interface IProviderScrapperService
 {

@@ -1,13 +1,12 @@
-using MangaScrapper.Application.Common.Abstractions;
+using MangaScrapper.Core.Common.Abstractions;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.DependencyInjection;
 using NovaStack.Contracts.Responses;
 using NovaStack.SharedKernel.Results;
 
-namespace MangaScrapper.Application.Features.Scrapper.SearchAnilist;
+namespace MangaScrapper.Core.Features.Scrapper.SearchAnilist;
 
 public record SearchAnilistQuery(string Title) : IQuery<List<AnilistMedia>>;
 

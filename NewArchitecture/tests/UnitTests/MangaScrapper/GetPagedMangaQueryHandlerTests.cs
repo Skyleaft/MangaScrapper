@@ -1,8 +1,7 @@
 using FluentAssertions;
-using MangaScrapper.Application.Features.Mangas.GetPagedManga;
-using MangaScrapper.Domain.Aggregates;
-using MangaScrapper.Domain.Repositories;
-using MangaScrapper.Domain.ValueObjects;
+using MangaScrapper.Core.Aggregates;
+using MangaScrapper.Core.Features.Mangas.GetPagedManga;
+using MangaScrapper.Core.Repositories;
 using Moq;
 using NovaStack.SharedKernel.Common;
 using Xunit;

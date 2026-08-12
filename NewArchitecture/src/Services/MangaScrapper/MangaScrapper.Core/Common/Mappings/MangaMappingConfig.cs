@@ -1,17 +1,30 @@
-﻿using MangaScrapper.Domain.Aggregates;
-using MangaScrapper.Domain.ValueObjects;
+using MangaScrapper.Core.Aggregates;
+using MangaScrapper.Core.Configuration;
+using MangaScrapper.Core.Persistence.Documents;
+using MangaScrapper.Core.ValueObjects;
 using Mapster;
 using NovaStack.Contracts.Responses;
 
-namespace MangaScrapper.Application.Common.Mappings;
+namespace MangaScrapper.Core.Common.Mappings;
 
 public sealed class MangaMappingConfig : IRegister
 {
     public void Register(TypeAdapterConfig config)
     {
+        // ── Value Object Primitive Mappings ──────────────────────────────────
+        config.NewConfig<Guid, MangaId>().MapWith(guid => MangaId.From(guid));
+        config.NewConfig<MangaId, Guid>().MapWith(id => id.Value);
+
+        config.NewConfig<Guid, ChapterId>().MapWith(guid => ChapterId.From(guid));
+        config.NewConfig<ChapterId, Guid>().MapWith(id => id.Value);
+
+        config.NewConfig<Guid, UserId>().MapWith(guid => UserId.From(guid));
+        config.NewConfig<UserId, Guid>().MapWith(id => id.Value);
+
+        // ── DTO & Contract Mappings ─────────────────────────────────────────
         config.NewConfig<Manga, MangaSummaryResponse>()
             .Map(dest => dest.Id, src => src.Id.Value)
-            .Map(dest=>dest.TotalView, src=>src.Chapters.Sum(x=>x.TotalView))
+            .Map(dest => dest.TotalView, src => src.Chapters.Sum(x => x.TotalView))
             .Map(dest => dest.LatestChapter, src => src.Chapters.OrderByDescending(c => c.Number).FirstOrDefault().Adapt<ChapterResponse>());
 
         config.NewConfig<Chapter, ChapterResponse>()
@@ -20,17 +33,19 @@ public sealed class MangaMappingConfig : IRegister
         
         config.NewConfig<Manga, MeiliMangaDocument>()
             .Map(dest => dest.Id, src => src.Id.Value.ToString())
-            .Map(dest=>dest.ReleaseDate,src=>((DateTimeOffset)src.ReleaseDate.GetValueOrDefault().ToUniversalTime()).ToUnixTimeSeconds())
+            .Map(dest => dest.ReleaseDate, src => ((DateTimeOffset)src.ReleaseDate.GetValueOrDefault().ToUniversalTime()).ToUnixTimeSeconds())
             .Map(dest => dest.CreatedAtTimestamp, src => ((DateTimeOffset)src.CreatedAt.ToUniversalTime()).ToUnixTimeSeconds())
             .Map(dest => dest.UpdatedAtTimestamp, src => ((DateTimeOffset)src.UpdatedAt.ToUniversalTime()).ToUnixTimeSeconds())
-            .Map(dest => dest.TotalView, src=>src.Chapters.Sum(x=>x.TotalView))
-            .Map(dest => dest.LatestChapter, src=>src.Chapters.OrderByDescending(c => c.Number).FirstOrDefault().Adapt<MeiliChapterDocument>());
+            .Map(dest => dest.TotalView, src => src.Chapters.Sum(x => x.TotalView))
+            .Map(dest => dest.LatestChapter, src => src.Chapters.OrderByDescending(c => c.Number).FirstOrDefault().Adapt<MeiliChapterDocument>());
 
         config.NewConfig<Chapter, MeiliChapterDocument>()
             .Map(dest => dest.Id, src => src.Id.Value.ToString())
-            .Map(dest=>dest.UploadDateTimestamp,src=>((DateTimeOffset)src.UploadDate.ToUniversalTime()).ToUnixTimeSeconds());
+            .Map(dest => dest.UploadDateTimestamp, src => ((DateTimeOffset)src.UploadDate.ToUniversalTime()).ToUnixTimeSeconds());
 
+        // ── Persistence BSON Document Mappings ─────────────────────────────
         config.NewConfig<MangaDocument, Manga>()
+            .Map(dest => dest.Id, src => MangaId.From(src.Id))
             .ConstructUsing(doc => Manga.Reconstitute(
                 MangaId.From(doc.Id),
                 doc.Title,

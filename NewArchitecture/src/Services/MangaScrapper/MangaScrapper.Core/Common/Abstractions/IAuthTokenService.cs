@@ -1,6 +1,6 @@
-using MangaScrapper.Domain.Aggregates;
+using MangaScrapper.Core.Aggregates;
 
-namespace MangaScrapper.Application.Common.Abstractions;
+namespace MangaScrapper.Core.Common.Abstractions;
 
 /// <summary>
 /// Generates JWT tokens for authenticated users.

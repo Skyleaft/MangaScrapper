@@ -2,17 +2,21 @@ using System.Globalization;
 using System.Text.Json;
 using System.Web;
 using HtmlAgilityPack;
-using SkiaSharp;
+using MangaScrapper.Core.Aggregates;
+using MangaScrapper.Core.Common.Abstractions;
+using MangaScrapper.Core.Configuration;
+using MangaScrapper.Core.Persistence.Documents;
+using MangaScrapper.Core.Repositories;
+using MangaScrapper.Core.Services;
+using MangaScrapper.Core.Utils;
+using MangaScrapper.Core.ValueObjects;
+using Mapster;
 using NovaStack.Contracts.IntegrationEvents;
 using NovaStack.Contracts.Responses;
 using NovaStack.Infrastructure.Messaging;
-using MangaScrapper.Application.Common.Abstractions;
-using MangaScrapper.Domain.Aggregates;
-using MangaScrapper.Domain.Repositories;
-using MangaScrapper.Domain.ValueObjects;
-using Mapster;
+using SkiaSharp;
 
-namespace MangaScrapper.Infrastructure.Scrapers;
+namespace MangaScrapper.Core.Scrapers;
 
 public interface IScrapperService
 {

@@ -1,8 +1,8 @@
-using MangaScrapper.Infrastructure.Persistence.Documents;
+using MangaScrapper.Core.Persistence.Documents;
 using MongoDB.Driver;
 using NovaStack.Infrastructure.Persistence.MongoDb;
 
-namespace MangaScrapper.Infrastructure.Persistence;
+namespace MangaScrapper.Core.Persistence;
 
 public class MangaMongoDbContext : MongoDbContextBase
 {

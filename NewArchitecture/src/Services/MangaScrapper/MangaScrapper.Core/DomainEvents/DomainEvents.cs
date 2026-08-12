@@ -1,7 +1,7 @@
-using MangaScrapper.Domain.ValueObjects;
+using MangaScrapper.Core.ValueObjects;
 using NovaStack.SharedKernel.Abstractions;
 
-namespace MangaScrapper.Domain.DomainEvents;
+namespace MangaScrapper.Core.DomainEvents;
 
 public record MangaCreatedDomainEvent(
     MangaId MangaId,

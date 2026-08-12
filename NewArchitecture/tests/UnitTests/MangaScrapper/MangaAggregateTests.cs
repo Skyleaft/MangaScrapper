@@ -1,7 +1,7 @@
 using FluentAssertions;
-using MangaScrapper.Domain.Aggregates;
-using MangaScrapper.Domain.DomainEvents;
-using MangaScrapper.Domain.ValueObjects;
+using MangaScrapper.Core.Aggregates;
+using MangaScrapper.Core.DomainEvents;
+using MangaScrapper.Core.ValueObjects;
 using Xunit;
 
 namespace UnitTests.MangaScrapper.Domain;

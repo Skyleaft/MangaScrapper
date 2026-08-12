@@ -1,6 +1,6 @@
-using MangaScrapper.Application.Common.Abstractions;
-using MangaScrapper.Domain.Repositories;
-using MangaScrapper.Domain.ValueObjects;
+using MangaScrapper.Core.Common.Abstractions;
+using MangaScrapper.Core.Repositories;
+using MangaScrapper.Core.ValueObjects;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Routing;
 using NovaStack.Contracts.Responses;
 using NovaStack.SharedKernel.Results;
 
-namespace MangaScrapper.Application.Features.UserProgression.GetMangaProgression;
+namespace MangaScrapper.Core.Features.UserProgression.GetMangaProgression;
 
 public record GetMangaProgressionQuery(string UserId, Guid MangaId) : IQuery<UserProgressionResponse>;
 

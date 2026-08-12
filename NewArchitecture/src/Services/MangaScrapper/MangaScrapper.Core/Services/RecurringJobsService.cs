@@ -1,15 +1,10 @@
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using Hangfire;
 using Hangfire.Storage;
-using MangaScrapper.Application.Common.Abstractions;
-using MangaScrapper.Application.Features.RecurringJobs.GetRecurringJobs;
-using MangaScrapper.Infrastructure.BackgroundJobs;
-using RecurringJobDto = MangaScrapper.Application.Features.RecurringJobs.GetRecurringJobs.RecurringJobDto;
+using MangaScrapper.Core.BackgroundJobs;
+using MangaScrapper.Core.Common.Abstractions;
+using RecurringJobDto = MangaScrapper.Core.Features.RecurringJobs.GetRecurringJobs.RecurringJobDto;
 
-namespace MangaScrapper.Infrastructure.Services;
+namespace MangaScrapper.Core.Services;
 
 public class RecurringJobsService(IRecurringJobManager recurringJobManager) : IRecurringJobsService
 {

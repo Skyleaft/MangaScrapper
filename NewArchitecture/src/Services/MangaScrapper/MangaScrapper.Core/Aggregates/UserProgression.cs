@@ -1,7 +1,7 @@
-using MangaScrapper.Domain.ValueObjects;
+using MangaScrapper.Core.ValueObjects;
 using NovaStack.SharedKernel.Common;
 
-namespace MangaScrapper.Domain.Aggregates;
+namespace MangaScrapper.Core.Aggregates;
 
 public class UserProgression : Entity<Guid>
 {

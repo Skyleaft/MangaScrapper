@@ -1,5 +1,4 @@
-using System.Net.Http.Json;
-using MangaScrapper.Application.Common.Abstractions;
+using MangaScrapper.Core.Common.Abstractions;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -7,7 +6,7 @@ using Microsoft.AspNetCore.Routing;
 using NovaStack.Contracts.Responses;
 using NovaStack.SharedKernel.Results;
 
-namespace MangaScrapper.Application.Features.Scrapper.SearchJikan;
+namespace MangaScrapper.Core.Features.Scrapper.SearchJikan;
 
 public record SearchJikanQuery(string Title) : IQuery<List<JikanMangaSearchDto>>;
 

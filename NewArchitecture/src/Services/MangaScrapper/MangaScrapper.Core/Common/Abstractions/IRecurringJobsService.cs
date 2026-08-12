@@ -1,9 +1,6 @@
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
-using MangaScrapper.Application.Features.RecurringJobs.GetRecurringJobs;
+using MangaScrapper.Core.Features.RecurringJobs.GetRecurringJobs;
 
-namespace MangaScrapper.Application.Common.Abstractions;
+namespace MangaScrapper.Core.Common.Abstractions;
 
 public interface IRecurringJobsService
 {

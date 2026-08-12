@@ -1,4 +1,4 @@
-namespace MangaScrapper.Application.Common.Abstractions;
+namespace MangaScrapper.Core.Common.Abstractions;
 
 /// <summary>
 /// Provides storage-related settings to the Application layer without referencing Infrastructure config types.

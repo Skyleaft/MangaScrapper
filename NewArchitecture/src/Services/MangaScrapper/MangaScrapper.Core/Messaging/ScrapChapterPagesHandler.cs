@@ -1,10 +1,12 @@
-using MangaScrapper.Infrastructure.Scrapers;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
+using MangaScrapper.Core.Aggregates;
+using MangaScrapper.Core.Persistence.Documents;
+using MangaScrapper.Core.Repositories;
+using MangaScrapper.Core.Scrapers;
+using MangaScrapper.Core.ValueObjects;
 using NovaStack.Contracts.IntegrationEvents;
 using NovaStack.Infrastructure.Messaging;
 
-namespace MangaScrapper.Infrastructure.Messaging;
+namespace MangaScrapper.Core.Messaging;
 
 /// <summary>
 /// Handles <see cref="ScrapChapterPagesIntegrationEvent"/> messages received from RabbitMQ.
@@ -26,9 +28,9 @@ public sealed class ScrapChapterPagesHandler(
         var scrapper = scope.ServiceProvider.GetKeyedService<IScrapperService>(evt.Provider)
             ?? throw new InvalidOperationException($"No IScrapperService registered for provider key '{evt.Provider}'.");
 
-        var repo = scope.ServiceProvider.GetRequiredService<MangaScrapper.Domain.Repositories.IMangaRepository>();
+        var repo = scope.ServiceProvider.GetRequiredService<IMangaRepository>();
 
-        var manga = await repo.GetByIdAsync(MangaScrapper.Domain.ValueObjects.MangaId.From(evt.MangaId), ct)
+        var manga = await repo.GetByIdAsync(MangaId.From(evt.MangaId), ct)
             ?? throw new InvalidOperationException($"Manga with ID '{evt.MangaId}' not found.");
 
         var chapterId = Guid.Parse(evt.ChapterId);
@@ -36,7 +38,7 @@ public sealed class ScrapChapterPagesHandler(
         if (chapter is null)
             throw new InvalidOperationException($"Chapter '{evt.ChapterId}' not found in manga '{evt.MangaTitle}'.");
 
-        var docChapter = new MangaScrapper.Infrastructure.Persistence.Documents.ChapterDocument
+        var docChapter = new ChapterDocument
         {
             Id = chapter.Id.Value,
             Number = chapter.Number,
@@ -58,7 +60,7 @@ public sealed class ScrapChapterPagesHandler(
             return;
         }
 
-        var domainPages = processedChapter.Pages.Select(p => new MangaScrapper.Domain.Aggregates.Page(Guid.NewGuid(), p.ImageUrl, p.LocalImageUrl, p.Size)).ToList();
+        var domainPages = processedChapter.Pages.Select(p => new Page(Guid.NewGuid(), p.ImageUrl, p.LocalImageUrl, p.Size)).ToList();
         await repo.UpdateChapterPagesAsync(evt.MangaId, chapterId, domainPages, ct);
 
         logger.LogInformation(

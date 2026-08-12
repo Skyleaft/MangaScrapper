@@ -1,12 +1,11 @@
-using MangaScrapper.Domain.Aggregates;
-using MangaScrapper.Domain.Repositories;
-using MangaScrapper.Domain.ValueObjects;
-using MangaScrapper.Infrastructure.Persistence;
-using Mapster;
-using Meilisearch;
+using MangaScrapper.Core.Aggregates;
+using MangaScrapper.Core.Configuration;
+using MangaScrapper.Core.Persistence.Documents;
+using MangaScrapper.Core.Repositories;
+using MangaScrapper.Core.ValueObjects;
 using NovaStack.SharedKernel.Common;
 
-namespace MangaScrapper.Infrastructure.Services;
+namespace MangaScrapper.Core.Services;
 
 public class MangaExternalService(ILogger<MangaExternalService> logger, 
     MeilisearchService meilisearchService,

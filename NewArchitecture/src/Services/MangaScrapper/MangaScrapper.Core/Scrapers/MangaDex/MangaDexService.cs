@@ -1,18 +1,14 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
+using MangaScrapper.Core.Configuration;
+using MangaScrapper.Core.Persistence.Documents;
+using MangaScrapper.Core.Repositories;
+using MangaScrapper.Core.Services;
+using MangaScrapper.Core.Utils;
+using Microsoft.AspNetCore.WebUtilities;
 using NovaStack.Infrastructure.Messaging;
 
-using MangaScrapper.Infrastructure.Persistence.Documents;
-
-
-using MangaScrapper.Infrastructure.Utils;
-using Microsoft.AspNetCore.WebUtilities;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-
-using MangaScrapper.Domain.Repositories;
-
-namespace MangaScrapper.Infrastructure.Scrapers;
+namespace MangaScrapper.Core.Scrapers.MangaDex;
 
 public class MangaDexService : ScrapperServiceBase
 {

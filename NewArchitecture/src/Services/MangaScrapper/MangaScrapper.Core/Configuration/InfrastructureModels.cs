@@ -1,4 +1,4 @@
-namespace MangaScrapper.Infrastructure.Configuration;
+namespace MangaScrapper.Core.Configuration;
 
 public class SearchItem
 {

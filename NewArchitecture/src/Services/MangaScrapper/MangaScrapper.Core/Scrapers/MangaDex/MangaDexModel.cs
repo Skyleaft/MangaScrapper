@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace MangaScrapper.Infrastructure.Scrapers;
+namespace MangaScrapper.Core.Scrapers.MangaDex;
 
 // â”€â”€â”€ Generic wrapper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 

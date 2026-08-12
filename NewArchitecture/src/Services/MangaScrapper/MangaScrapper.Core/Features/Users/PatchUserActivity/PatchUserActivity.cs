@@ -1,6 +1,6 @@
-using MangaScrapper.Application.Common.Abstractions;
-using MangaScrapper.Domain.Repositories;
-using MangaScrapper.Domain.ValueObjects;
+using MangaScrapper.Core.Common.Abstractions;
+using MangaScrapper.Core.Repositories;
+using MangaScrapper.Core.ValueObjects;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -9,7 +9,7 @@ using NovaStack.Contracts.Responses;
 using NovaStack.SharedKernel.Abstractions;
 using NovaStack.SharedKernel.Results;
 
-namespace MangaScrapper.Application.Features.Users.PatchUserActivity;
+namespace MangaScrapper.Core.Features.Users.PatchUserActivity;
 
 public record PatchUserActivityCommand(Guid Id) : ICommand;
 
