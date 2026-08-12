@@ -20,18 +20,18 @@
     <PackageReference Include="MongoDB.Driver" Version="3.10.0" />
     <PackageReference Include="Hangfire.AspNetCore" Version="1.8.24" />
     <PackageReference Include="Hangfire.Mongo" Version="1.16.1" />
-    <PackageReference Include="MeiliSearch" Version="0.16.1" />
-    <PackageReference Include="Qdrant.Client" Version="1.13.0" />
-    <PackageReference Include="HtmlAgilityPack" Version="1.11.74" />
-    <PackageReference Include="Microsoft.Playwright" Version="1.50.0" />
-    <PackageReference Include="SkiaSharp" Version="3.116.1" />
-    <PackageReference Include="FirebaseAdmin" Version="3.1.0" />
-    <PackageReference Include="Google.Apis.Auth" Version="1.69.0" />
+    <PackageReference Include="MeiliSearch" Version="0.20.0" />
+    <PackageReference Include="Qdrant.Client" Version="1.19.0" />
+    <PackageReference Include="HtmlAgilityPack" Version="1.12.4" />
+    <PackageReference Include="Microsoft.Playwright" Version="1.62.0" />
+    <PackageReference Include="SkiaSharp" Version="4.151.1" />
+    <PackageReference Include="FirebaseAdmin" Version="3.6.0" />
+    <PackageReference Include="Google.Apis.Auth" Version="1.75.0" />
     <PackageReference Include="Isopoh.Cryptography.Argon2" Version="2.0.0" />
     <PackageReference Include="Mapster" Version="10.0.11" />
     <PackageReference Include="MediatR" Version="14.2.0" />
-    <PackageReference Include="FluentValidation" Version="12.0.0" />
-    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.0.0" />
+    <PackageReference Include="FluentValidation" Version="12.1.1" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
   </ItemGroup>
 
 </Project>

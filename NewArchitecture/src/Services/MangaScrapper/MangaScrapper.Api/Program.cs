@@ -85,6 +85,10 @@ try
             {
                 return LogEventLevel.Verbose; 
             }
+            else if (path != null && path.StartsWith("/scalar", StringComparison.OrdinalIgnoreCase))
+            {
+                return LogEventLevel.Verbose; 
+            }
 
             if (ex != null || httpContext.Response.StatusCode >= 500)
                 return LogEventLevel.Error;
