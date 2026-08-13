@@ -23,15 +23,12 @@ public interface IScrapperService
     Task<(string path, long size)> DownloadAndConvertToWebP(string mangaTitle, string chapterNumber, string imageUrl, int index, CancellationToken ct = default);
     Task<(string path, long size)> DownloadThumbnailAndConvertToWebP(string mangaTitle, string imageUrl, CancellationToken ct = default);
     string GetCleanTitle(string title);
-    Task<JikanMangaItem?> GetMangaInfo(string title, string type, CancellationToken ct = default);
-    Task<JikanMangaItem?> GetMangaInfoById(int malId, CancellationToken ct = default);
     Task<Manga> UpdateMangaMetaData(Manga manga, CancellationToken ct = default);
     Task<Manga> ExtractManga(string url, CancellationToken ct, bool scrapChapters = true, string? linkedId = null);
     Task<Manga> GetDetail(string url, CancellationToken ct);
     Task<Chapter> GetChapterPage(string mangaTitle, Chapter chapter, CancellationToken ct = default);
     Task QueueChapterScraping(Guid mangaId, string mangaTitle, Chapter chapter, CancellationToken ct = default);
     Task<List<SearchItem>> SearchManga(SearchRequest request, CancellationToken ct);
-    Task<List<JikanMangaItem>> SearchJikan(string title, CancellationToken ct = default);
     Task<List<Page>> GetAllPages(string url, CancellationToken ct = default);
     Task<List<ScrapperProvider>> GetAllProvider();
 }
@@ -331,82 +328,13 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
         return string.Equals(Path.GetExtension(uri.AbsolutePath), ".avif", StringComparison.OrdinalIgnoreCase);
     }
 
-    public async Task<List<JikanMangaItem>> SearchJikan(string title, CancellationToken ct = default)
-    {
-        var query = HttpUtility.ParseQueryString(string.Empty);
-        query["q"] = title;
-        query["limit"] = "10";
-        try
-        {
-            var response = await HttpClient.GetFromJsonAsync<JikanMangaResponse>($"https://api.jikan.moe/v4/manga?{query}", ct);
-            return response?.Data ?? new List<JikanMangaItem>();
-        }
-        catch { return new List<JikanMangaItem>(); }
-    }
-
-    public async Task<List<AnilistMedia>> SearchAnilist(string title, CancellationToken ct = default)
-    {
-        var url = "https://graphql.anilist.co";
-        var query = new
-        {
-            query = @"
-                query ($search: String) {
-                    Page (page: 1, perPage: 10) {
-                        media (search: $search, type: MANGA) {
-                            id
-                            idMal
-                            title { romaji english native }
-                            description
-                            countryOfOrigin
-                            format
-                            status
-                            chapters
-                            volumes
-                            coverImage { extraLarge large medium }
-                            averageScore
-                            popularity
-                            genres
-                            startDate { year month day }
-                        }
-                    }
-                }",
-            variables = new { search = title }
-        };
-
-        try
-        {
-            var response = await HttpClient.PostAsJsonAsync(url, query, ct);
-            response.EnsureSuccessStatusCode();
-            var result = await response.Content.ReadFromJsonAsync<AnilistResponse>(cancellationToken: ct);
-            return result?.Data?.Page?.Media ?? new List<AnilistMedia>();
-        }
-        catch (Exception)
-        {
-            return new List<AnilistMedia>();
-        }
-    }
-
-    public async Task<JikanMangaItem?> GetMangaInfo(string title, string type, CancellationToken ct = default)
-    {
-        var results = await SearchJikan(title, ct);
-        return results.FirstOrDefault(x => string.Equals(x.Type, type, StringComparison.OrdinalIgnoreCase)) ?? results.FirstOrDefault();
-    }
-
-    public async Task<JikanMangaItem?> GetMangaInfoById(int malId, CancellationToken ct = default)
-    {
-        try
-        {
-            var response = await HttpClient.GetFromJsonAsync<JikanMangaSingleResponse>($"https://api.jikan.moe/v4/manga/{malId}", ct);
-            return response?.Data;
-        }
-        catch { return null; }
-    }
 
     public async Task<Manga> UpdateMangaMetaData(Manga manga, CancellationToken ct = default)
     {
+        var externalService = ScopeFactory.CreateScope().ServiceProvider.GetRequiredService<IExternalMetadataService>();
         JikanMangaItem? mangaInfo = manga.MalId != 0
-            ? await GetMangaInfoById(manga.MalId, ct)
-            : await GetMangaInfo(manga.Title, manga.Type, ct);
+            ? await externalService.GetJikanMangaInfoByIdAsync(manga.MalId, ct)
+            : await externalService.GetJikanMangaInfoAsync(manga.Title, manga.Type, ct);
 
         if (mangaInfo?.TitleSynonyms != null)
         {

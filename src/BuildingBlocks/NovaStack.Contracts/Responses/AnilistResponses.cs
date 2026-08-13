@@ -32,7 +32,8 @@ public record AnilistMedia(
     [property: JsonPropertyName("averageScore")] int? AverageScore,
     [property: JsonPropertyName("popularity")] int? Popularity,
     [property: JsonPropertyName("genres")] List<string>? Genres,
-    [property: JsonPropertyName("startDate")] AnilistFuzzyDate? StartDate)
+    [property: JsonPropertyName("startDate")] AnilistFuzzyDate? StartDate,
+    [property: JsonPropertyName("staff")] AnilistStaffConnection? Staff)
 {
     /// <summary>
     /// Gets the comic classification derived from CountryOfOrigin.
@@ -62,3 +63,16 @@ public record AnilistFuzzyDate(
     [property: JsonPropertyName("year")] int? Year,
     [property: JsonPropertyName("month")] int? Month,
     [property: JsonPropertyName("day")] int? Day);
+
+public record AnilistStaffConnection(
+    [property: JsonPropertyName("edges")] List<AnilistStaffEdge>? Edges);
+
+public record AnilistStaffEdge(
+    [property: JsonPropertyName("role")] string? Role,
+    [property: JsonPropertyName("node")] AnilistStaffNode? Node);
+
+public record AnilistStaffNode(
+    [property: JsonPropertyName("name")] AnilistStaffName? Name);
+
+public record AnilistStaffName(
+    [property: JsonPropertyName("full")] string? Full);

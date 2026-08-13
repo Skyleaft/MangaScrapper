@@ -1,4 +1,5 @@
 using MangaScrapper.Core.Common.Abstractions;
+using Mapster;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -8,29 +9,20 @@ using NovaStack.SharedKernel.Results;
 
 namespace MangaScrapper.Core.Features.Scrapper.SearchJikan;
 
-public record SearchJikanQuery(string Title) : IQuery<List<JikanMangaSearchDto>>;
+public record SearchJikanQuery(string Title) : IQuery<List<MangaSummaryResponse>>;
 
-internal sealed class SearchJikanQueryHandler(IHttpClientFactory httpClientFactory)
-    : IQueryHandler<SearchJikanQuery, List<JikanMangaSearchDto>>
+internal sealed class SearchJikanQueryHandler(IExternalMetadataService externalMetadataService)
+    : IQueryHandler<SearchJikanQuery, List<MangaSummaryResponse>>
 {
-    public async Task<Result<List<JikanMangaSearchDto>>> Handle(SearchJikanQuery query, CancellationToken ct)
+    public async Task<Result<List<MangaSummaryResponse>>> Handle(SearchJikanQuery query, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(query.Title))
-            return new List<JikanMangaSearchDto>();
+            return new List<MangaSummaryResponse>();
 
         try
         {
-            var client = httpClientFactory.CreateClient();
-            var response = await client.GetFromJsonAsync<JikanMangaResponse>(
-                $"https://api.jikan.moe/v4/manga?q={Uri.EscapeDataString(query.Title)}&limit=10", ct);
-
-            var items = response?.Data?.Select(d => new JikanMangaSearchDto(
-                d.MalId,
-                d.Title,
-                d.Images?.Jpg?.ImageUrl ?? d.Images?.Webp?.ImageUrl,
-                d.Score)).ToList() ?? [];
-
-            return items;
+            var mangas = await externalMetadataService.SearchJikanAsync(query.Title, ct);
+            return mangas.Adapt<List<MangaSummaryResponse>>();
         }
         catch (Exception ex)
         {

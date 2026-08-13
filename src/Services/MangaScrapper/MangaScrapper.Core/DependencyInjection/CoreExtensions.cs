@@ -149,6 +149,7 @@ public static class CoreExtensions
 
         services.AddScoped<IMangaExternalRepository, MangaExternalService>();
         services.AddScoped<IMangaMessagePublisher, MangaMessagePublisher>();
+        services.AddScoped<IExternalMetadataService, ExternalMetadataService>();
 
         services.AddHttpClient<DiscordWebhookService>();
 

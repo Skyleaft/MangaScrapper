@@ -1,4 +1,5 @@
 using MangaScrapper.Core.Common.Abstractions;
+using Mapster;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -8,21 +9,21 @@ using NovaStack.SharedKernel.Results;
 
 namespace MangaScrapper.Core.Features.Scrapper.SearchAnilist;
 
-public record SearchAnilistQuery(string Title) : IQuery<List<AnilistMedia>>;
+public record SearchAnilistQuery(string Title) : IQuery<List<MangaSummaryResponse>>;
 
 internal sealed class SearchAnilistQueryHandler(
-    [FromKeyedServices("komiku")] IProviderScrapperService scrapperService)
-    : IQueryHandler<SearchAnilistQuery, List<AnilistMedia>>
+    IExternalMetadataService externalMetadataService)
+    : IQueryHandler<SearchAnilistQuery, List<MangaSummaryResponse>>
 {
-    public async Task<Result<List<AnilistMedia>>> Handle(SearchAnilistQuery query, CancellationToken ct)
+    public async Task<Result<List<MangaSummaryResponse>>> Handle(SearchAnilistQuery query, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(query.Title))
-            return new List<AnilistMedia>();
+            return new List<MangaSummaryResponse>();
 
         try
         {
-            var items = await scrapperService.SearchAnilist(query.Title, ct);
-            return items;
+            var mangas = await externalMetadataService.SearchAnilistAsync(query.Title, ct);
+            return mangas.Adapt<List<MangaSummaryResponse>>();
         }
         catch (Exception ex)
         {
