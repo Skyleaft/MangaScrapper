@@ -17,14 +17,16 @@ LoggingExtensions.BootstrapLogger();
 try
 {
     var asciiArt = @"
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────
     __  ___                        _____                                              ______            _           
    /  |/  /___ _____  ____ _____ _/ ___/______________ _____  ____  ___  _____       / ____/___  ____ _(_)___  ___ 
   / /|_/ / __ `/ __ \/ __ `/ __ `/\__ \/ ___/ ___/ __ `/ __ \/ __ \/ _ \/ ___/      / __/ / __ \/ __ `/ / __ \/ _ \
  / /  / / /_/ / / / / /_/ / /_/ /___/ / /__/ /  / /_/ / /_/ / /_/ /  __/ /         / /___/ / / / /_/ / / / / /  __/
 /_/  /_/\__,_/_/ /_/\__, /\__,_//____/\___/_/   \__,_/ .___/ .___/\___/_/         /_____/_/ /_/\__, /_/_/ /_/\___/ 
                    /____/                           /_/   /_/                                 /____/               
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 ";
-    Console.WriteLine(asciiArt);
+    Log.Information(asciiArt);
     Log.Information("Starting MangaScrapper.Api Engine...");
 
     var builder = WebApplication.CreateBuilder(args);
@@ -35,7 +37,7 @@ try
     // ── OpenAPI / Swagger ────────────────────────────────────────────────────
     builder.Services.AddOpenApi();
     builder.Services.AddEndpointsApiExplorer();
-    
+
     // ── Razor Component ──────────────────────────────────────────────────────
     builder.Services.AddRazorComponents()
         .AddInteractiveWebAssemblyComponents();
@@ -90,7 +92,7 @@ try
                 path.StartsWith("/api/v1/images", StringComparison.OrdinalIgnoreCase) ||
                 path.StartsWith("/scalar", StringComparison.OrdinalIgnoreCase))
             {
-                return LogEventLevel.Verbose; 
+                return LogEventLevel.Verbose;
             }
 
             if (path.EndsWith(".js", StringComparison.OrdinalIgnoreCase) ||
@@ -158,7 +160,7 @@ try
     app.MapFallbackToFile("index.html");
     app.UseAntiforgery();
     app.MapStaticAssets();
-    
+
     app.MapRazorComponents<App>()
         .AddInteractiveWebAssemblyRenderMode()
         .AddAdditionalAssemblies(typeof(MangaPanel.Client._Imports).Assembly);
