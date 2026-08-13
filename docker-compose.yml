@@ -48,7 +48,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512M
+          memory: 768M
     environment:
       - DOTNET_ENVIRONMENT=Production
       - MongoDB__ConnectionString=mongodb://mongodb:27017
