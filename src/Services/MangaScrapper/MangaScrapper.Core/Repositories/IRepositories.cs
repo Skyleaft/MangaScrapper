@@ -81,6 +81,7 @@ public interface IUserLibraryRepository
 {
     Task<UserLibrary?> GetByIdAsync(Guid id, CancellationToken ct = default);
     Task<UserLibrary?> GetByUserIdAndMangaIdAsync(string userId, MangaId mangaId, CancellationToken ct = default);
+    Task<List<UserLibrary>> GetAllAsync(string userId, CancellationToken ct = default);
     Task<PagedList<UserLibrary>> GetPagedByUserIdAsync(string userId,string? search,string? type,string? status,bool? isFavorite,string sortBy, string orderBy, int page, int pageSize, CancellationToken ct = default);
     Task AddAsync(UserLibrary userLibrary, CancellationToken ct = default);
     Task UpdateAsync(UserLibrary userLibrary, CancellationToken ct = default);

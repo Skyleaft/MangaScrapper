@@ -131,6 +131,13 @@ public class MongoUserLibraryRepository(MangaMongoDbContext dbContext) : IUserLi
         return doc is null ? null : MapToDomain(doc);
     }
 
+    public async Task<List<UserLibrary>> GetAllAsync(string userId, CancellationToken ct = default)
+    {
+        if (!Guid.TryParse(userId, out var userGuid)) return new List<UserLibrary>();
+        var doc = await dbContext.UserLibraries.Find(l => l.UserId == userGuid).ToListAsync(ct);
+        return doc is null ? new() : doc.Select(MapToDomain).ToList();
+    }
+
     public async Task<PagedList<UserLibrary>> GetPagedByUserIdAsync(string userId,string? search,string? type,string? status,bool? isFavorite,string sortBy, string orderBy, int page, int pageSize, CancellationToken ct = default)
     {
         if (!Guid.TryParse(userId, out var userGuid))

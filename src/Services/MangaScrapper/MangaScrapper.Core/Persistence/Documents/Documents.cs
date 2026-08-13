@@ -120,6 +120,7 @@ public class UserLibraryDocument
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }
 
+[BsonIgnoreExtraElements]
 public class UserProgressionDocument
 {
     [BsonId]
