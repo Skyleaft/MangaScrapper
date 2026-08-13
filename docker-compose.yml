@@ -5,6 +5,7 @@ services:
     build:
       context: .
       dockerfile: src/Services/MangaScrapper/MangaScrapper.Api/Dockerfile
+    restart: always
     ports:
       - "5191:8080"
     environment:
@@ -16,10 +17,10 @@ services:
       - Qdrant__Port=6334
       - Embedding__Host=http://embedding-service:8222
       - FlareSolverr__Host=http://flaresolverr:8191
-      - Messaging__HostName=rabbitmq
-      - Messaging__Port=5672
-      - Messaging__UserName=guest
-      - Messaging__Password=guest
+      - Messaging__RabbitMQ__Host=rabbitmq
+      - Messaging__RabbitMQ__Port=5672
+      - Messaging__RabbitMQ__Username=guest
+      - Messaging__RabbitMQ__Password=guest
       - Scrapper__ImageStoragePath=/app/images
       - Scrapper__MaxParallelDownloads=10
       - Cors__AllowedOrigins=http://localhost:3000,http://localhost:5191
@@ -30,6 +31,7 @@ services:
     build:
       context: .
       dockerfile: src/Workers/Scrapper.Worker/Dockerfile
+    restart: always
     environment:
       - DOTNET_ENVIRONMENT=Production
       - MongoDB__ConnectionString=mongodb://mongodb:27017
@@ -39,10 +41,10 @@ services:
       - Qdrant__Port=6334
       - Embedding__Host=http://embedding-service:8222
       - FlareSolverr__Host=http://flaresolverr:8191
-      - Messaging__HostName=rabbitmq
-      - Messaging__Port=5672
-      - Messaging__UserName=guest
-      - Messaging__Password=guest
+      - Messaging__RabbitMQ__Host=rabbitmq
+      - Messaging__RabbitMQ__Port=5672
+      - Messaging__RabbitMQ__Username=guest
+      - Messaging__RabbitMQ__Password=guest
       - Scrapper__ImageStoragePath=/app/images
       - Scrapper__MaxParallelDownloads=10
     volumes:
