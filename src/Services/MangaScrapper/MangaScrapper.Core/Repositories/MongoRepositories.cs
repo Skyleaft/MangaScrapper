@@ -154,7 +154,7 @@ public class MongoUserLibraryRepository(MangaMongoDbContext dbContext) : IUserLi
             // Check if the search term can be parsed into a valid Guid
             if (Guid.TryParse(search, out Guid parsedGuid))
             {
-                var idFilter = builder.Eq(m => m.Id, parsedGuid);
+                var idFilter = builder.Eq(m => m.MangaId, parsedGuid);
         
                 // Match either the Title regex OR the exact Guid
                 filter &= (titleFilter | idFilter);
