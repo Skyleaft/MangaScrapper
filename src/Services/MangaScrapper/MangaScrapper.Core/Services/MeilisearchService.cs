@@ -1,6 +1,7 @@
 using MangaScrapper.Core.Aggregates;
 using MangaScrapper.Core.Configuration;
 using MangaScrapper.Core.Persistence;
+using MangaScrapper.Core.Persistence.Documents;
 using Mapster;
 using Meilisearch;
 using MongoDB.Driver;
@@ -78,33 +79,50 @@ public class MeilisearchService
 
         await InitializeAsync(ct);
 
-        var mangaDocs = await _dbContext.Mangas
-            .Find(_ => true)
-            .ToListAsync(ct);
-
-        if (mangaDocs.Count == 0)
+        long totalCount = await _dbContext.Mangas.CountDocumentsAsync(_ => true, cancellationToken: ct);
+        if (totalCount == 0)
         {
             _logger.LogWarning("No manga documents found in MongoDB. Nothing to sync.");
             return;
         }
 
-        var mangas = mangaDocs.Select(doc => doc.Adapt<Manga>()).ToList();
-        var documents = mangas.Select(m => m.Adapt<MeiliMangaDocument>()).ToList();
-
-        // Batch upsert in chunks of 1000
-        const int batchSize = 1000;
         var index = _client.Index(IndexName);
+        var projection = Builders<MangaDocument>.Projection.Exclude("Chapters.pages");
 
-        for (int i = 0; i < documents.Count; i += batchSize)
+        using var cursor = await _dbContext.Mangas
+            .Find(_ => true)
+            .Project<MangaDocument>(projection)
+            .ToCursorAsync(ct);
+
+        int processed = 0;
+        var batch = new List<MeiliMangaDocument>();
+
+        while (await cursor.MoveNextAsync(ct))
         {
-            var batch = documents.Skip(i).Take(batchSize).ToList();
-            var task = await index.AddDocumentsAsync(batch, "id", ct);
-            await _client.WaitForTaskAsync(task.TaskUid, cancellationToken: ct);
-            _logger.LogInformation("Indexed batch {Start}-{End} of {Total} documents.",
-                i + 1, Math.Min(i + batchSize, documents.Count), documents.Count);
+            foreach (var doc in cursor.Current)
+            {
+                batch.Add(doc.Adapt<Manga>().Adapt<MeiliMangaDocument>());
+                
+                if (batch.Count >= 1000)
+                {
+                    var task = await index.AddDocumentsAsync(batch, "id", ct);
+                    await _client.WaitForTaskAsync(task.TaskUid, cancellationToken: ct);
+                    processed += batch.Count;
+                    _logger.LogInformation("Indexed {Processed} of {Total} documents.", processed, totalCount);
+                    batch.Clear();
+                }
+            }
         }
 
-        _logger.LogInformation("Full sync completed. {Count} manga documents indexed.", documents.Count);
+        if (batch.Count > 0)
+        {
+            var task = await index.AddDocumentsAsync(batch, "id", ct);
+            await _client.WaitForTaskAsync(task.TaskUid, cancellationToken: ct);
+            processed += batch.Count;
+            _logger.LogInformation("Indexed {Processed} of {Total} documents.", processed, totalCount);
+        }
+
+        _logger.LogInformation("Full sync completed. {Count} manga documents indexed.", processed);
     }
 
     /// <summary>

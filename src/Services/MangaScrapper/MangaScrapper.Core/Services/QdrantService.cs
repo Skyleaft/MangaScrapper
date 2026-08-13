@@ -1,6 +1,7 @@
 using MangaScrapper.Core.Aggregates;
 using MangaScrapper.Core.Configuration;
 using MangaScrapper.Core.Persistence;
+using MangaScrapper.Core.Persistence.Documents;
 using Mapster;
 using MongoDB.Driver;
 using Qdrant.Client;
@@ -81,35 +82,47 @@ public class QdrantService
 
         await InitializeAsync(ct);
 
-        var mangaDocs = await _dbContext.Mangas
-            .Find(_ => true)
-            .ToListAsync(ct);
-
-        if (mangaDocs.Count == 0)
+        long totalCount = await _dbContext.Mangas.CountDocumentsAsync(_ => true, cancellationToken: ct);
+        if (totalCount == 0)
         {
             _logger.LogWarning("No manga documents found in MongoDB. Nothing to sync to Qdrant.");
             return;
         }
 
-        var mangas = mangaDocs.Select(doc => doc.Adapt<Manga>()).ToList();
+        var projection = Builders<MangaDocument>.Projection.Exclude(x => x.Chapters);
+        using var cursor = await _dbContext.Mangas
+            .Find(_ => true)
+            .Project<MangaDocument>(projection)
+            .ToCursorAsync(ct);
 
-        const int batchSize = 500;
-        for (int i = 0; i < mangas.Count; i += batchSize)
+        int processed = 0;
+        var batch = new List<PointStruct>();
+
+        while (await cursor.MoveNextAsync(ct))
         {
-            var batch = mangas.Skip(i).Take(batchSize).ToList();
-            var points = new List<PointStruct>();
-            foreach (var manga in batch)
+            foreach (var doc in cursor.Current)
             {
-                points.Add(await MapToPointStructAsync(manga, ct));
+                var manga = doc.Adapt<Manga>();
+                batch.Add(await MapToPointStructAsync(manga, ct));
+
+                if (batch.Count >= 500)
+                {
+                    await _client.UpsertAsync(CollectionName, batch, cancellationToken: ct);
+                    processed += batch.Count;
+                    _logger.LogInformation("Qdrant synced {Processed} of {Total} documents.", processed, totalCount);
+                    batch.Clear();
+                }
             }
-
-            await _client.UpsertAsync(CollectionName, points, cancellationToken: ct);
-
-            _logger.LogInformation("Qdrant synced batch {Start}-{End} of {Total} documents.",
-                i + 1, Math.Min(i + batchSize, mangas.Count), mangas.Count);
         }
 
-        _logger.LogInformation("Full sync completed. {Count} manga documents synced to Qdrant.", mangas.Count);
+        if (batch.Count > 0)
+        {
+            await _client.UpsertAsync(CollectionName, batch, cancellationToken: ct);
+            processed += batch.Count;
+            _logger.LogInformation("Qdrant synced {Processed} of {Total} documents.", processed, totalCount);
+        }
+
+        _logger.LogInformation("Full sync completed. {Count} manga documents synced to Qdrant.", processed);
     }
 
     public async Task UpsertMangaAsync(Manga manga, CancellationToken ct = default)
