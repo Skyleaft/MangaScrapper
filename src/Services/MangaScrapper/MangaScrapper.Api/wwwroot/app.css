@@ -38,6 +38,7 @@
     --color-violet-600: oklch(54.1% 0.281 293.009);
     --color-purple-50: oklch(97.7% 0.014 308.299);
     --color-purple-500: oklch(62.7% 0.265 303.9);
+    --color-purple-600: oklch(55.8% 0.288 302.321);
     --color-rose-50: oklch(96.9% 0.015 12.422);
     --color-rose-100: oklch(94.1% 0.03 12.58);
     --color-rose-200: oklch(89.2% 0.058 10.001);
@@ -265,9 +266,6 @@
   .pointer-events-none {
     pointer-events: none;
   }
-  .invisible {
-    visibility: hidden;
-  }
   .absolute {
     position: absolute;
   }
@@ -396,6 +394,9 @@
   }
   .mt-4 {
     margin-top: calc(var(--spacing) * 4);
+  }
+  .mt-6 {
+    margin-top: calc(var(--spacing) * 6);
   }
   .mt-auto {
     margin-top: auto;
@@ -879,6 +880,12 @@
       border-color: color-mix(in oklab, var(--color-primary) 30%, transparent);
     }
   }
+  .border-purple-500\/30 {
+    border-color: color-mix(in srgb, oklch(62.7% 0.265 303.9) 30%, transparent);
+    @supports (color: color-mix(in lab, red, red)) {
+      border-color: color-mix(in oklab, var(--color-purple-500) 30%, transparent);
+    }
+  }
   .border-red-400 {
     border-color: var(--color-red-400);
   }
@@ -923,6 +930,9 @@
   }
   .border-t-primary {
     border-top-color: var(--color-primary);
+  }
+  .border-t-purple-500 {
+    border-top-color: var(--color-purple-500);
   }
   .border-t-teal-500 {
     border-top-color: var(--color-teal-500);
@@ -1046,6 +1056,15 @@
   }
   .bg-purple-50 {
     background-color: var(--color-purple-50);
+  }
+  .bg-purple-500 {
+    background-color: var(--color-purple-500);
+  }
+  .bg-purple-500\/10 {
+    background-color: color-mix(in srgb, oklch(62.7% 0.265 303.9) 10%, transparent);
+    @supports (color: color-mix(in lab, red, red)) {
+      background-color: color-mix(in oklab, var(--color-purple-500) 10%, transparent);
+    }
   }
   .bg-red-50 {
     background-color: var(--color-red-50);
@@ -1531,6 +1550,9 @@
   .text-purple-500 {
     color: var(--color-purple-500);
   }
+  .text-purple-600 {
+    color: var(--color-purple-600);
+  }
   .text-red-400 {
     color: var(--color-red-400);
   }
@@ -1770,6 +1792,14 @@
         border-color: color-mix(in oklab, var(--color-primary) 50%, transparent);
       }
     }
+    .hover\:border-purple-500\/50:hover {
+      border-color: color-mix(in srgb, oklch(62.7% 0.265 303.9) 50%, transparent);
+    }
+    @supports (color: color-mix(in lab, red, red)) {
+      .hover\:border-purple-500\/50:hover {
+        border-color: color-mix(in oklab, var(--color-purple-500) 50%, transparent);
+      }
+    }
     .hover\:border-secondary\/40:hover {
       border-color: var(--color-secondary);
     }
@@ -1847,6 +1877,22 @@
     @supports (color: color-mix(in lab, red, red)) {
       .hover\:bg-primary\/90:hover {
         background-color: color-mix(in oklab, var(--color-primary) 90%, transparent);
+      }
+    }
+    .hover\:bg-purple-500\/10:hover {
+      background-color: color-mix(in srgb, oklch(62.7% 0.265 303.9) 10%, transparent);
+    }
+    @supports (color: color-mix(in lab, red, red)) {
+      .hover\:bg-purple-500\/10:hover {
+        background-color: color-mix(in oklab, var(--color-purple-500) 10%, transparent);
+      }
+    }
+    .hover\:bg-purple-500\/20:hover {
+      background-color: color-mix(in srgb, oklch(62.7% 0.265 303.9) 20%, transparent);
+    }
+    @supports (color: color-mix(in lab, red, red)) {
+      .hover\:bg-purple-500\/20:hover {
+        background-color: color-mix(in oklab, var(--color-purple-500) 20%, transparent);
       }
     }
     .hover\:bg-rose-50:hover {
@@ -1930,6 +1976,9 @@
   .focus\:border-primary:focus {
     border-color: var(--color-primary);
   }
+  .focus\:border-purple-500:focus {
+    border-color: var(--color-purple-500);
+  }
   .focus\:border-teal-500:focus {
     border-color: var(--color-teal-500);
   }
@@ -1947,6 +1996,12 @@
     --tw-ring-color: var(--color-primary);
     @supports (color: color-mix(in lab, red, red)) {
       --tw-ring-color: color-mix(in oklab, var(--color-primary) 50%, transparent);
+    }
+  }
+  .focus\:ring-purple-500\/20:focus {
+    --tw-ring-color: color-mix(in srgb, oklch(62.7% 0.265 303.9) 20%, transparent);
+    @supports (color: color-mix(in lab, red, red)) {
+      --tw-ring-color: color-mix(in oklab, var(--color-purple-500) 20%, transparent);
     }
   }
   .focus\:ring-teal-500\/20:focus {

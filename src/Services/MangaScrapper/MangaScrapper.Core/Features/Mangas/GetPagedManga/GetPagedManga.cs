@@ -63,6 +63,7 @@ public sealed class GetPagedMangaQueryHandler(
                 id,
                 mongoDoc?.MalId ?? 0,
                 mongoDoc?.AnilistId ?? 0,
+                m.MangaUpdateId,
                 m.Title,
                 m.Author,
                 m.Type,

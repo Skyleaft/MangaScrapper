@@ -4,6 +4,7 @@ public record MangaSummaryResponse(
     Guid Id,
     int MalId,
     int? AnilistId,
+    long? MangaUpdateId,
     string Title,
     string Author,
     string Type,

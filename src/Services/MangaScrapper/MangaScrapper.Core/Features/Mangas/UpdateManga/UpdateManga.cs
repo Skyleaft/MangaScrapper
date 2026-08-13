@@ -16,7 +16,7 @@ public record UpdateMangaCommand(
     Guid Id,
     int MalId,
     int? AnilistId,
-    int? MangaUpdateId,
+    long? MangaUpdateId,
     string Author,
     string Type,
     List<string> Genres,
