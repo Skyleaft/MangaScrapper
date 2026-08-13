@@ -9,7 +9,10 @@ public class MangaDocument
     [BsonRepresentation(BsonType.String)]
     public Guid Id { get; set; }
     public int MalID { get; set; }
+    [BsonIgnoreIfNull]
     public int? AnilistID { get; set; }
+    [BsonIgnoreIfNull]
+    public long? MangaUpdateID { get; set; }
     public string Title { get; set; } = string.Empty;
     public string Author { get; set; } = string.Empty;
     public string Type { get; set; } = string.Empty;
@@ -95,6 +98,7 @@ public class UserDocument
     [BsonDateTimeOptions(Kind = DateTimeKind.Utc)]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     [BsonDateTimeOptions(Kind = DateTimeKind.Utc)]
+    [BsonIgnoreIfNull]
     public DateTime? LastActiveAt { get; set; }
 }
 

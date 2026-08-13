@@ -45,6 +45,7 @@ public class MangaAggregateTests
             type,
             malId: 20,
             anilistId:30,
+            mangaUpdateId:23,
             genres: new List<string> { "Action", "Ninja" },
             categories:new List<string>{"Isekai"},
             description: "A ninja's journey",

@@ -204,7 +204,7 @@ public sealed class ExternalMetadataService : IExternalMetadataService
                 }
 
                 var author = details?.Authors?.FirstOrDefault(a => a.Type == "Author")?.Name ?? "Unknown";
-                var categories = details?.Categories?.Select(c => c.Category).Where(c => !string.IsNullOrEmpty(c)).Cast<string>().ToList();
+                var categories = details?.Categories?.OrderByDescending(x=>x.Votes).Select(c => c.Category).Where(c => !string.IsNullOrEmpty(c)).Cast<string>().ToList();
                 var genres = record.Genres?.Select(g => g.Genre).Where(g => !string.IsNullOrEmpty(g)).Cast<string>().ToList() ?? new List<string>();
 
                 DateTime? releaseDate = null;
@@ -220,6 +220,7 @@ public sealed class ExternalMetadataService : IExternalMetadataService
                     source: "MangaUpdates",
                     malId: 0,
                     anilistId: null,
+                    mangaUpdateId:record.SeriesId,
                     genres: genres,
                     categories: categories,
                     description: record.Description,

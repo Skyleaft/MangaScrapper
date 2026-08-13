@@ -38,7 +38,7 @@ public class Chapter
         UploadDate = uploadDate;
         Pages = pages ?? [];
     }
-    
+
     public void AddPages(List<Page> pages) => Pages.AddRange(pages);
     public void AddPage(Page page) => Pages.Add(page);
     public void IncrementView() => TotalView++;
@@ -74,6 +74,7 @@ public class Manga : Entity<MangaId>
 {
     public int MalId { get; private set; }
     public int? AnilistId { get; private set; }
+    public long? MangaUpdateId { get; private set; }
     public string Title { get; private set; }
     public string Author { get; private set; }
     public string Type { get; private set; }
@@ -81,7 +82,7 @@ public class Manga : Entity<MangaId>
     public int Popularity { get; private set; }
     public int Members { get; private set; }
     public List<string> Genres { get; private set; }
-    public List<string>Categories { get;private set; }
+    public List<string> Categories { get; private set; }
     public string? Description { get; private set; }
     public string? ImageUrl { get; private set; }
     public string? LocalImageUrl { get; private set; }
@@ -100,11 +101,12 @@ public class Manga : Entity<MangaId>
         string title,
         string author,
         string type,
-        string source, 
+        string source,
         int malId = 0,
         int? anilistId = null,
+        long? mangaUpdateId = null,
         List<string>? genres = null,
-        List<string>? categories =null, 
+        List<string>? categories = null,
         string? description = null,
         string? imageUrl = null,
         string? localImageUrl = null,
@@ -126,6 +128,7 @@ public class Manga : Entity<MangaId>
         Type = type ?? string.Empty;
         MalId = malId;
         AnilistId = anilistId;
+        MangaUpdateId = mangaUpdateId;
         Genres = genres ?? [];
         Categories = categories ?? [];
         Description = description;
@@ -152,6 +155,7 @@ public class Manga : Entity<MangaId>
         string source,
         int malId = 0,
         int? anilistId = null,
+        long? mangaUpdateId = null,
         List<string>? genres = null,
         List<string>? categories = null,
         string? description = null,
@@ -164,8 +168,8 @@ public class Manga : Entity<MangaId>
         var id = MangaId.New();
         var manga = new Manga(
             id, title, author, type, source,
-            malId: malId, anilistId: anilistId, genres: genres, categories: categories, description: description, imageUrl: imageUrl, url: url,
-            rating: rating, status: status, releaseDate:releaseDate);
+            malId: malId, anilistId: anilistId, mangaUpdateId: mangaUpdateId, genres: genres, categories: categories, description: description, imageUrl: imageUrl, url: url,
+            rating: rating, status: status, releaseDate: releaseDate);
 
         manga.RaiseDomainEvent(new MangaCreatedDomainEvent(id, title, source));
         return manga;
@@ -178,6 +182,7 @@ public class Manga : Entity<MangaId>
         string type,
         int malId,
         int? anilistId,
+        long? mangaUpdateId,
         List<string>? genres,
         List<string>? categories,
         string? description,
@@ -198,18 +203,19 @@ public class Manga : Entity<MangaId>
     {
         return new Manga(
             id, title, author, type, "Unknown",
-            malId, anilistId, genres, categories,description, imageUrl, localImageUrl, thumbnailSize,
-            rating, popularity, members,nsfw, status, releaseDate, totalView,
+            malId, anilistId, mangaUpdateId, genres, categories, description, imageUrl, localImageUrl, thumbnailSize,
+            rating, popularity, members, nsfw, status, releaseDate, totalView,
             createdAt, updatedAt, url, chapters);
     }
 
     public void UpdateMetadata(
         int malId,
         int? anilistId,
+        long? mangaUpdateId,
         string author,
         string type,
         List<string> genres,
-        List<string>?categories,
+        List<string>? categories,
         string? description,
         double? rating,
         int popularity,
@@ -221,6 +227,7 @@ public class Manga : Entity<MangaId>
     {
         MalId = malId;
         AnilistId = anilistId;
+        MangaUpdateId = mangaUpdateId;
         Author = author;
         Type = type;
         Genres = genres ?? [];
@@ -262,7 +269,7 @@ public class Manga : Entity<MangaId>
         Description = string.IsNullOrEmpty(Description) ? anilistInfo.Description : Description;
         Rating = Rating ?? (anilistInfo.AverageScore.HasValue ? anilistInfo.AverageScore.Value / 10.0 : null);
         Popularity = anilistInfo.Popularity ?? Popularity;
-        
+
         Status = anilistInfo.Status switch
         {
             "FINISHED" => "Completed",

@@ -39,4 +39,5 @@ public record MangaUpdatesAuthor(
     [property: JsonPropertyName("type")] string? Type);
 
 public record MangaUpdatesCategory(
-    [property: JsonPropertyName("category")] string? Category);
+    [property: JsonPropertyName("category")] string? Category,
+    [property: JsonPropertyName("votes")] int Votes=0);
