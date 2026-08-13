@@ -16,7 +16,7 @@ internal sealed class SyncMeilisearchCommandHandler(IEventBus eventBus) : IComma
 {
     public async Task<Result<Unit>> Handle(SyncMeilisearchCommand command, CancellationToken ct)
     {
-        await eventBus.PublishAsync(new SyncMeilisearchIntegrationEvent(), ct);
+        await eventBus.PublishAsync(new SyncMeilisearchIntegrationEvent(), "sync-meilisearch", ct);
         return Result.Success(Unit.Value);
     }
 }

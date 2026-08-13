@@ -16,7 +16,7 @@ internal sealed class SyncQdrantCommandHandler(IEventBus eventBus) : ICommandHan
 {
     public async Task<Result<Unit>> Handle(SyncQdrantCommand command, CancellationToken ct)
     {
-        await eventBus.PublishAsync(new SyncQdrantIntegrationEvent(), ct);
+        await eventBus.PublishAsync(new SyncQdrantIntegrationEvent(), "sync-qdrant", ct);
         return Result.Success(Unit.Value);
     }
 }

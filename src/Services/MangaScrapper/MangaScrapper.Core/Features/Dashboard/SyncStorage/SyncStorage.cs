@@ -16,7 +16,7 @@ internal sealed class SyncStorageCommandHandler(IEventBus eventBus) : ICommandHa
 {
     public async Task<Result<Unit>> Handle(SyncStorageCommand command, CancellationToken ct)
     {
-        await eventBus.PublishAsync(new SyncStorageIntegrationEvent(), ct);
+        await eventBus.PublishAsync(new SyncStorageIntegrationEvent(), "sync-storage", ct);
         return Result.Success(Unit.Value);
     }
 }
