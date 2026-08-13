@@ -6,7 +6,7 @@ namespace NovaStack.Contracts.IntegrationEvents;
 /// </summary>
 public sealed record SyncStorageIntegrationEvent : IIntegrationEvent
 {
-    public Guid EventId { get; init; } = Guid.NewGuid();
+    public Guid EventId { get; init; } = Guid.CreateVersion7();
     public DateTime OccurredOn { get; init; } = DateTime.UtcNow;
     public string EventType { get; init; } = nameof(SyncStorageIntegrationEvent);
 
@@ -19,7 +19,7 @@ public sealed record SyncStorageIntegrationEvent : IIntegrationEvent
 /// </summary>
 public sealed record SyncQdrantIntegrationEvent : IIntegrationEvent
 {
-    public Guid EventId { get; init; } = Guid.NewGuid();
+    public Guid EventId { get; init; } = Guid.CreateVersion7();
     public DateTime OccurredOn { get; init; } = DateTime.UtcNow;
     public string EventType { get; init; } = nameof(SyncQdrantIntegrationEvent);
 
@@ -32,7 +32,7 @@ public sealed record SyncQdrantIntegrationEvent : IIntegrationEvent
 /// </summary>
 public sealed record SyncMeilisearchIntegrationEvent : IIntegrationEvent
 {
-    public Guid EventId { get; init; } = Guid.NewGuid();
+    public Guid EventId { get; init; } = Guid.CreateVersion7();
     public DateTime OccurredOn { get; init; } = DateTime.UtcNow;
     public string EventType { get; init; } = nameof(SyncMeilisearchIntegrationEvent);
 

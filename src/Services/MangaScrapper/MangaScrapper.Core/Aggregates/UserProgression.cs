@@ -29,7 +29,7 @@ public class UserProgression : Entity<Guid>
 
     public static UserProgression Create(string userId, MangaId mangaId, ChapterId chapterId, double chapterNumber)
     {
-        var id = Guid.NewGuid();
+        var id = Guid.CreateVersion7();
         return new UserProgression(id, userId, mangaId, chapterId, chapterNumber, DateTime.UtcNow);
     }
 

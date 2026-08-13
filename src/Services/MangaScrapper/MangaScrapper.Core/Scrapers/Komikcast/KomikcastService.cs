@@ -98,7 +98,7 @@ public class KomikcastService : ScrapperServiceBase
                     index + 1,
                     ct);
 
-                return (Index: index, Page: new Page(Guid.NewGuid(), imageUrl, result.path, result.size));
+                return (Index: index, Page: new Page(Guid.CreateVersion7(), imageUrl, result.path, result.size));
             }
             catch (Exception ex)
             {

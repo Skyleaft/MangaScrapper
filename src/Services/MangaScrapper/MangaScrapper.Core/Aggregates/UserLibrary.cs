@@ -26,7 +26,7 @@ public class UserLibrary : Entity<Guid>
 
     public static UserLibrary Create(string userId, MangaId mangaId, string status)
     {
-        var id = Guid.NewGuid();
+        var id = Guid.CreateVersion7();
         var userLibrary = new UserLibrary(id, userId, mangaId, DateTime.UtcNow,DateTime.UtcNow,status,false);
         userLibrary.RaiseDomainEvent(new UserLibraryUpdatedDomainEvent(id, userId, mangaId, "Added"));
         return userLibrary;

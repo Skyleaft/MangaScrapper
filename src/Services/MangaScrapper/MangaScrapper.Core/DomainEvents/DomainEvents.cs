@@ -11,7 +11,7 @@ public record MangaCreatedDomainEvent(
     DateTime OccurredOn) : IDomainEvent
 {
     public MangaCreatedDomainEvent(MangaId mangaId, string title, string source)
-        : this(mangaId, title, source, Guid.NewGuid(), DateTime.UtcNow) { }
+        : this(mangaId, title, source, Guid.CreateVersion7(), DateTime.UtcNow) { }
 }
 
 public record ChapterScrapedDomainEvent(
@@ -23,7 +23,7 @@ public record ChapterScrapedDomainEvent(
     DateTime OccurredOn) : IDomainEvent
 {
     public ChapterScrapedDomainEvent(MangaId mangaId, ChapterId chapterId, double chapterNumber, string chapterProvider)
-        : this(mangaId, chapterId, chapterNumber, chapterProvider, Guid.NewGuid(), DateTime.UtcNow) { }
+        : this(mangaId, chapterId, chapterNumber, chapterProvider, Guid.CreateVersion7(), DateTime.UtcNow) { }
 }
 
 public record UserLibraryUpdatedDomainEvent(
@@ -35,5 +35,5 @@ public record UserLibraryUpdatedDomainEvent(
     DateTime OccurredOn) : IDomainEvent
 {
     public UserLibraryUpdatedDomainEvent(Guid userLibraryId, string userId, MangaId mangaId, string action)
-        : this(userLibraryId, userId, mangaId, action, Guid.NewGuid(), DateTime.UtcNow) { }
+        : this(userLibraryId, userId, mangaId, action, Guid.CreateVersion7(), DateTime.UtcNow) { }
 }

@@ -49,6 +49,7 @@ For the mobile-first reading experience, check out the [Open Manga Reader](https
 - **APIs**: ASP.NET Core Minimal APIs with reflection-based endpoint discovery (`IEndpointDefinition`)
 - **Database & Persistence**: MongoDB 8 via `MongoDB.Driver` 3.x, Meilisearch 0.17 (full-text search), Qdrant 1.13 (vector search)
 - **Domain Aggregates**: Centralized domain aggregates (`Manga`, `Chapter`, `Page`) produced directly by provider scrapers and mapped transparently to BSON documents for MongoDB persistence.
+- **Identifier Generation**: Standardized on UUIDv7 (`Guid.CreateVersion7()`) for sequential, time-sortable database identifiers to improve index locality.
 - **Object Mapping**: Mapster 10.x (centralized in `MangaMappingConfig.cs` and `MangaInfrastructureMapping.cs`)
 - **Validation**: FluentValidation 12
 - **Error Handling**: Railway-oriented `Result<T>` and `Error` types (no domain exceptions for control flow)

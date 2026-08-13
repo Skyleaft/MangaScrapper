@@ -158,6 +158,12 @@ Error.Validation("Request.Invalid", "Search parameter cannot be empty.");
 
 ---
 
+### 6. Unique Identifier Generation
+
+Always use `Guid.CreateVersion7()` instead of `Guid.NewGuid()` when generating new GUIDs for domain aggregates, events, and documents. This ensures sequential, time-sortable identifiers which provide better database indexing performance.
+
+---
+
 ## 🧪 Verification & Testing Commands
 
 To verify changes in this solution:

@@ -75,13 +75,13 @@ public sealed class ScrapperQueueService : IScrapperQueueService
             // We surface ready messages and consumer count as the observable state.
             if (result.MessageCount > 0)
                 items.Add((
-                    Guid.NewGuid().ToString(),
+                    Guid.CreateVersion7().ToString(),
                     ScrapingQueueName,
                     $"Enqueued ({result.MessageCount} ready, {result.ConsumerCount} consumer(s))"
                 ));
             else
                 items.Add((
-                    Guid.NewGuid().ToString(),
+                    Guid.CreateVersion7().ToString(),
                     ScrapingQueueName,
                     $"Idle (0 ready, {result.ConsumerCount} consumer(s))"
                 ));
@@ -91,7 +91,7 @@ public sealed class ScrapperQueueService : IScrapperQueueService
             or RabbitMQ.Client.Exceptions.OperationInterruptedException)
         {
             // Queue does not exist yet or broker is unavailable — return empty.
-            items.Add((Guid.NewGuid().ToString(), ScrapingQueueName, "Unavailable"));
+            items.Add((Guid.CreateVersion7().ToString(), ScrapingQueueName, "Unavailable"));
         }
 
         return items;

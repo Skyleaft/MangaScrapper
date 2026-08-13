@@ -48,7 +48,7 @@ public class MangaDocument
 public class ChapterDocument
 {
     [BsonRepresentation(BsonType.String)]
-    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid Id { get; set; } = Guid.CreateVersion7();
     public double Number { get; set; }
 
     [BsonIgnoreIfNull]
@@ -69,7 +69,7 @@ public class ChapterDocument
 public class PageDocument
 {
     [BsonRepresentation(BsonType.String)]
-    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid Id { get; set; } = Guid.CreateVersion7();
     public string ImageUrl { get; set; } = default!;
 
     [BsonIgnoreIfNull]
@@ -81,7 +81,7 @@ public class UserDocument
 {
     [BsonId]
     [BsonRepresentation(BsonType.String)]
-    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid Id { get; set; } = Guid.CreateVersion7();
     public string Username { get; set; } = string.Empty;
     public string PasswordHash { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
@@ -99,7 +99,7 @@ public class UserLibraryDocument
 {
     [BsonId]
     [BsonRepresentation(BsonType.String)]
-    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid Id { get; set; } = Guid.CreateVersion7();
 
     [BsonRepresentation(BsonType.String)]
     public Guid UserId { get; set; }
@@ -124,7 +124,7 @@ public class UserProgressionDocument
 {
     [BsonId]
     [BsonRepresentation(BsonType.String)]
-    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid Id { get; set; } = Guid.CreateVersion7();
 
     [BsonRepresentation(BsonType.String)]
     public Guid UserId { get; set; }

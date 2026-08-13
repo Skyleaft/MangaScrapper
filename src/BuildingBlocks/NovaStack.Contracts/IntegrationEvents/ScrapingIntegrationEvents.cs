@@ -6,7 +6,7 @@ namespace NovaStack.Contracts.IntegrationEvents;
 /// </summary>
 public sealed record ScrapChapterPagesIntegrationEvent : IIntegrationEvent
 {
-    public Guid EventId { get; init; } = Guid.NewGuid();
+    public Guid EventId { get; init; } = Guid.CreateVersion7();
     public DateTime OccurredOn { get; init; } = DateTime.UtcNow;
     public string EventType { get; init; } = nameof(ScrapChapterPagesIntegrationEvent);
 
@@ -41,7 +41,7 @@ public sealed record ScrapChapterPagesIntegrationEvent : IIntegrationEvent
 /// </summary>
 public sealed record DeleteMangaIntegrationEvent : IIntegrationEvent
 {
-    public Guid EventId { get; init; } = Guid.NewGuid();
+    public Guid EventId { get; init; } = Guid.CreateVersion7();
     public DateTime OccurredOn { get; init; } = DateTime.UtcNow;
     public string EventType { get; init; } = nameof(DeleteMangaIntegrationEvent);
 
@@ -63,7 +63,7 @@ public sealed record DeleteMangaIntegrationEvent : IIntegrationEvent
 /// </summary>
 public sealed record DeleteChapterIntegrationEvent : IIntegrationEvent
 {
-    public Guid EventId { get; init; } = Guid.NewGuid();
+    public Guid EventId { get; init; } = Guid.CreateVersion7();
     public DateTime OccurredOn { get; init; } = DateTime.UtcNow;
     public string EventType { get; init; } = nameof(DeleteChapterIntegrationEvent);
 

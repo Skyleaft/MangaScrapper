@@ -61,7 +61,7 @@ internal sealed class FirebaseVerifyCommandHandler(
             var existingByUsername = await userRepository.GetByUsernameAsync(username, ct);
             if (existingByUsername is not null)
             {
-                username = $"{username}_{Guid.NewGuid().ToString()[..6]}";
+                username = $"{username}_{Guid.CreateVersion7().ToString()[..6]}";
             }
 
             user = User.Create(

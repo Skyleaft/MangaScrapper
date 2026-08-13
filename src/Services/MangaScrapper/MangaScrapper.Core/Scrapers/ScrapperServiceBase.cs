@@ -568,7 +568,7 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
             try
             {
                 var result = await DownloadAndConvertToWebP(mangaTitle, chapter.Number.ToString(CultureInfo.InvariantCulture), imageUrl, index + 1, ct);
-                return (Index: index, Page: new Page(Guid.NewGuid(), imageUrl, result.path, result.size));
+                return (Index: index, Page: new Page(Guid.CreateVersion7(), imageUrl, result.path, result.size));
             }
             catch (Exception ex)
             {

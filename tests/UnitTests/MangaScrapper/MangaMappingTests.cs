@@ -19,7 +19,7 @@ public class MangaMappingTests
     public void MangaDocument_To_Manga_ShouldPreserveGuidId()
     {
         // Arrange
-        var expectedId = Guid.NewGuid();
+        var expectedId = Guid.CreateVersion7();
         var doc = new MangaDocument
         {
             Id = expectedId,
@@ -34,7 +34,7 @@ public class MangaMappingTests
             {
                 new ChapterDocument
                 {
-                    Id = Guid.NewGuid(),
+                    Id = Guid.CreateVersion7(),
                     Number = 1.0,
                     Language = "en",
                     UploadDate = DateTime.UtcNow
