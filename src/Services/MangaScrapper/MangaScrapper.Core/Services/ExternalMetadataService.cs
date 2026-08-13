@@ -108,7 +108,7 @@ public sealed class ExternalMetadataService : IExternalMetadataService
             var mangaList = new List<Manga>();
             foreach (var item in items)
             {
-                var titleToUse = item.Title?.Romaji ?? item.Title?.English ?? item.Title?.Native ?? "Unknown";
+                var titleToUse = item.ComicType==ComicType.Manga?item.Title?.Romaji:item.Title?.English??item.Title?.Romaji??item.Title?.Native;
                 
                 var author = "Unknown";
                 var staffEdges = item.Staff?.Edges;

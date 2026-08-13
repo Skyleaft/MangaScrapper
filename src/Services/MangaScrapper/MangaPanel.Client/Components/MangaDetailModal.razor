@@ -414,19 +414,19 @@
                             @foreach (var item in _jikanSearchResults)
                             {
                                 <div class="flex gap-4 p-3 bg-surface border border-border-main rounded-xl hover:border-primary/50 transition-colors group">
-                                    <img src="@item.Images?.Jpg?.ImageUrl" class="w-16 h-24 object-cover rounded-lg shadow-sm" />
+                                    <img src="@item.ImageUrl" class="w-16 h-24 object-cover rounded-lg shadow-sm" />
                                     <div class="flex-grow min-w-0">
                                         <h4 class="font-bold text-sm text-text-main truncate">@item.Title</h4>
                                         <div class="text-[10px] text-slate-400 flex flex-wrap gap-2 mt-1">
                                             <span>@item.Type</span>
                                             <span>•</span>
-                                            <span>@item.Authors.FirstOrDefault()?.Name</span>
+                                            <span>@item.Author</span>
                                             <span>•</span>
                                             <span>@item.Status</span>
                                             <span>•</span>
-                                            <span class="text-amber-500 font-bold">★ @item.Score</span>
+                                            <span class="text-amber-500 font-bold">★ @item.Rating</span>
                                         </div>
-                                        <p class="text-[10px] text-slate-500 line-clamp-2 mt-1">@item.Synopsis</p>
+                                        <p class="text-[10px] text-slate-500 line-clamp-2 mt-1">@item.Description</p>
                                     </div>
                                     <div class="flex items-center">
                                         <button @onclick="() => SyncJikanResult(item)" class="flex items-center gap-1.5 px-3 py-1.5 text-primary hover:bg-primary/10 font-bold text-xs rounded-xl transition-all" title="Sync this result">
@@ -483,25 +483,25 @@
                             @foreach (var item in _anilistSearchResults)
                             {
                                 <div class="flex gap-4 p-3 bg-surface border border-border-main rounded-xl hover:border-teal-500/50 transition-colors group">
-                                    @if (!string.IsNullOrEmpty(item.CoverImage?.Large ?? item.CoverImage?.Medium))
+                                    @if (!string.IsNullOrEmpty(item.ImageUrl))
                                     {
-                                        <img src="@(item.CoverImage?.Large ?? item.CoverImage?.Medium)" class="w-16 h-24 object-cover rounded-lg shadow-sm flex-shrink-0" />
+                                        <img src="@item.ImageUrl" class="w-16 h-24 object-cover rounded-lg shadow-sm flex-shrink-0" />
                                     }
                                     <div class="flex-grow min-w-0">
-                                        <h4 class="font-bold text-sm text-text-main truncate">@(item.Title?.English ?? item.Title?.Romaji ?? item.Title?.Native)</h4>
+                                        <h4 class="font-bold text-sm text-text-main truncate">@item.Title</h4>
                                         <div class="text-[10px] text-slate-400 flex flex-wrap gap-2 mt-1">
-                                            <span>@item.Format</span>
+                                            <span>@item.Type</span>
                                             <span>•</span>
                                             <span>@item.Status</span>
-                                            @if (item.AverageScore.HasValue)
+                                            @if (item.Rating.HasValue)
                                             {
                                                 <span>•</span>
-                                                <span class="text-amber-500 font-bold">★ @(item.AverageScore.Value / 10.0)</span>
+                                                <span class="text-amber-500 font-bold">★ @item.Rating.Value</span>
                                             }
-                                            @if (item.Popularity.HasValue)
+                                            @if (item.Popularity > 0)
                                             {
                                                 <span>•</span>
-                                                <span>@item.Popularity.Value.ToString("N0") members</span>
+                                                <span>@item.Popularity.ToString("N0") members</span>
                                             }
                                         </div>
                                         @if (item.Genres != null && item.Genres.Any())
@@ -546,12 +546,12 @@
     
     private bool _isSearchJikanOpen = false;
     private string _jikanSearchQuery = "";
-    private List<JikanMangaItem> _jikanSearchResults = new();
+    private List<MangaSummaryResponse> _jikanSearchResults = new();
     private bool _isSearchingJikan = false;
 
     private bool _isSearchAnilistOpen = false;
     private string _anilistSearchQuery = "";
-    private List<AnilistMedia> _anilistSearchResults = new();
+    private List<MangaSummaryResponse> _anilistSearchResults = new();
     private bool _isSearchingAnilist = false;
 
 
@@ -745,7 +745,7 @@
         
         try
         {
-            var results = await Http.GetApiDataAsync<List<JikanMangaItem>>($"/api/v1/scrapper/jikan/search?title={Uri.EscapeDataString(_jikanSearchQuery)}");
+            var results = await Http.GetApiDataAsync<List<MangaSummaryResponse>>($"/api/v1/scrapper/jikan/search?title={Uri.EscapeDataString(_jikanSearchQuery)}");
             _jikanSearchResults = results ?? new();
         }
         catch (Exception ex)
@@ -787,7 +787,7 @@
 
         try
         {
-            var results = await Http.GetApiDataAsync<List<AnilistMedia>>($"/api/v1/scrapper/anilist/search?title={Uri.EscapeDataString(_anilistSearchQuery)}");
+            var results = await Http.GetApiDataAsync<List<MangaSummaryResponse>>($"/api/v1/scrapper/anilist/search?title={Uri.EscapeDataString(_anilistSearchQuery)}");
             _anilistSearchResults = results ?? new();
         }
         catch (Exception ex)
@@ -801,33 +801,23 @@
         }
     }
 
-    private void SyncAnilistResult(AnilistMedia item)
+    private void SyncAnilistResult(MangaSummaryResponse item)
     {
-        EditModel.AnilistId = item.Id;
-        EditModel.MalId = item.IdMal ?? EditModel.MalId;
+        EditModel.AnilistId = item.AnilistId ?? EditModel.AnilistId;
+        EditModel.MalId = item.MalId > 0 ? item.MalId : EditModel.MalId;
 
-        if (item.AverageScore.HasValue)
-            EditModel.Rating = item.AverageScore.Value / 10.0;
+        if (item.Rating.HasValue)
+            EditModel.Rating = item.Rating;
 
-        if (item.Popularity.HasValue)
-            EditModel.Popularity = item.Popularity.Value;
+        if (item.Popularity > 0)
+            EditModel.Popularity = item.Popularity;
 
-        EditModel.Status = item.Status switch
+        if (!string.IsNullOrEmpty(item.Status))
+            EditModel.Status = item.Status;
+
+        if (item.ReleaseDate.HasValue)
         {
-            "FINISHED" => "Completed",
-            "RELEASING" => "Ongoing",
-            "HIATUS" => "On Hiatus",
-            "CANCELLED" => "Discontinued",
-            "NOT_YET_RELEASED" => "Upcoming",
-            _ => EditModel.Status
-        };
-
-        if (item.StartDate?.Year != null)
-        {
-            EditModel.ReleaseDate = new DateTime(
-                item.StartDate.Year.Value,
-                item.StartDate.Month ?? 1,
-                item.StartDate.Day ?? 1);
+            EditModel.ReleaseDate = item.ReleaseDate;
         }
 
         if (item.Genres != null && item.Genres.Any())
@@ -841,40 +831,38 @@
             EditModel.Description = item.Description;
         }
 
+        if (string.IsNullOrEmpty(EditModel.Author) && !string.IsNullOrEmpty(item.Author) && item.Author != "Unknown")
+        {
+            EditModel.Author = item.Author;
+        }
+
         _isSearchAnilistOpen = false;
         StateHasChanged();
     }
 
-    private void SyncJikanResult(JikanMangaItem item)
+    private void SyncJikanResult(MangaSummaryResponse item)
     {
-        EditModel.MalId = item.MalId;
-        EditModel.Author = item.Authors.FirstOrDefault()?.Name ?? EditModel.Author;
-        EditModel.Rating = item.Score;
-        EditModel.ReleaseDate = item.Published?.From;
-        EditModel.Popularity = item.Popularity;
-        EditModel.Members = item.Members;
+        EditModel.MalId = item.MalId > 0 ? item.MalId : EditModel.MalId;
+        EditModel.Author = string.IsNullOrEmpty(item.Author) || item.Author == "Unknown" ? EditModel.Author : item.Author;
+        EditModel.Rating = item.Rating ?? EditModel.Rating;
+        EditModel.ReleaseDate = item.ReleaseDate ?? EditModel.ReleaseDate;
+        EditModel.Popularity = item.Popularity > 0 ? item.Popularity : EditModel.Popularity;
+        EditModel.Members = item.Members > 0 ? item.Members : EditModel.Members;
         
-        EditModel.Status = item.Status switch
+        if (!string.IsNullOrEmpty(item.Status))
         {
-            "Finished" => "Completed",
-            "Complete" => "Completed",
-            "Publishing" => "Ongoing",
-            "On Hiatus" => "On Hiatus",
-            "Hiatus" => "On Hiatus",
-            "Discontinued" => "Discontinued",
-            "Upcoming" => "Upcoming",
-            _ => item.Status
-        };
+            EditModel.Status = item.Status;
+        }
 
-
-        if (item.Genres != null)
+        if (item.Genres != null && item.Genres.Any())
         {
-            EditModel.Genres = item.Genres.Select(x => x.Name).Where(x => x != null).Cast<string>().ToList();
+            var merged = (EditModel.Genres ?? new List<string>()).Union(item.Genres).ToList();
+            EditModel.Genres = merged;
         }
         
-        if (string.IsNullOrEmpty(EditModel.Description))
+        if (string.IsNullOrEmpty(EditModel.Description) && !string.IsNullOrEmpty(item.Description))
         {
-            EditModel.Description = item.Synopsis;
+            EditModel.Description = item.Description;
         }
 
         _isSearchJikanOpen = false;
