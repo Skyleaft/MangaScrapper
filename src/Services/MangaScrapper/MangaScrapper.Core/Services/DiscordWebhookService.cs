@@ -54,7 +54,7 @@ public class DiscordWebhookService
                     .Split('/')
                     .Select(Uri.EscapeDataString));
 
-            var mangaThumb = string.IsNullOrWhiteSpace(manga.LocalImageUrl) ? null : new { url = $"{_domainSettings.DomainUrl}/api/images/{encodedPath}" };
+            var mangaThumb = string.IsNullOrWhiteSpace(manga.LocalImageUrl) ? null : new { url = $"{_domainSettings.DomainUrl}/images/{encodedPath}" };
 
             var embed = new
             {

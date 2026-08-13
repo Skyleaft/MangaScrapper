@@ -45,6 +45,10 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
     environment:
       - DOTNET_ENVIRONMENT=Production
       - MongoDB__ConnectionString=mongodb://mongodb:27017

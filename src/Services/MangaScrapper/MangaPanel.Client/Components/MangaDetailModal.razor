@@ -777,7 +777,7 @@
         IsSaving = true;
         try
         {
-            var response = await Http.PutAsJsonAsync($"/api/v1/manga/{MangaId}", EditModel);
+            var response = await Http.PatchAsJsonAsync($"/api/v1/manga/{MangaId}", EditModel);
             if (response.IsSuccessStatusCode)
             {
                 await OnSaved.InvokeAsync();
