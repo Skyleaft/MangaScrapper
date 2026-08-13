@@ -3,7 +3,7 @@ using Microsoft.Extensions.Hosting;
 using NovaStack.Infrastructure.Logging;
 using NovaStack.Infrastructure.Observability;
 using Serilog;
-
+using NovaStack.Infrastructure.DependencyInjection;
 // ── Bootstrap logger (captures startup errors) ───────────────────────────────
 LoggingExtensions.BootstrapLogger();
 
@@ -36,6 +36,7 @@ try
                 hostContext.Configuration,
                 includeHangfireServer: true,
                 includeRabbitMqConsumer: true);
+            services.AddNovaStackMappings(typeof(CoreExtensions).Assembly);
         })
         .Build();
 

@@ -22,66 +22,73 @@ public sealed class DeleteMangaHandler(
 
     public async Task HandleAsync(DeleteMangaIntegrationEvent evt, CancellationToken ct = default)
     {
-        logger.LogInformation(
-            "Processing DeleteManga event: MangaId={MangaId}, Title={MangaTitle}",
-            evt.MangaId, evt.MangaTitle);
-
-        using var scope = serviceProvider.CreateScope();
-        var repo = scope.ServiceProvider.GetRequiredService<IMangaRepository>();
-        var meilisearch = scope.ServiceProvider.GetRequiredService<Services.MeilisearchService>();
-        var qdrant = scope.ServiceProvider.GetRequiredService<Services.QdrantService>();
-
-        var manga = await repo.GetByIdAsync(MangaId.From(evt.MangaId), ct);
-        if (manga == null)
+        try
         {
-            logger.LogWarning(
-                "Manga with ID {MangaId} not found. It might have been deleted already.", evt.MangaId);
-            return;
-        }
+            logger.LogInformation(
+                "Processing DeleteManga event: MangaId={MangaId}, Title={MangaTitle}",
+                evt.MangaId, evt.MangaTitle);
 
-        // Delete local chapter directory
-        var cleanTitle = GetCleanTitle(manga.Title);
-        var mangaDir = Path.Combine(_imageStoragePath, cleanTitle);
+            using var scope = serviceProvider.CreateScope();
+            var repo = scope.ServiceProvider.GetRequiredService<IMangaRepository>();
+            var meilisearch = scope.ServiceProvider.GetRequiredService<Services.MeilisearchService>();
+            var qdrant = scope.ServiceProvider.GetRequiredService<Services.QdrantService>();
 
-        if (Directory.Exists(mangaDir))
-        {
-            try
+            var manga = await repo.GetByIdAsync(MangaId.From(evt.MangaId), ct);
+            if (manga == null)
             {
-                Directory.Delete(mangaDir, recursive: true);
-                logger.LogInformation("Deleted manga directory: {MangaDir}", mangaDir);
+                logger.LogWarning(
+                    "Manga with ID {MangaId} not found. It might have been deleted already.", evt.MangaId);
+                return;
             }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error deleting manga directory: {MangaDir}", mangaDir);
-            }
-        }
 
-        // Delete thumbnail
-        if (!string.IsNullOrEmpty(manga.LocalImageUrl))
-        {
-            var thumbnailPath = Path.Combine(_imageStoragePath, manga.LocalImageUrl);
-            if (File.Exists(thumbnailPath))
+            // Delete local chapter directory
+            var cleanTitle = GetCleanTitle(manga.Title);
+            var mangaDir = Path.Combine(_imageStoragePath, cleanTitle);
+
+            if (Directory.Exists(mangaDir))
             {
                 try
                 {
-                    File.Delete(thumbnailPath);
-                    logger.LogInformation("Deleted thumbnail: {ThumbnailPath}", thumbnailPath);
+                    Directory.Delete(mangaDir, recursive: true);
+                    logger.LogInformation("Deleted manga directory: {MangaDir}", mangaDir);
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError(ex, "Error deleting thumbnail: {ThumbnailPath}", thumbnailPath);
+                    logger.LogError(ex, "Error deleting manga directory: {MangaDir}", mangaDir);
                 }
             }
+
+            // Delete thumbnail
+            if (!string.IsNullOrEmpty(manga.LocalImageUrl))
+            {
+                var thumbnailPath = Path.Combine(_imageStoragePath, manga.LocalImageUrl);
+                if (File.Exists(thumbnailPath))
+                {
+                    try
+                    {
+                        File.Delete(thumbnailPath);
+                        logger.LogInformation("Deleted thumbnail: {ThumbnailPath}", thumbnailPath);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex, "Error deleting thumbnail: {ThumbnailPath}", thumbnailPath);
+                    }
+                }
+            }
+
+            // Remove from all stores
+            await repo.DeleteAsync(MangaId.From(evt.MangaId), ct);
+            await meilisearch.DeleteMangaAsync(evt.MangaId, ct);
+            await qdrant.DeleteMangaAsync(evt.MangaId, ct);
+
+            logger.LogInformation(
+                "Finished DeleteManga event: MangaId={MangaId}, Title={MangaTitle}",
+                evt.MangaId, evt.MangaTitle);
         }
-
-        // Remove from all stores
-        await repo.DeleteAsync(MangaId.From(evt.MangaId), ct);
-        await meilisearch.DeleteMangaAsync(evt.MangaId, ct);
-        await qdrant.DeleteMangaAsync(evt.MangaId, ct);
-
-        logger.LogInformation(
-            "Finished DeleteManga event: MangaId={MangaId}, Title={MangaTitle}",
-            evt.MangaId, evt.MangaTitle);
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to process DeleteManga event for MangaId={MangaId}. Event discarded.", evt.MangaId);
+        }
     }
 
     private static string GetCleanTitle(string title)

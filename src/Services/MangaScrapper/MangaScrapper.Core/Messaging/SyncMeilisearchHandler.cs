@@ -24,7 +24,6 @@ public sealed class SyncMeilisearchHandler(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to complete background Meilisearch sync.");
-            throw;
         }
     }
 }

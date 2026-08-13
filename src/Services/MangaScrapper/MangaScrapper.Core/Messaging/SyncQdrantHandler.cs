@@ -24,7 +24,6 @@ public sealed class SyncQdrantHandler(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to complete background Qdrant sync.");
-            throw;
         }
     }
 }

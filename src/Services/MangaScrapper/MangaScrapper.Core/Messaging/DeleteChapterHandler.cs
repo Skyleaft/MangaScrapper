@@ -22,52 +22,59 @@ public sealed class DeleteChapterHandler(
 
     public async Task HandleAsync(DeleteChapterIntegrationEvent evt, CancellationToken ct = default)
     {
-        logger.LogInformation(
-            "Processing DeleteChapter event: MangaId={MangaId}, ChapterId={ChapterId}",
-            evt.MangaId, evt.ChapterId);
-
-        using var scope = serviceProvider.CreateScope();
-        var repo = scope.ServiceProvider.GetRequiredService<IMangaRepository>();
-
-        var manga = await repo.GetByIdAsync(MangaId.From(evt.MangaId), ct);
-        if (manga == null)
+        try
         {
-            logger.LogWarning(
-                "Manga with ID {MangaId} not found. Cannot delete chapter.", evt.MangaId);
-            return;
-        }
+            logger.LogInformation(
+                "Processing DeleteChapter event: MangaId={MangaId}, ChapterId={ChapterId}",
+                evt.MangaId, evt.ChapterId);
 
-        var chapter = manga.Chapters.FirstOrDefault(c => c.Id.Value == evt.ChapterId);
-        if (chapter == null)
-        {
-            logger.LogWarning(
-                "Chapter {ChapterId} not found in Manga {MangaId}.", evt.ChapterId, evt.MangaId);
-            return;
-        }
+            using var scope = serviceProvider.CreateScope();
+            var repo = scope.ServiceProvider.GetRequiredService<IMangaRepository>();
 
-        // Delete local chapter directory
-        var cleanTitle = GetCleanTitle(manga.Title);
-        var chapterDir = Path.Combine(_imageStoragePath, cleanTitle, chapter.Number.ToString());
-
-        if (Directory.Exists(chapterDir))
-        {
-            try
+            var manga = await repo.GetByIdAsync(MangaId.From(evt.MangaId), ct);
+            if (manga == null)
             {
-                Directory.Delete(chapterDir, recursive: true);
-                logger.LogInformation("Deleted chapter directory: {ChapterDir}", chapterDir);
+                logger.LogWarning(
+                    "Manga with ID {MangaId} not found. Cannot delete chapter.", evt.MangaId);
+                return;
             }
-            catch (Exception ex)
+
+            var chapter = manga.Chapters.FirstOrDefault(c => c.Id.Value == evt.ChapterId);
+            if (chapter == null)
             {
-                logger.LogError(ex, "Error deleting chapter directory: {ChapterDir}", chapterDir);
+                logger.LogWarning(
+                    "Chapter {ChapterId} not found in Manga {MangaId}.", evt.ChapterId, evt.MangaId);
+                return;
             }
+
+            // Delete local chapter directory
+            var cleanTitle = GetCleanTitle(manga.Title);
+            var chapterDir = Path.Combine(_imageStoragePath, cleanTitle, chapter.Number.ToString());
+
+            if (Directory.Exists(chapterDir))
+            {
+                try
+                {
+                    Directory.Delete(chapterDir, recursive: true);
+                    logger.LogInformation("Deleted chapter directory: {ChapterDir}", chapterDir);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Error deleting chapter directory: {ChapterDir}", chapterDir);
+                }
+            }
+
+            manga.DeleteChapter(ChapterId.From(evt.ChapterId));
+            await repo.UpdateAsync(manga, ct);
+
+            logger.LogInformation(
+                "Finished DeleteChapter event: MangaId={MangaId}, ChapterId={ChapterId}",
+                evt.MangaId, evt.ChapterId);
         }
-
-        manga.DeleteChapter(ChapterId.From(evt.ChapterId));
-        await repo.UpdateAsync(manga, ct);
-
-        logger.LogInformation(
-            "Finished DeleteChapter event: MangaId={MangaId}, ChapterId={ChapterId}",
-            evt.MangaId, evt.ChapterId);
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to process DeleteChapter event for MangaId={MangaId}, ChapterId={ChapterId}. Event discarded.", evt.MangaId, evt.ChapterId);
+        }
     }
 
     private static string GetCleanTitle(string title)

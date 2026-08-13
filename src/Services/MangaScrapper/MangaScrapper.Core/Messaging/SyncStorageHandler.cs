@@ -33,7 +33,6 @@ public sealed class SyncStorageHandler(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to complete background storage sync.");
-            throw;
         }
     }
 }
