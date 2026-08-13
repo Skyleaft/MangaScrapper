@@ -328,7 +328,9 @@ public static class CoreExtensions
 
         services.AddScoped<IAuthTokenService, JwtAuthTokenService>();
 
+        var keysPath = Environment.GetEnvironmentVariable("DATAPROTECTION_KEYS_PATH") ?? "/app/keys";
         services.AddDataProtection()
+            .PersistKeysToFileSystem(new System.IO.DirectoryInfo(keysPath))
             .SetApplicationName("MangaScrapper");
 
         return services;

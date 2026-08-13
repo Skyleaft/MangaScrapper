@@ -28,7 +28,7 @@ public static class LoggingExtensions
                 .WriteTo.Console(
                     outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {SourceContext} {Message:lj}{NewLine}{Exception}")
                 .WriteTo.File(
-                    path: "logs/novastack-.log",
+                    path: $"logs/{context.HostingEnvironment.ApplicationName}-.log",
                     rollingInterval: RollingInterval.Day,
                     retainedFileCountLimit: 7,
                     outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff} {Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}");

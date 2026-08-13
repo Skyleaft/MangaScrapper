@@ -27,6 +27,7 @@ services:
     volumes:
       - ./images:/app/images
       - ./logs:/app/logs
+      - ./keys:/app/keys
 
   worker:
     build:
@@ -51,6 +52,7 @@ services:
     volumes:
       - ./images:/app/images
       - ./logs:/app/logs
+      - ./keys:/app/keys
 
   mongodb:
     image: mongo:latest
