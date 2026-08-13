@@ -117,9 +117,11 @@ try
     if (app.Environment.IsDevelopment())
     {
         app.UseWebAssemblyDebugging();
-        app.MapOpenApi(); // Access via /openapi/v1.json
-        app.MapScalarApiReference();
     }
+    
+    // openapi
+    app.MapOpenApi(); // Access via /openapi/v1.json
+    app.MapScalarApiReference();
 
     app.UseHttpsRedirection();
     app.UseStaticFiles();
@@ -179,11 +181,8 @@ try
     {
         var urls = string.Join(", ", app.Urls);
         Log.Information("Application is running on: {Urls}", urls);
-        if (app.Environment.IsDevelopment())
-        {
-            var firstUrl = app.Urls.FirstOrDefault() ?? "http://localhost:5191";
-            Log.Information("Scalar API reference available at: {Url}/scalar/v1", firstUrl.TrimEnd('/'));
-        }
+        var firstUrl = app.Urls.FirstOrDefault() ?? "http://localhost:5191";
+        Log.Information("Scalar API reference available at: {Url}/scalar/v1", firstUrl.TrimEnd('/'));
     });
 
     app.Run();
