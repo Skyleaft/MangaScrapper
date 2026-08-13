@@ -16,7 +16,16 @@ LoggingExtensions.BootstrapLogger();
 
 try
 {
-    Log.Information("Starting MangaScrapper.Api...");
+    var asciiArt = @"
+    __  ___                        _____                                              ______            _           
+   /  |/  /___ _____  ____ _____ _/ ___/______________ _____  ____  ___  _____       / ____/___  ____ _(_)___  ___ 
+  / /|_/ / __ `/ __ \/ __ `/ __ `/\__ \/ ___/ ___/ __ `/ __ \/ __ \/ _ \/ ___/      / __/ / __ \/ __ `/ / __ \/ _ \
+ / /  / / /_/ / / / / /_/ / /_/ /___/ / /__/ /  / /_/ / /_/ / /_/ /  __/ /         / /___/ / / / /_/ / / / / /  __/
+/_/  /_/\__,_/_/ /_/\__, /\__,_//____/\___/_/   \__,_/ .___/ .___/\___/_/         /_____/_/ /_/\__, /_/_/ /_/\___/ 
+                   /____/                           /_/   /_/                                 /____/               
+";
+    Console.WriteLine(asciiArt);
+    Log.Information("Starting MangaScrapper.Api Engine...");
 
     var builder = WebApplication.CreateBuilder(args);
 
@@ -73,21 +82,23 @@ try
         {
             var path = httpContext.Request.Path.Value;
 
-            if (!string.IsNullOrEmpty(path) && path.StartsWith("/images", StringComparison.OrdinalIgnoreCase))
+            if (string.IsNullOrEmpty(path))
+                return LogEventLevel.Information;
+
+            if (path.StartsWith("/images", StringComparison.OrdinalIgnoreCase) ||
+                path.StartsWith("/hangfire", StringComparison.OrdinalIgnoreCase) ||
+                path.StartsWith("/api/v1/images", StringComparison.OrdinalIgnoreCase) ||
+                path.StartsWith("/scalar", StringComparison.OrdinalIgnoreCase))
             {
                 return LogEventLevel.Verbose; 
             }
-            else if (path != null && path.StartsWith("/hangfire", StringComparison.OrdinalIgnoreCase))
+
+            if (path.EndsWith(".js", StringComparison.OrdinalIgnoreCase) ||
+                path.EndsWith(".css", StringComparison.OrdinalIgnoreCase) ||
+                path.EndsWith(".pdb", StringComparison.OrdinalIgnoreCase) ||
+                path.EndsWith(".wasm", StringComparison.OrdinalIgnoreCase))
             {
-                return LogEventLevel.Verbose; 
-            }
-            else if (path != null && path.StartsWith("/api/v1/images", StringComparison.OrdinalIgnoreCase))
-            {
-                return LogEventLevel.Verbose; 
-            }
-            else if (path != null && path.StartsWith("/scalar", StringComparison.OrdinalIgnoreCase))
-            {
-                return LogEventLevel.Verbose; 
+                return LogEventLevel.Verbose;
             }
 
             if (ex != null || httpContext.Response.StatusCode >= 500)
