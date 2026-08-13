@@ -203,7 +203,15 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
             catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Net.Sockets.SocketException)
             {
                 if (i == maxRetries - 1) throw;
-                await Task.Delay(1000 * (i + 1), ct);
+
+                var delay = 1000 * (i + 1);
+                if (ex is HttpRequestException { StatusCode: System.Net.HttpStatusCode.TooManyRequests })
+                {
+                    delay = 5000 * (int)Math.Pow(2, i);
+                    Logger.LogWarning("Rate limited (429). Retrying in {Delay}ms...", delay);
+                }
+
+                await Task.Delay(delay, ct);
             }
         }
         throw new Exception("Retry failed");

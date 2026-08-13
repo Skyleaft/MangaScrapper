@@ -107,7 +107,7 @@ try
             if (ex != null || httpContext.Response.StatusCode >= 500)
                 return LogEventLevel.Error;
 
-            return LogEventLevel.Information;
+            return LogEventLevel.Debug;
         };
         options.MessageTemplate =
             "HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000}ms";
