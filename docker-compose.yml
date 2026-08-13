@@ -6,10 +6,16 @@ services:
       context: .
       dockerfile: src/Services/MangaScrapper/MangaScrapper.Api/Dockerfile
     restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     ports:
       - "5191:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
+      - Serilog__MinimumLevel__Override__Serilog.AspNetCore.RequestLoggingMiddleware=Warning
       - MongoDB__ConnectionString=mongodb://mongodb:27017
       - MongoDB__DatabaseName=manga-scrap
       - Meili__Host=http://meilisearch:7700
@@ -34,6 +40,11 @@ services:
       context: .
       dockerfile: src/Workers/Scrapper.Worker/Dockerfile
     restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     environment:
       - DOTNET_ENVIRONMENT=Production
       - MongoDB__ConnectionString=mongodb://mongodb:27017
