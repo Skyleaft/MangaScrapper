@@ -386,7 +386,7 @@ public class QdrantService
     {
         float[] vector = new float[VectorSize];
 
-        var text = $"{manga.Title} {manga.Description} {manga.Author} {string.Join(" ", manga.Genres ?? new List<string>())}";
+        var text = $"{manga.Title} {manga.Description} {manga.Author} {string.Join(" ", manga.Genres ?? new List<string>())} {string.Join(" ", manga.Categories ?? new List<string>())}";
         // mode=passage applies "passage: " prefix for e5 indexing convention
         var embedding = await GetEmbeddingAsync(text, mode: "passage", ct);
         if (embedding != null)
@@ -409,7 +409,8 @@ public class QdrantService
                 ["author"] = manga.Author ?? "Unknown",
                 ["status"] = manga.Status ?? "Unknown",
                 ["type"] = manga.Type ?? "Unknown",
-                ["genres"] = manga.Genres != null ? manga.Genres.ToArray() : Array.Empty<string>()
+                ["genres"] = manga.Genres != null ? manga.Genres.ToArray() : Array.Empty<string>(),
+                ["categories"] = manga.Categories != null ? manga.Categories.ToArray() : Array.Empty<string>()
             }
         };
     }

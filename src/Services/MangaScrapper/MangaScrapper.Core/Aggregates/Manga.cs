@@ -81,10 +81,12 @@ public class Manga : Entity<MangaId>
     public int Popularity { get; private set; }
     public int Members { get; private set; }
     public List<string> Genres { get; private set; }
+    public List<string>Categories { get;private set; }
     public string? Description { get; private set; }
     public string? ImageUrl { get; private set; }
     public string? LocalImageUrl { get; private set; }
     public long ThumbnailSize { get; private set; }
+    public bool Nsfw { get; private set; }
     public string? Status { get; private set; }
     public DateTime? ReleaseDate { get; private set; }
     public int TotalView { get; private set; }
@@ -98,10 +100,11 @@ public class Manga : Entity<MangaId>
         string title,
         string author,
         string type,
-        string source,
+        string source, 
         int malId = 0,
         int? anilistId = null,
         List<string>? genres = null,
+        List<string>? categories =null, 
         string? description = null,
         string? imageUrl = null,
         string? localImageUrl = null,
@@ -109,6 +112,7 @@ public class Manga : Entity<MangaId>
         double? rating = null,
         int popularity = 0,
         int members = 0,
+        bool? nsfw = false,
         string? status = null,
         DateTime? releaseDate = null,
         int totalView = 0,
@@ -123,6 +127,7 @@ public class Manga : Entity<MangaId>
         MalId = malId;
         AnilistId = anilistId;
         Genres = genres ?? [];
+        Categories = categories ?? [];
         Description = description;
         ImageUrl = imageUrl;
         LocalImageUrl = localImageUrl;
@@ -130,6 +135,7 @@ public class Manga : Entity<MangaId>
         Rating = rating;
         Popularity = popularity;
         Members = members;
+        Nsfw = nsfw ?? false;
         Status = status;
         ReleaseDate = releaseDate;
         TotalView = totalView;
@@ -171,6 +177,7 @@ public class Manga : Entity<MangaId>
         int malId,
         int? anilistId,
         List<string>? genres,
+        List<string>? categories,
         string? description,
         string? imageUrl,
         string? localImageUrl,
@@ -178,6 +185,7 @@ public class Manga : Entity<MangaId>
         double? rating,
         int popularity,
         int members,
+        bool? nsfw,
         string? status,
         DateTime? releaseDate,
         int totalView,
@@ -188,8 +196,8 @@ public class Manga : Entity<MangaId>
     {
         return new Manga(
             id, title, author, type, "Unknown",
-            malId, anilistId, genres, description, imageUrl, localImageUrl, thumbnailSize,
-            rating, popularity, members, status, releaseDate, totalView,
+            malId, anilistId, genres, categories,description, imageUrl, localImageUrl, thumbnailSize,
+            rating, popularity, members,nsfw, status, releaseDate, totalView,
             createdAt, updatedAt, url, chapters);
     }
 
@@ -199,10 +207,12 @@ public class Manga : Entity<MangaId>
         string author,
         string type,
         List<string> genres,
+        List<string>?categories,
         string? description,
         double? rating,
         int popularity,
         int members,
+        bool? nsfw,
         string? status,
         DateTime? releaseDate,
         int totalView)
@@ -212,10 +222,12 @@ public class Manga : Entity<MangaId>
         Author = author;
         Type = type;
         Genres = genres ?? [];
+        Categories = categories ?? [];
         Description = description ?? Description;
         Rating = rating ?? Rating;
         Popularity = popularity > 0 ? popularity : Popularity;
         Members = members > 0 ? members : Members;
+        Nsfw = nsfw ?? false;
         Status = status ?? Status;
         ReleaseDate = releaseDate ?? ReleaseDate;
         TotalView = totalView;

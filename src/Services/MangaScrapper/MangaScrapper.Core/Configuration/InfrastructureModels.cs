@@ -40,8 +40,10 @@ public class MeiliMangaDocument
     public int Popularity { get; set; }
     public int Members { get; set; }
     public List<string> Genres { get; set; } = new();
+    public List<string> Categories { get; set; } = new();
     public string? Description { get; set; }
     public string? Status { get; set; }
+    public bool Nsfw { get; set; } = false;
     public int TotalView { get; set; }
     public long ReleaseDate { get; set; }
     public string? ImageUrl { get; set; }

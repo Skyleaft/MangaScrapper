@@ -19,6 +19,8 @@ public class MangaDocument
 
     [BsonIgnoreIfNull]
     public List<string>? Genres { get; set; }
+    [BsonIgnoreIfNull]
+    public List<string>? Categories { get; set; }
 
     [BsonIgnoreIfNull]
     public string? Description { get; set; }
@@ -27,7 +29,8 @@ public class MangaDocument
     public string? ImageUrl { get; set; }
     public string? LocalImageUrl { get; set; }
     public long ThumbnailSize { get; set; }
-
+    [BsonIgnoreIfNull]
+    public bool? Nsfw { get; set; }
     [BsonIgnoreIfNull]
     public string? Status { get; set; }
     public DateTime? ReleaseDate { get; set; }
