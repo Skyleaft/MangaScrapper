@@ -31,7 +31,7 @@ internal sealed class AddOrUpdateUserLibraryCommandHandler(
     public async Task<Result<UserLibraryResponse>> Handle(AddOrUpdateUserLibraryCommand command, CancellationToken ct)
     {
         var existing = await libraryRepository.GetByUserIdAndMangaIdAsync(command.UserId, MangaId.From(command.MangaId), ct);
-        var manga = await mangaRepository.GetByIdAsync(MangaId.From(command.MangaId), ct);
+        var manga = await mangaRepository.GetByIdAsync(MangaId.From(command.MangaId), ct,true);
         if (existing is not null)
         {
             existing.UpdateLibrary(command.Status, command.IsFavorite);

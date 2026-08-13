@@ -131,11 +131,24 @@ public class UserProgressionDocument
 
     [BsonRepresentation(BsonType.String)]
     public Guid MangaId { get; set; }
+    [BsonDateTimeOptions(Kind = DateTimeKind.Utc)]
+    public DateTime LastReadAt { get; set; } = DateTime.UtcNow;
+    public List<ChapterLogDocument> ChapterLogs { get; set; } = new();
+    public int TotalReadingTime { get; set; }
+}
 
+public class ChapterLogDocument
+{
+    [BsonId]
     [BsonRepresentation(BsonType.String)]
-    public Guid LastReadChapterId { get; set; }
-    public double LastReadChapterNumber { get; set; }
-
+    public Guid Id { get; set; } = Guid.CreateVersion7();
+    [BsonRepresentation(BsonType.String)]
+    public Guid ChapterId { get; set; }
+    public double ChapterNumber { get; set; }
+    public int LastReadPage { get; set; }
+    public int TotalPages { get; set; }
+    public bool IsCompleted { get; set; }
+    public int ReadingTimeSeconds { get; set; }
     [BsonDateTimeOptions(Kind = DateTimeKind.Utc)]
     public DateTime LastReadAt { get; set; } = DateTime.UtcNow;
 }

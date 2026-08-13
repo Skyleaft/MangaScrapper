@@ -6,7 +6,7 @@ namespace MangaScrapper.Core.Repositories;
 
 public interface IMangaRepository
 {
-    Task<Manga?> GetByIdAsync(MangaId id, CancellationToken ct = default);
+    Task<Manga?> GetByIdAsync(MangaId id, CancellationToken ct = default,bool excludePage = false);
     Task<Manga?> GetByTitleAsync(string title, CancellationToken ct = default);
     Task<PagedList<Manga>> GetPagedAsync(
         string? search, 

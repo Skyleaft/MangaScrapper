@@ -14,8 +14,12 @@ namespace MangaScrapper.Core.Features.UserProgression.UpdateUserProgression;
 public record UpdateUserProgressionCommand(
     string UserId,
     Guid MangaId,
-    Guid LastReadChapterId,
-    double LastReadChapterNumber) : ICommand<UserProgressionResponse>;
+    Guid ChapterId,
+    double ChapterNumber,
+    int LastReadPage,
+    int TotalPages,
+    bool IsCompleted,
+    int ReadingTimeSeconds) : ICommand<UserProgressionResponse>;
 
 public class UpdateUserProgressionCommandValidator : AbstractValidator<UpdateUserProgressionCommand>
 {
@@ -23,7 +27,7 @@ public class UpdateUserProgressionCommandValidator : AbstractValidator<UpdateUse
     {
         RuleFor(x => x.UserId).NotEmpty().WithMessage("UserId is required.");
         RuleFor(x => x.MangaId).NotEmpty().WithMessage("MangaId is required.");
-        RuleFor(x => x.LastReadChapterId).NotEmpty().WithMessage("LastReadChapterId is required.");
+        RuleFor(x => x.ChapterId).NotEmpty().WithMessage("ChapterId is required.");
     }
 }
 
@@ -33,20 +37,28 @@ internal sealed class UpdateUserProgressionCommandHandler(IUserProgressionReposi
     public async Task<Result<UserProgressionResponse>> Handle(UpdateUserProgressionCommand command, CancellationToken ct)
     {
         var mangaId = MangaId.From(command.MangaId);
-        var chapterId = ChapterId.From(command.LastReadChapterId);
+        var chapterLog = Aggregates.UserProgression.ChapterLog.Create(
+            command.ChapterId, command.ChapterNumber, command.LastReadPage, 
+            command.TotalPages, command.IsCompleted, command.ReadingTimeSeconds);
 
         var existing = await progressionRepository.GetByUserIdAndMangaIdAsync(command.UserId, mangaId, ct);
         if (existing is not null)
         {
-            existing.UpdateProgression(chapterId, command.LastReadChapterNumber);
+            existing.UpdateProgression(chapterLog);
             await progressionRepository.AddOrUpdateAsync(existing, ct);
-            return new UserProgressionResponse(existing.Id, existing.UserId, existing.MangaId.Value, existing.LastReadChapterId.Value, existing.LastReadChapterNumber, existing.LastReadAt);
+            return new UserProgressionResponse(
+                existing.Id, existing.UserId, existing.MangaId.Value, existing.LastReadAt, existing.TotalReadingTime, 
+                existing.ChapterLogs.Select(cl => new ChapterLogsResponse(cl.Id, cl.ChapterId, cl.ChapterNumber, cl.LastReadPage, cl.TotalPages, cl.IsCompleted, cl.ReadingTimeSeconds, cl.LastReadAt)).ToList()
+            );
         }
 
-        var progression = Aggregates.UserProgression.Create(command.UserId, mangaId, chapterId, command.LastReadChapterNumber);
+        var progression = Aggregates.UserProgression.Create(command.UserId, mangaId, chapterLog.ReadingTimeSeconds, new List<Aggregates.UserProgression.ChapterLog> { chapterLog });
         await progressionRepository.AddOrUpdateAsync(progression, ct);
 
-        return new UserProgressionResponse(progression.Id, progression.UserId, progression.MangaId.Value, progression.LastReadChapterId.Value, progression.LastReadChapterNumber, progression.LastReadAt);
+        return new UserProgressionResponse(
+            progression.Id, progression.UserId, progression.MangaId.Value, progression.LastReadAt, progression.TotalReadingTime, 
+            progression.ChapterLogs.Select(cl => new ChapterLogsResponse(cl.Id, cl.ChapterId, cl.ChapterNumber, cl.LastReadPage, cl.TotalPages, cl.IsCompleted, cl.ReadingTimeSeconds, cl.LastReadAt)).ToList()
+        );
     }
 }
 

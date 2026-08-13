@@ -11,10 +11,13 @@ namespace MangaScrapper.Core.Repositories;
 
 public class MongoMangaRepository(MangaMongoDbContext dbContext) : IMangaRepository
 {
-    public async Task<Manga?> GetByIdAsync(MangaId id, CancellationToken ct = default)
+    public async Task<Manga?> GetByIdAsync(MangaId id, CancellationToken ct = default, bool excludePage = false)
     {
-        var doc = await dbContext.Mangas.Find(m => m.Id == id.Value)
-            .FirstOrDefaultAsync(ct);
+        var query = dbContext.Mangas.Find(m => m.Id == id.Value);
+        var doc = await (excludePage
+            ? query.Project<MangaDocument>(Builders<MangaDocument>.Projection.Exclude("chapters.pages"))
+            : query).FirstOrDefaultAsync(ct);
+
         return doc is null ? null : MapToDomain(doc);
     }
 
@@ -51,7 +54,7 @@ public class MongoMangaRepository(MangaMongoDbContext dbContext) : IMangaReposit
         }
 
         var totalCount = await dbContext.Mangas.CountDocumentsAsync(filter, cancellationToken: ct);
-        
+
         var sortBuilder = Builders<MangaDocument>.Sort;
         SortDefinition<MangaDocument> sortDefinition = sortBy.ToLowerInvariant() switch
         {
@@ -84,7 +87,7 @@ public class MongoMangaRepository(MangaMongoDbContext dbContext) : IMangaReposit
     public async Task<List<Manga>> GetByIdsAsync(List<Guid> ids, CancellationToken ct)
     {
         var filter = Builders<MangaDocument>.Filter.In(m => m.Id, ids);
-        var doc=  await dbContext.Mangas.Find(filter)
+        var doc = await dbContext.Mangas.Find(filter)
             .Project<MangaDocument>(Builders<MangaDocument>.Projection.Exclude("chapters.pages"))
             .ToListAsync(ct);
         return doc is null ? new List<Manga>() : doc.Select(MapToDomain).ToList();
@@ -324,7 +327,7 @@ public class MongoMangaRepository(MangaMongoDbContext dbContext) : IMangaReposit
     private static Manga MapToDomain(MangaDocument doc) => doc.Adapt<Manga>();
 
     private static MangaDocument MapToDocument(Manga manga) => manga.Adapt<MangaDocument>();
-    
+
     private class ChapterDocumentUnwound
     {
         public ChapterDocument Chapters { get; set; } = null!;

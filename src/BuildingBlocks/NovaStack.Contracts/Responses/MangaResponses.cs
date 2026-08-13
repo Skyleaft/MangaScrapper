@@ -48,6 +48,17 @@ public record UserProgressionResponse(
     Guid Id,
     string UserId,
     Guid MangaId,
-    Guid LastReadChapterId,
-    double LastReadChapterNumber,
-    DateTime LastReadAt);
+    DateTime LastReadAt,
+    int TotalReadingTime,
+    List<ChapterLogsResponse> ChapterLogs
+    );
+
+public record ChapterLogsResponse(
+    Guid Id,
+    Guid ChapterId,
+    double ChapterNumber,
+    int LastReadPage,
+    int TotalPage,
+    bool IsCompleted,
+    int ReadTimeInSeconds,
+    DateTime? LastReadAt);

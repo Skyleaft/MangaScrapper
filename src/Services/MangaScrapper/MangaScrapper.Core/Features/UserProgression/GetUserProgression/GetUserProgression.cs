@@ -17,7 +17,14 @@ internal sealed class GetUserProgressionQueryHandler(IUserProgressionRepository 
     public async Task<Result<List<UserProgressionResponse>>> Handle(GetUserProgressionQuery query, CancellationToken ct)
     {
         var items = await progressionRepository.GetByUserIdAsync(query.UserId, ct);
-        var mapped = items.Select(p => new UserProgressionResponse(p.Id, p.UserId, p.MangaId.Value, p.LastReadChapterId.Value, p.LastReadChapterNumber, p.LastReadAt)).ToList();
+        var mapped = items.Select(p => new UserProgressionResponse(
+            p.Id, 
+            p.UserId, 
+            p.MangaId.Value, 
+            p.LastReadAt, 
+            p.TotalReadingTime, 
+            p.ChapterLogs.Select(cl => new ChapterLogsResponse(cl.Id, cl.ChapterId, cl.ChapterNumber, cl.LastReadPage, cl.TotalPages, cl.IsCompleted, cl.ReadingTimeSeconds, cl.LastReadAt)).ToList()
+        )).ToList();
         return mapped;
     }
 }

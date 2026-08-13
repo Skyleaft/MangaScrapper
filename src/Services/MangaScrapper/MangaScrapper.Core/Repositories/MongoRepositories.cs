@@ -257,9 +257,18 @@ public class MongoUserProgressionRepository(MangaMongoDbContext dbContext) : IUs
             doc.Id,
             doc.UserId.ToString(),
             MangaId.From(doc.MangaId),
-            ChapterId.From(doc.LastReadChapterId),
-            doc.LastReadChapterNumber,
-            doc.LastReadAt);
+            doc.LastReadAt,
+            doc.TotalReadingTime,
+            doc.ChapterLogs.Select(cl => UserProgression.ChapterLog.Reconstitute(
+                cl.Id,
+                cl.ChapterId,
+                cl.ChapterNumber,
+                cl.LastReadPage,
+                cl.TotalPages,
+                cl.IsCompleted,
+                cl.ReadingTimeSeconds,
+                cl.LastReadAt)).ToList()
+        );
     }
 
     private static UserProgressionDocument MapToDocument(UserProgression progression)
@@ -270,9 +279,19 @@ public class MongoUserProgressionRepository(MangaMongoDbContext dbContext) : IUs
             Id = progression.Id,
             UserId = userGuid,
             MangaId = progression.MangaId.Value,
-            LastReadChapterId = progression.LastReadChapterId.Value,
-            LastReadChapterNumber = progression.LastReadChapterNumber,
-            LastReadAt = progression.LastReadAt
+            LastReadAt = progression.LastReadAt,
+            TotalReadingTime = progression.ChapterLogs.Sum(x=>x.ReadingTimeSeconds),
+            ChapterLogs = progression.ChapterLogs.Select(cl => new ChapterLogDocument
+            {
+                Id = cl.Id,
+                ChapterId = cl.ChapterId,
+                ChapterNumber = cl.ChapterNumber,
+                LastReadPage = cl.LastReadPage,
+                TotalPages = cl.TotalPages,
+                IsCompleted = cl.IsCompleted,
+                ReadingTimeSeconds = cl.ReadingTimeSeconds,
+                LastReadAt = cl.LastReadAt
+            }).ToList()
         };
     }
 }

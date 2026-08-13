@@ -21,7 +21,14 @@ internal sealed class GetMangaProgressionQueryHandler(IUserProgressionRepository
         if (p is null)
             return Error.NotFound("UserProgression.NotFound", "No progression recorded for this manga.");
 
-        return new UserProgressionResponse(p.Id, p.UserId, p.MangaId.Value, p.LastReadChapterId.Value, p.LastReadChapterNumber, p.LastReadAt);
+        return new UserProgressionResponse(
+            p.Id, 
+            p.UserId, 
+            p.MangaId.Value, 
+            p.LastReadAt,
+            p.TotalReadingTime,
+            p.ChapterLogs.Select(cl => new ChapterLogsResponse(cl.Id, cl.ChapterId, cl.ChapterNumber, cl.LastReadPage, cl.TotalPages, cl.IsCompleted, cl.ReadingTimeSeconds, cl.LastReadAt)).ToList()
+        );
     }
 }
 
