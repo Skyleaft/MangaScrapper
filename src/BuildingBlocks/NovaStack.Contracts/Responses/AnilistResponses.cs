@@ -32,6 +32,7 @@ public record AnilistMedia(
     [property: JsonPropertyName("averageScore")] int? AverageScore,
     [property: JsonPropertyName("popularity")] int? Popularity,
     [property: JsonPropertyName("genres")] List<string>? Genres,
+    [property: JsonPropertyName("tags")] List<AnilistTag>? Tags,
     [property: JsonPropertyName("startDate")] AnilistFuzzyDate? StartDate,
     [property: JsonPropertyName("staff")] AnilistStaffConnection? Staff)
 {
@@ -76,3 +77,6 @@ public record AnilistStaffNode(
 
 public record AnilistStaffName(
     [property: JsonPropertyName("full")] string? Full);
+
+public record AnilistTag(
+    [property: JsonPropertyName("name")] string? Name);

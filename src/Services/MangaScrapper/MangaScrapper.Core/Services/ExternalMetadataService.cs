@@ -83,6 +83,7 @@ public sealed class ExternalMetadataService : IExternalMetadataService
                             averageScore
                             popularity
                             genres
+                            tags { name }
                             startDate { year month day }
                             staff {
                                 edges {
@@ -133,6 +134,7 @@ public sealed class ExternalMetadataService : IExternalMetadataService
                     malId: item.IdMal ?? 0,
                     anilistId: item.Id,
                     genres: item.Genres ?? [],
+                    categories: item.Tags?.Select(t => t.Name).Where(n => !string.IsNullOrEmpty(n)).Cast<string>().ToList() ?? [],
                     description: item.Description,
                     imageUrl: item.CoverImage?.Large ?? item.CoverImage?.Medium ?? item.CoverImage?.ExtraLarge,
                     rating: item.AverageScore.HasValue ? item.AverageScore.Value / 10.0 : null,
