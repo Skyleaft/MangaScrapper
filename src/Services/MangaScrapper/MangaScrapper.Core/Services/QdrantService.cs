@@ -17,7 +17,7 @@ public class QdrantService
     private readonly ILogger<QdrantService> _logger;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly EmbeddingConfig _embeddingConfig;
-    private const ulong VectorSize = 768; // multilingual-e5-base produces 768-dim vectors
+    private const ulong VectorSize = 1024; // BAAI/bge-m3 produces 1024-dim vectors
 
     public QdrantService(
         IOptions<QdrantConfig> config,
@@ -399,8 +399,33 @@ public class QdrantService
     {
         float[] vector = new float[VectorSize];
 
-        var text = $"{manga.Title} {manga.Description} {manga.Author} {string.Join(" ", manga.Genres ?? new List<string>())} {string.Join(" ", manga.Categories ?? new List<string>())}";
-        // mode=passage applies "passage: " prefix for e5 indexing convention
+        var distinctGenres = (manga.Genres ?? new List<string>())
+            .Where(g => !string.IsNullOrWhiteSpace(g))
+            .Distinct(StringComparer.OrdinalIgnoreCase);
+
+        var distinctCategories = (manga.Categories ?? new List<string>())
+            .Where(c => !string.IsNullOrWhiteSpace(c))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(15);
+
+        var textParts = new List<string>();
+        if (!string.IsNullOrWhiteSpace(manga.Title))
+            textParts.Add($"Title: {manga.Title}");
+        if (!string.IsNullOrWhiteSpace(manga.Author) && manga.Author != "Unknown")
+            textParts.Add($"Author: {manga.Author}");
+        
+        var genresStr = string.Join(", ", distinctGenres);
+        if (!string.IsNullOrWhiteSpace(genresStr))
+            textParts.Add($"Genres: {genresStr}");
+
+        var categoriesStr = string.Join(", ", distinctCategories);
+        if (!string.IsNullOrWhiteSpace(categoriesStr))
+            textParts.Add($"Themes: {categoriesStr}");
+
+        if (!string.IsNullOrWhiteSpace(manga.Description))
+            textParts.Add($"Synopsis: {manga.Description}");
+
+        var text = string.Join(". ", textParts);
         var embedding = await GetEmbeddingAsync(text, mode: "passage", ct);
         if (embedding != null)
         {
