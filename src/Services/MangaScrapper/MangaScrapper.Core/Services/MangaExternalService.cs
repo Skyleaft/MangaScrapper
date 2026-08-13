@@ -2,6 +2,7 @@ using MangaScrapper.Core.Aggregates;
 using MangaScrapper.Core.Configuration;
 using MangaScrapper.Core.Repositories;
 using MangaScrapper.Core.ValueObjects;
+using Mapster;
 using NovaStack.SharedKernel.Common;
 
 namespace MangaScrapper.Core.Services;
@@ -73,23 +74,36 @@ public class MangaExternalService(ILogger<MangaExternalService> logger,
             doc.Title,
             doc.Author,
             doc.Type,
-            0,
-            0,
+            doc.MalId,
+            doc.AnilistId,
+            doc.MangaUpdateId,
             doc.Genres,
+            doc.Categories,
             doc.Description,
             doc.ImageUrl,
             doc.LocalImageUrl,
             0,
             doc.Rating,
             doc.Popularity,
-            0,
+            doc.Members,
+            doc.Nsfw,
             doc.Status,
             DateTimeOffset.FromUnixTimeSeconds(doc.ReleaseDate).UtcDateTime,
             doc.TotalView,
             DateTimeOffset.FromUnixTimeSeconds(doc.CreatedAtTimestamp).UtcDateTime,
             DateTimeOffset.FromUnixTimeSeconds(doc.UpdatedAtTimestamp).UtcDateTime,
-            "",
-            null);
+            doc.Url,
+            doc.LatestChapter.Select(c=>new Chapter(
+                ChapterId.From(Guid.Parse(c.Id)),
+                c.Number,
+                c.Link,
+                c.ChapterProvider,
+                c.ChapterProviderIcon,
+                c.Language,
+                c.TotalView,
+                DateTimeOffset.FromUnixTimeSeconds(c.UploadDateTimestamp).UtcDateTime,
+                null
+                )).ToList());
     }
 
     public async Task IndexMangaAsync(Manga manga, CancellationToken ct = default)

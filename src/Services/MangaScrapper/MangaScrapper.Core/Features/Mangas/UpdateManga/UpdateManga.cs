@@ -16,12 +16,15 @@ public record UpdateMangaCommand(
     Guid Id,
     int MalId,
     int? AnilistId,
+    int? MangaUpdateId,
     string Author,
     string Type,
     List<string> Genres,
+    List<string> Categories,
     string? Description,
     double? Rating,
     DateTime? ReleaseDate,
+    bool? Nsfw,
     string? Status,
     int TotalView,
     int Popularity,
@@ -30,7 +33,7 @@ public record UpdateMangaCommand(
 internal sealed class UpdateMangaCommandHandler(
     IMangaRepository mangaRepository,
     IMangaExternalRepository mangaExternalRepository)
-    : ICommandHandler<UpdateMangaCommand,MangaSummaryResponse>
+    : ICommandHandler<UpdateMangaCommand, MangaSummaryResponse>
 {
     public async Task<Result<MangaSummaryResponse>> Handle(UpdateMangaCommand command, CancellationToken ct)
     {
@@ -42,13 +45,16 @@ internal sealed class UpdateMangaCommandHandler(
         manga.UpdateMetadata(
             command.MalId,
             command.AnilistId,
+            command.MangaUpdateId,
             command.Author,
             command.Type,
             command.Genres,
+            command.Categories,
             command.Description,
             command.Rating,
             command.Popularity,
             command.Members,
+            command.Nsfw,
             command.Status,
             command.ReleaseDate,
             command.TotalView);
@@ -75,9 +81,9 @@ public sealed class UpdateMangaEndpoint : IEndpointDefinition
     }
 
     private static async Task<IResult> HandleUpdateAsync(
-        Guid id, 
-        UpdateMangaCommand request, 
-        ISender sender, 
+        Guid id,
+        UpdateMangaCommand request,
+        ISender sender,
         CancellationToken ct)
     {
         // Ensure the ID from the route matches the body
@@ -87,8 +93,8 @@ public sealed class UpdateMangaEndpoint : IEndpointDefinition
         }
 
         var result = await sender.Send(request, ct);
-        return result.IsSuccess 
-            ? Results.Ok(ApiResponse.Ok<object?>(null, "Manga updated successfully")) 
+        return result.IsSuccess
+            ? Results.Ok(ApiResponse.Ok<object?>(null, "Manga updated successfully"))
             : result.Error.ToHttpResult();
     }
 }

@@ -33,6 +33,7 @@ public class MeiliMangaDocument
     public string Id { get; set; } = string.Empty;
     public int MalId { get; set; }
     public int? AnilistId { get; set; }
+    public long? MangaUpdateId { get; set; }
     public string Title { get; set; } = string.Empty;
     public string Author { get; set; } = string.Empty;
     public string Type { get; set; } = string.Empty;
@@ -40,8 +41,10 @@ public class MeiliMangaDocument
     public int Popularity { get; set; }
     public int Members { get; set; }
     public List<string> Genres { get; set; } = new();
+    public List<string> Categories { get; set; } = new();
     public string? Description { get; set; }
     public string? Status { get; set; }
+    public bool Nsfw { get; set; } = false;
     public int TotalView { get; set; }
     public long ReleaseDate { get; set; }
     public string? ImageUrl { get; set; }

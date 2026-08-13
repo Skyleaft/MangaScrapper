@@ -30,7 +30,7 @@ public sealed class MangaMappingConfig : IRegister
         config.NewConfig<Chapter, ChapterResponse>()
             .Map(dest => dest.Id, src => src.Id.Value)
             .Map(dest => dest.Pages, src => src.Pages.Select(x => x.LocalImageUrl).ToList());
-        
+
         config.NewConfig<Manga, MeiliMangaDocument>()
             .Map(dest => dest.Id, src => src.Id.Value.ToString())
             .Map(dest => dest.ReleaseDate, src => ((DateTimeOffset)src.ReleaseDate.GetValueOrDefault().ToUniversalTime()).ToUnixTimeSeconds())
@@ -53,7 +53,9 @@ public sealed class MangaMappingConfig : IRegister
                 doc.Type,
                 doc.MalID,
                 doc.AnilistID,
+                doc.MangaUpdateID,
                 doc.Genres,
+                doc.Categories,
                 doc.Description,
                 doc.ImageUrl,
                 doc.LocalImageUrl,
@@ -61,6 +63,7 @@ public sealed class MangaMappingConfig : IRegister
                 doc.Rating,
                 doc.Popularity,
                 doc.Members,
+                doc.Nsfw,
                 doc.Status,
                 doc.ReleaseDate,
                 doc.TotalView,
