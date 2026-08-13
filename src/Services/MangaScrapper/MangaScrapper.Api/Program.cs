@@ -89,6 +89,7 @@ try
 
             if (path.StartsWith("/images", StringComparison.OrdinalIgnoreCase) ||
                 path.StartsWith("/hangfire", StringComparison.OrdinalIgnoreCase) ||
+                path.StartsWith("/metrics", StringComparison.OrdinalIgnoreCase) ||
                 path.StartsWith("/api/v1/images", StringComparison.OrdinalIgnoreCase) ||
                 path.StartsWith("/scalar", StringComparison.OrdinalIgnoreCase))
             {
