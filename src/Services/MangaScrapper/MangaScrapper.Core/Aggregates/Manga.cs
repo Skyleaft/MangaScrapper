@@ -153,17 +153,19 @@ public class Manga : Entity<MangaId>
         int malId = 0,
         int? anilistId = null,
         List<string>? genres = null,
+        List<string>? categories = null,
         string? description = null,
         string? imageUrl = null,
         string? url = null,
         double? rating = null,
-        string? status = null)
+        string? status = null,
+        DateTime? releaseDate = null)
     {
         var id = MangaId.New();
         var manga = new Manga(
             id, title, author, type, source,
-            malId: malId, anilistId: anilistId, genres: genres, description: description, imageUrl: imageUrl, url: url,
-            rating: rating, status: status);
+            malId: malId, anilistId: anilistId, genres: genres, categories: categories, description: description, imageUrl: imageUrl, url: url,
+            rating: rating, status: status, releaseDate:releaseDate);
 
         manga.RaiseDomainEvent(new MangaCreatedDomainEvent(id, title, source));
         return manga;

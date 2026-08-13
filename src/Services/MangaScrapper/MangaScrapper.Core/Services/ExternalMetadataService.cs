@@ -178,4 +178,64 @@ public sealed class ExternalMetadataService : IExternalMetadataService
             return null;
         }
     }
+
+    public async Task<List<Manga>> SearchMangaUpdatesAsync(string title, CancellationToken ct = default)
+    {
+        try
+        {
+            var query = new { search = title, perpage = 10 };
+            var response = await _httpClient.PostAsJsonAsync("https://api.mangaupdates.com/v1/series/search", query, ct);
+            response.EnsureSuccessStatusCode();
+            var result = await response.Content.ReadFromJsonAsync<MangaUpdatesSearchResponse>(cancellationToken: ct);
+            var items = result?.Results?.Take(10).ToList() ?? [];
+
+            var detailTasks = items.Where(i => i.Record?.SeriesId != null).Select(async item =>
+            {
+                var record = item.Record!;
+                
+                MangaUpdatesSeriesResponse? details = null;
+                try
+                {
+                    details = await _httpClient.GetFromJsonAsync<MangaUpdatesSeriesResponse>($"https://api.mangaupdates.com/v1/series/{record.SeriesId}", ct);
+                }
+                catch
+                {
+                    // Ignore detail fetch errors
+                }
+
+                var author = details?.Authors?.FirstOrDefault(a => a.Type == "Author")?.Name ?? "Unknown";
+                var categories = details?.Categories?.Select(c => c.Category).Where(c => !string.IsNullOrEmpty(c)).Cast<string>().ToList();
+                var genres = record.Genres?.Select(g => g.Genre).Where(g => !string.IsNullOrEmpty(g)).Cast<string>().ToList() ?? new List<string>();
+
+                DateTime? releaseDate = null;
+                if (!string.IsNullOrEmpty(record.Year) && int.TryParse(record.Year, out int year))
+                {
+                    releaseDate = new DateTime(year, 1, 1);
+                }
+
+                return Manga.Create(
+                    title: record.Title ?? "Unknown",
+                    author: author,
+                    type: record.Type ?? "Unknown",
+                    source: "MangaUpdates",
+                    malId: 0,
+                    anilistId: null,
+                    genres: genres,
+                    categories: categories,
+                    description: record.Description,
+                    imageUrl: record.Image?.Url?.Original ?? record.Image?.Url?.Thumb,
+                    rating: record.BayesianRating,
+                    status: details.Completed?"Completed":"Ongoing",
+                    releaseDate: releaseDate
+                );
+            });
+
+            var mangaList = await Task.WhenAll(detailTasks);
+            return mangaList.ToList();
+        }
+        catch
+        {
+            return new List<Manga>();
+        }
+    }
 }
