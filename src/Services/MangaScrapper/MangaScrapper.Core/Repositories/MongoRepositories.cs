@@ -148,7 +148,22 @@ public class MongoUserLibraryRepository(MangaMongoDbContext dbContext) : IUserLi
 
         if (!string.IsNullOrWhiteSpace(search))
         {
-            filter &= builder.Regex(m => m.MangaTitle, new BsonRegularExpression(search, "i"));
+            // Build a regex filter for MangaTitle (case-insensitive)
+            var titleFilter = builder.Regex(m => m.MangaTitle, new BsonRegularExpression(search, "i"));
+
+            // Check if the search term can be parsed into a valid Guid
+            if (Guid.TryParse(search, out Guid parsedGuid))
+            {
+                var idFilter = builder.Eq(m => m.Id, parsedGuid);
+        
+                // Match either the Title regex OR the exact Guid
+                filter &= (titleFilter | idFilter);
+            }
+            else
+            {
+                // If it's not a valid Guid, filter by Title only
+                filter &= titleFilter;
+            }
         }
         
         if (!string.IsNullOrWhiteSpace(status))
