@@ -3,21 +3,27 @@ using MangaScrapper.Core.Configuration;
 using MangaScrapper.Core.Persistence;
 using MangaScrapper.Core.Persistence.Documents;
 using Mapster;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 using Qdrant.Client;
 using Qdrant.Client.Grpc;
+using System.Net.Http.Json;
 
 namespace MangaScrapper.Core.Services;
 
 public class QdrantService
 {
     private const string CollectionName = "mangas";
+    public const string DenseVectorName = "dense";
+    public const string SparseVectorName = "sparse";
+
     private readonly QdrantClient _client;
     private readonly MangaMongoDbContext _dbContext;
     private readonly ILogger<QdrantService> _logger;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly EmbeddingConfig _embeddingConfig;
-    private const ulong VectorSize = 1024; // BAAI/bge-m3 produces 1024-dim vectors
+    private const ulong VectorSize = 1024; // BAAI/bge-m3 produces 1024-dim dense vectors
 
     public QdrantService(
         IOptions<QdrantConfig> config,
@@ -55,20 +61,33 @@ public class QdrantService
 
     public async Task InitializeAsync(CancellationToken ct = default)
     {
-        _logger.LogInformation("Initializing Qdrant collection '{CollectionName}'...", CollectionName);
+        _logger.LogInformation("Initializing Qdrant collection '{CollectionName}' with Hybrid vectors...", CollectionName);
 
         var collections = await _client.ListCollectionsAsync(cancellationToken: ct);
         if (!collections.Contains(CollectionName))
         {
             await _client.CreateCollectionAsync(
                 CollectionName,
-                new VectorParams
+                vectorsConfig: new VectorParamsMap
                 {
-                    Size = VectorSize,
-                    Distance = Distance.Cosine
+                    Map =
+                    {
+                        [DenseVectorName] = new VectorParams
+                        {
+                            Size = VectorSize,
+                            Distance = Distance.Cosine
+                        }
+                    }
+                },
+                sparseVectorsConfig: new SparseVectorConfig
+                {
+                    Map =
+                    {
+                        [SparseVectorName] = new SparseVectorParams()
+                    }
                 },
                 cancellationToken: ct);
-            _logger.LogInformation("Qdrant collection '{CollectionName}' created successfully.", CollectionName);
+            _logger.LogInformation("Qdrant collection '{CollectionName}' created successfully with hybrid vectors.", CollectionName);
         }
         else
         {
@@ -140,7 +159,7 @@ public class QdrantService
     }
 
     /// <summary>
-    /// History-based recommendation: computes centroid of reading history vectors and
+    /// History-based recommendation: computes centroid of reading history dense vectors and
     /// returns nearest neighbors, excluding already-read manga.
     /// </summary>
     public async Task<List<Guid>> RecommendAsync(List<Guid> readingHistoryIds, int limit = 10, CancellationToken ct = default)
@@ -161,8 +180,8 @@ public class QdrantService
         }
 
         var denseVectors = points
-            .Where(p => p.Vectors?.Vector?.Dense != null)
-            .Select(p => p.Vectors.Vector.Dense.Data)
+            .Where(p => p.Vectors?.Vectors?.Vectors?.ContainsKey(DenseVectorName) == true)
+            .Select(p => p.Vectors.Vectors.Vectors[DenseVectorName].Data)
             .ToList();
 
         if (!denseVectors.Any())
@@ -195,6 +214,7 @@ public class QdrantService
         var searchResult = await _client.QueryAsync(
             CollectionName,
             query: new Query { Nearest = new VectorInput(centroid) },
+            usingVector: DenseVectorName,
             filter: filter,
             limit: (ulong)limit,
             cancellationToken: ct);
@@ -203,7 +223,7 @@ public class QdrantService
     }
 
     /// <summary>
-    /// Vector similarity search seeded from a single manga, optionally excluding it.
+    /// Hybrid similarity search seeded from a single manga (Dense + Sparse vectors with RRF fusion).
     /// </summary>
     public async Task<List<Guid>> SearchSimilarAsync(Guid mangaId, int limit = 10, CancellationToken ct = default)
     {
@@ -219,8 +239,13 @@ public class QdrantService
             return new List<Guid>();
         }
 
-        var sourceVector = points[0].Vectors?.Vector?.Dense?.Data;
-        if (sourceVector == null || sourceVector.Count == 0)
+        var targetPoint = points[0];
+        var namedVectors = targetPoint.Vectors?.Vectors?.Vectors;
+
+        var denseData = namedVectors?.ContainsKey(DenseVectorName) == true ? namedVectors[DenseVectorName].Data : null;
+        var sparseData = namedVectors?.ContainsKey(SparseVectorName) == true ? namedVectors[SparseVectorName].Sparse : null;
+
+        if (denseData == null || denseData.Count == 0)
         {
             _logger.LogWarning("No dense vector found for manga (ID: {Id}) in Qdrant.", mangaId);
             return new List<Guid>();
@@ -232,10 +257,39 @@ public class QdrantService
             HasId = new HasIdCondition { HasId = { (PointId)mangaId } }
         });
 
+        var prefetchList = new List<PrefetchQuery>
+        {
+            new()
+            {
+                Query = new Query { Nearest = new VectorInput(denseData.ToArray()) },
+                Using = DenseVectorName,
+                Limit = (ulong)(limit * 2),
+                Filter = filter
+            }
+        };
+
+        if (sparseData != null && sparseData.Indices.Count > 0)
+        {
+            var sparseVector = new SparseVector();
+            sparseVector.Indices.AddRange(sparseData.Indices);
+            sparseVector.Values.AddRange(sparseData.Values);
+
+            prefetchList.Add(new PrefetchQuery
+            {
+                Query = new Query
+                {
+                    Nearest = new VectorInput { Sparse = sparseVector }
+                },
+                Using = SparseVectorName,
+                Limit = (ulong)(limit * 2),
+                Filter = filter
+            });
+        }
+
         var searchResult = await _client.QueryAsync(
             CollectionName,
-            query: new Query { Nearest = new VectorInput(sourceVector.ToArray()) },
-            filter: filter,
+            prefetch: prefetchList,
+            query: new Query { Fusion = Fusion.Rrf },
             limit: (ulong)limit,
             cancellationToken: ct);
 
@@ -243,22 +297,48 @@ public class QdrantService
     }
 
     /// <summary>
-    /// Multilingual semantic text search. Embeds the query with mode=query (e5 prefix convention)
-    /// and returns nearest-neighbor manga by cosine similarity. Supports 100+ languages including Indonesian.
+    /// Hybrid multilingual semantic text search (Dense semantic + Sparse lexical matching with RRF fusion).
     /// </summary>
     public async Task<List<Guid>> SemanticSearchAsync(string queryText, int limit = 10, CancellationToken ct = default)
     {
-        // mode=query applies "query: " prefix required by multilingual-e5 for retrieval
-        var vector = await GetEmbeddingAsync(queryText, mode: "query", ct);
-        if (vector == null)
+        var embeddingResult = await GetEmbeddingAsync(queryText, mode: "query", ct);
+        if (embeddingResult == null)
         {
             _logger.LogWarning("Failed to get embedding for semantic search query.");
             return new List<Guid>();
         }
 
+        var prefetchList = new List<PrefetchQuery>
+        {
+            new()
+            {
+                Query = new Query { Nearest = new VectorInput(embeddingResult.Dense) },
+                Using = DenseVectorName,
+                Limit = (ulong)(limit * 2)
+            }
+        };
+
+        if (embeddingResult.Sparse != null && embeddingResult.Sparse.Indices.Any())
+        {
+            var sparseVector = new SparseVector();
+            sparseVector.Indices.AddRange(embeddingResult.Sparse.Indices.Select(i => (uint)i));
+            sparseVector.Values.AddRange(embeddingResult.Sparse.Values);
+
+            prefetchList.Add(new PrefetchQuery
+            {
+                Query = new Query
+                {
+                    Nearest = new VectorInput { Sparse = sparseVector }
+                },
+                Using = SparseVectorName,
+                Limit = (ulong)(limit * 2)
+            });
+        }
+
         var searchResult = await _client.QueryAsync(
             CollectionName,
-            query: new Query { Nearest = new VectorInput(vector) },
+            prefetch: prefetchList,
+            query: new Query { Fusion = Fusion.Rrf },
             limit: (ulong)limit,
             cancellationToken: ct);
 
@@ -266,8 +346,8 @@ public class QdrantService
     }
 
     /// <summary>
-    /// Filtered vector similarity search seeded from a single manga.
-    /// Applies Qdrant payload filters (status, type, genres) before nearest-neighbor search.
+    /// Filtered hybrid vector similarity search seeded from a single manga.
+    /// Applies Qdrant payload filters (status, type, genres) with RRF fusion.
     /// </summary>
     public async Task<List<Guid>> SearchSimilarFilteredAsync(
         Guid mangaId,
@@ -289,8 +369,13 @@ public class QdrantService
             return new List<Guid>();
         }
 
-        var sourceVector = points[0].Vectors?.Vector?.Dense?.Data;
-        if (sourceVector == null || sourceVector.Count == 0)
+        var targetPoint = points[0];
+        var namedVectors = targetPoint.Vectors?.Vectors?.Vectors;
+
+        var denseData = namedVectors?.ContainsKey(DenseVectorName) == true ? namedVectors[DenseVectorName].Data : null;
+        var sparseData = namedVectors?.ContainsKey(SparseVectorName) == true ? namedVectors[SparseVectorName].Sparse : null;
+
+        if (denseData == null || denseData.Count == 0)
         {
             _logger.LogWarning("No dense vector found for manga (ID: {Id}) in Qdrant.", mangaId);
             return new List<Guid>();
@@ -344,10 +429,39 @@ public class QdrantService
             }
         }
 
+        var prefetchList = new List<PrefetchQuery>
+        {
+            new()
+            {
+                Query = new Query { Nearest = new VectorInput(denseData.ToArray()) },
+                Using = DenseVectorName,
+                Limit = (ulong)(limit * 2),
+                Filter = filter
+            }
+        };
+
+        if (sparseData != null && sparseData.Indices.Count > 0)
+        {
+            var sparseVector = new SparseVector();
+            sparseVector.Indices.AddRange(sparseData.Indices);
+            sparseVector.Values.AddRange(sparseData.Values);
+
+            prefetchList.Add(new PrefetchQuery
+            {
+                Query = new Query
+                {
+                    Nearest = new VectorInput { Sparse = sparseVector }
+                },
+                Using = SparseVectorName,
+                Limit = (ulong)(limit * 2),
+                Filter = filter
+            });
+        }
+
         var searchResult = await _client.QueryAsync(
             CollectionName,
-            query: new Query { Nearest = new VectorInput(sourceVector.ToArray()) },
-            filter: filter,
+            prefetch: prefetchList,
+            query: new Query { Fusion = Fusion.Rrf },
             limit: (ulong)limit,
             cancellationToken: ct);
 
@@ -355,9 +469,7 @@ public class QdrantService
     }
 
     /// <summary>
-    /// Advanced recommendation using Qdrant's native positive/negative example API.
-    /// Pulls results toward liked manga and away from disliked manga server-side.
-    /// No embedding calls needed — Qdrant handles vector arithmetic internally.
+    /// Advanced recommendation using Qdrant's native positive/negative example API on dense vectors.
     /// </summary>
     public async Task<List<Guid>> RecommendAdvancedAsync(
         List<Guid> likedIds,
@@ -386,6 +498,7 @@ public class QdrantService
         var result = await _client.QueryAsync(
             CollectionName,
             query: recommend,
+            usingVector: DenseVectorName,
             filter: filter,
             limit: (ulong)limit,
             cancellationToken: ct);
@@ -397,8 +510,6 @@ public class QdrantService
 
     private async Task<PointStruct> MapToPointStructAsync(Manga manga, CancellationToken ct = default)
     {
-        float[] vector = new float[VectorSize];
-
         var distinctGenres = (manga.Genres ?? new List<string>())
             .Where(g => !string.IsNullOrWhiteSpace(g))
             .Distinct(StringComparer.OrdinalIgnoreCase);
@@ -427,19 +538,35 @@ public class QdrantService
 
         var text = string.Join(". ", textParts);
         var embedding = await GetEmbeddingAsync(text, mode: "passage", ct);
-        if (embedding != null)
+
+        var namedVectors = new NamedVectors();
+        if (embedding?.Dense != null && embedding.Dense.Length == (int)VectorSize)
         {
-            vector = embedding;
+            var denseVec = new Vector();
+            denseVec.Data.AddRange(embedding.Dense);
+            namedVectors.Vectors[DenseVectorName] = denseVec;
         }
         else
         {
-            _logger.LogWarning("Using zero vector for manga {Id} due to embedding failure.", manga.Id.Value);
+            _logger.LogWarning("Using zero dense vector for manga {Id} due to embedding failure.", manga.Id.Value);
+            var zeroVec = new Vector();
+            zeroVec.Data.AddRange(new float[VectorSize]);
+            namedVectors.Vectors[DenseVectorName] = zeroVec;
+        }
+
+        if (embedding?.Sparse != null && embedding.Sparse.Indices.Any())
+        {
+            var sparseVec = new SparseVector();
+            sparseVec.Indices.AddRange(embedding.Sparse.Indices.Select(i => (uint)i));
+            sparseVec.Values.AddRange(embedding.Sparse.Values);
+
+            namedVectors.Vectors[SparseVectorName] = new Vector { Sparse = sparseVec };
         }
 
         return new PointStruct
         {
             Id = (PointId)manga.Id.Value,
-            Vectors = vector,
+            Vectors = new Vectors { Vectors_ = namedVectors },
             Payload =
             {
                 ["title"] = manga.Title,
@@ -454,11 +581,9 @@ public class QdrantService
     }
 
     /// <summary>
-    /// Calls the embedding microservice.
-    /// mode: "passage" for indexing (adds "passage: " prefix), "query" for search (adds "query: " prefix).
-    /// Returns null on failure so callers can apply fallback behaviour.
+    /// Calls the embedding microservice to get both dense and sparse representations.
     /// </summary>
-    private async Task<float[]?> GetEmbeddingAsync(string text, string mode, CancellationToken ct)
+    private async Task<EmbeddingResult?> GetEmbeddingAsync(string text, string mode, CancellationToken ct)
     {
         try
         {
@@ -473,11 +598,17 @@ public class QdrantService
             }
 
             var result = await response.Content.ReadFromJsonAsync<EmbedResponse>(cancellationToken: ct);
-            if (result?.Vector != null && result.Vector.Count == (int)VectorSize)
-                return result.Vector.ToArray();
+            if (result?.Dense != null && result.Dense.Count == (int)VectorSize)
+            {
+                return new EmbeddingResult
+                {
+                    Dense = result.Dense.ToArray(),
+                    Sparse = result.Sparse
+                };
+            }
 
             _logger.LogWarning("Embedding response null or wrong size (expected {Expected}, got {Got}).",
-                VectorSize, result?.Vector?.Count ?? 0);
+                VectorSize, result?.Dense?.Count ?? 0);
             return null;
         }
         catch (Exception ex)
@@ -485,6 +616,12 @@ public class QdrantService
             _logger.LogError(ex, "Error calling embedding service (mode={Mode}).", mode);
             return null;
         }
+    }
+
+    private sealed class EmbeddingResult
+    {
+        public float[] Dense { get; set; } = Array.Empty<float>();
+        public SparseVectorResponse? Sparse { get; set; }
     }
 
     private sealed class EmbedRequest
@@ -496,9 +633,21 @@ public class QdrantService
         public string Mode { get; set; } = "passage";
     }
 
+    private sealed class SparseVectorResponse
+    {
+        [System.Text.Json.Serialization.JsonPropertyName("indices")]
+        public List<int> Indices { get; set; } = new();
+
+        [System.Text.Json.Serialization.JsonPropertyName("values")]
+        public List<float> Values { get; set; } = new();
+    }
+
     private sealed class EmbedResponse
     {
-        [System.Text.Json.Serialization.JsonPropertyName("vector")]
-        public List<float> Vector { get; set; } = new();
+        [System.Text.Json.Serialization.JsonPropertyName("dense")]
+        public List<float> Dense { get; set; } = new();
+
+        [System.Text.Json.Serialization.JsonPropertyName("sparse")]
+        public SparseVectorResponse? Sparse { get; set; }
     }
 }
