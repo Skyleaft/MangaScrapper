@@ -180,8 +180,9 @@ public class QdrantService
         }
 
         var denseVectors = points
-            .Where(p => p.Vectors?.Vectors?.Vectors?.ContainsKey(DenseVectorName) == true)
-            .Select(p => p.Vectors.Vectors.Vectors[DenseVectorName].Data)
+            .Select(ExtractDenseVector)
+            .Where(v => v != null && v.Length == (int)VectorSize)
+            .Select(v => v!)
             .ToList();
 
         if (!denseVectors.Any())
@@ -240,12 +241,10 @@ public class QdrantService
         }
 
         var targetPoint = points[0];
-        var namedVectors = targetPoint.Vectors?.Vectors?.Vectors;
+        var denseData = ExtractDenseVector(targetPoint);
+        var sparseData = ExtractSparseVector(targetPoint);
 
-        var denseData = namedVectors?.ContainsKey(DenseVectorName) == true ? namedVectors[DenseVectorName].Data : null;
-        var sparseData = namedVectors?.ContainsKey(SparseVectorName) == true ? namedVectors[SparseVectorName].Sparse : null;
-
-        if (denseData == null || denseData.Count == 0)
+        if (denseData == null || denseData.Length == 0)
         {
             _logger.LogWarning("No dense vector found for manga (ID: {Id}) in Qdrant.", mangaId);
             return new List<Guid>();
@@ -370,12 +369,10 @@ public class QdrantService
         }
 
         var targetPoint = points[0];
-        var namedVectors = targetPoint.Vectors?.Vectors?.Vectors;
+        var denseData = ExtractDenseVector(targetPoint);
+        var sparseData = ExtractSparseVector(targetPoint);
 
-        var denseData = namedVectors?.ContainsKey(DenseVectorName) == true ? namedVectors[DenseVectorName].Data : null;
-        var sparseData = namedVectors?.ContainsKey(SparseVectorName) == true ? namedVectors[SparseVectorName].Sparse : null;
-
-        if (denseData == null || denseData.Count == 0)
+        if (denseData == null || denseData.Length == 0)
         {
             _logger.LogWarning("No dense vector found for manga (ID: {Id}) in Qdrant.", mangaId);
             return new List<Guid>();
@@ -504,6 +501,60 @@ public class QdrantService
             cancellationToken: ct);
 
         return result.Select(r => Guid.Parse(r.Id.Uuid)).ToList();
+    }
+
+    // ── Private helpers ────────────────────────────────────────────────────────
+
+    private float[]? ExtractDenseVector(RetrievedPoint point)
+    {
+        if (point.Vectors == null)
+            return null;
+
+        // 1. Try NamedVectors (hybrid collection format: point.Vectors.Vectors.Vectors)
+        var map = point.Vectors.Vectors?.Vectors;
+        if (map != null && map.TryGetValue(DenseVectorName, out var namedVector))
+        {
+            var dense = namedVector.GetDenseVector();
+            if (dense?.Data != null && dense.Data.Count > 0)
+                return dense.Data.ToArray();
+
+            var data = namedVector.Data;
+            if (data != null && data.Count > 0)
+                return data.ToArray();
+        }
+
+        // 2. Try single default vector (fallback for legacy or un-named collections)
+        if (point.Vectors.Vector != null)
+        {
+            var singleDense = point.Vectors.Vector.GetDenseVector();
+            if (singleDense?.Data != null && singleDense.Data.Count > 0)
+                return singleDense.Data.ToArray();
+
+            var singleData = point.Vectors.Vector.Data;
+            if (singleData != null && singleData.Count > 0)
+                return singleData.ToArray();
+        }
+
+        return null;
+    }
+
+    private SparseVector? ExtractSparseVector(RetrievedPoint point)
+    {
+        if (point.Vectors == null)
+            return null;
+
+        var map = point.Vectors.Vectors?.Vectors;
+        if (map != null && map.TryGetValue(SparseVectorName, out var namedVector))
+        {
+            var sparse = namedVector.GetSparseVector();
+            if (sparse != null && sparse.Indices.Count > 0)
+                return sparse;
+
+            if (namedVector.Sparse != null && namedVector.Sparse.Indices.Count > 0)
+                return namedVector.Sparse;
+        }
+
+        return null;
     }
 
     // ── Private helpers ────────────────────────────────────────────────────────
