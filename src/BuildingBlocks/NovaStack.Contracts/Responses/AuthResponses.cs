@@ -26,10 +26,11 @@ public record UserResponse(
     string Email,
     List<string> Roles,
     bool IsActive,
-    string FirebaseUid,
-    DateTime CreatedAt);
+    string? FirebaseUid,
+    DateTime CreatedAt,
+    DateTime? LastActiveAt);
 
 public record UserHeartbeatResponse(
     Guid UserId,
     string Username,
-    DateTime LastActive);
+    DateTime LastActiveAt);

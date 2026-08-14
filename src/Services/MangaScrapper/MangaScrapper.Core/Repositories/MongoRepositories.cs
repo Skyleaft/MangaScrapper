@@ -166,6 +166,11 @@ public class MongoUserLibraryRepository(MangaMongoDbContext dbContext) : IUserLi
             }
         }
         
+        if (userGuid!=Guid.Empty)
+        {
+            filter &= builder.Eq(m => m.UserId, userGuid);
+        }
+        
         if (!string.IsNullOrWhiteSpace(status))
         {
             filter &= builder.Eq(m => m.Status, status);
@@ -264,7 +269,7 @@ public class MongoUserProgressionRepository(MangaMongoDbContext dbContext) : IUs
     public async Task<List<UserProgression>> GetByUserIdAsync(string userId, CancellationToken ct = default)
     {
         if (!Guid.TryParse(userId, out var userGuid)) return [];
-        var docs = await dbContext.UserProgressions.Find(p => p.UserId == userGuid).ToListAsync(ct);
+        var docs = await dbContext.UserProgressions.Find(p => p.UserId == userGuid).SortByDescending(s=>s.LastReadAt).ToListAsync(ct);
         return docs.Select(MapToDomain).ToList();
     }
 

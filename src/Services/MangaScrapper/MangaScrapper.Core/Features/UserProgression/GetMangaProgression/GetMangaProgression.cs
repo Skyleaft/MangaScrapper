@@ -27,7 +27,7 @@ internal sealed class GetMangaProgressionQueryHandler(IUserProgressionRepository
             p.MangaId.Value, 
             p.LastReadAt,
             p.TotalReadingTime,
-            p.ChapterLogs.Select(cl => new ChapterLogsResponse(cl.Id, cl.ChapterId, cl.ChapterNumber, cl.LastReadPage, cl.TotalPages, cl.IsCompleted, cl.ReadingTimeSeconds, cl.LastReadAt)).ToList()
+            p.ChapterLogs.OrderByDescending(o=>o.LastReadAt).Select(cl => new ChapterLogsResponse(cl.Id, cl.ChapterId, cl.ChapterNumber, cl.LastReadPage, cl.TotalPages, cl.IsCompleted, cl.ReadingTimeSeconds, cl.LastReadAt)).ToList()
         );
     }
 }

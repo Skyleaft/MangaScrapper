@@ -53,7 +53,8 @@ public record UserProgressionResponse(
     Guid MangaId,
     DateTime LastReadAt,
     int TotalReadingTime,
-    List<ChapterLogsResponse> ChapterLogs
+    List<ChapterLogsResponse> ChapterLogs,
+    MangaSummaryResponse? Manga = null
     );
 
 public record ChapterLogsResponse(
