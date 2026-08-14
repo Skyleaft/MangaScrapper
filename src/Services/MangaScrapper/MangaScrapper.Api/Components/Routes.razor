@@ -1,7 +1,13 @@
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Routing
+@using MangaPanel.Client.Layout
+@using MangaPanel.Client.Components
+@using MangaPanel.Client.Pages
+
 <CascadingAuthenticationState>
-    <Router AppAssembly="@typeof(Program).Assembly">
+    <Router AppAssembly="@typeof(App).Assembly" AdditionalAssemblies="new[] { typeof(MangaPanel.Client._Imports).Assembly }">
         <Found Context="routeData">
-            <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(Layout.MainLayout)">
+            <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
                 <NotAuthorized>
                     @if (context.User.Identity?.IsAuthenticated == true)
                     {
@@ -9,7 +15,7 @@
                     }
                     else
                     {
-                        <MangaPanel.Client.Components.RedirectToLogin />
+                        <RedirectToLogin />
                     }
                 </NotAuthorized>
             </AuthorizeRouteView>
@@ -17,8 +23,8 @@
         </Found>
         <NotFound>
             <PageTitle>Not found</PageTitle>
-            <LayoutView Layout="@typeof(Layout.MainLayout)">
-                <MangaPanel.Client.Pages.NotFound />
+            <LayoutView Layout="@typeof(MainLayout)">
+                <NotFound />
             </LayoutView>
         </NotFound>
     </Router>

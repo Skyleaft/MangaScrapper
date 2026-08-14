@@ -1,8 +1,10 @@
 @page "/manga/{mangaId}"
-@using System.Net.Http.Json
+@rendermode @(new InteractiveServerRenderMode(prerender: true))
+@using MediatR
+@using MangaScrapper.Core.Features.Mangas.GetMangaById
+@using MangaScrapper.Core.Features.Mangas.GetAllChapters
 @using NovaStack.Contracts.Responses
-@using MangaPanel.Client.Extensions
-@inject HttpClient Http
+@inject ISender Sender
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
 
@@ -502,15 +504,20 @@
 
         try
         {
-            var mangaTask = Http.GetApiDataAsync<MangaSummaryResponse>($"/api/v1/manga/{id}");
-            var chaptersTask = Http.GetApiDataAsync<List<ChapterResponse>>($"/api/v1/manga/{id}/chapters");
+            var mangaTask = Sender.Send(new GetMangaByIdQuery(id));
+            var chaptersTask = Sender.Send(new GetAllChaptersQuery(id));
 
             await Task.WhenAll(mangaTask, chaptersTask);
 
-            Manga = await mangaTask;
-            Chapters = await chaptersTask ?? new();
+            var mangaResult = await mangaTask;
+            var chaptersResult = await chaptersTask;
 
-            if (Manga is null)
+            if (mangaResult.IsSuccess && mangaResult.Value != null)
+            {
+                Manga = mangaResult.Value;
+                Chapters = chaptersResult.IsSuccess && chaptersResult.Value != null ? chaptersResult.Value : new();
+            }
+            else
             {
                 HasError = true;
             }

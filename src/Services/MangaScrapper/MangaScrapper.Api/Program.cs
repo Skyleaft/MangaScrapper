@@ -40,6 +40,7 @@ try
 
     // ── Razor Component ──────────────────────────────────────────────────────
     builder.Services.AddRazorComponents()
+        .AddInteractiveServerComponents()
         .AddInteractiveWebAssemblyComponents();
 
     // ── Shared Infrastructure ────────────────────────────────────────────────
@@ -159,12 +160,11 @@ try
     // Health checks
     app.MapHealthChecks("/health");
 
-    // Blazor WASM fallback route
-    app.MapFallbackToFile("index.html");
     app.UseAntiforgery();
     app.MapStaticAssets();
 
     app.MapRazorComponents<App>()
+        .AddInteractiveServerRenderMode()
         .AddInteractiveWebAssemblyRenderMode()
         .AddAdditionalAssemblies(typeof(MangaPanel.Client._Imports).Assembly);
 
