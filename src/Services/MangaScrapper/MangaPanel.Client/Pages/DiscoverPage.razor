@@ -9,23 +9,23 @@
 <div class="space-y-6 opacity-0 animate-backdrop-in">
 
     <!-- Header -->
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-            <h1 class="text-2xl font-bold text-text-main">Discover Manga</h1>
-            <p class="text-sm text-slate-500 dark:text-slate-400">Browse and scrape manga from external providers</p>
+            <h1 class="text-xl sm:text-2xl font-bold text-text-main">Discover Manga</h1>
+            <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Browse and scrape manga from external providers</p>
         </div>
     </div>
 
     <!-- Search & Filter Panel -->
-    <div class="bg-surface p-5 rounded-2xl border border-border-main shadow-sm space-y-4 transition-colors duration-300">
+    <div class="bg-surface p-4 sm:p-5 rounded-2xl border border-border-main shadow-sm space-y-4 transition-colors duration-300">
 
         <!-- Row 1: Provider + Keyword -->
-        <div class="flex flex-col md:flex-row gap-4">
+        <div class="flex flex-col md:flex-row gap-3 sm:gap-4">
 
             <!-- Provider ComboBox -->
             <div class="w-full md:w-64 space-y-1">
                 <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Provider</label>
-                <select @bind="selectedProvider" class="w-full px-3 py-2.5 bg-bg-app border border-border-main rounded-xl text-sm outline-none focus:border-primary transition-all text-text-main">
+                <select @bind="selectedProvider" class="w-full px-3 py-2.5 bg-bg-app border border-border-main rounded-xl text-xs sm:text-sm outline-none focus:border-primary transition-all text-text-main">
                     <option value="">-- Select Provider --</option>
                     @foreach (var p in providers)
                     {
@@ -38,28 +38,28 @@
             <div class="relative flex-grow">
                 <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Keyword</label>
                 <div class="relative mt-1">
-                    <span class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <svg class="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <span class="absolute inset-y-0 left-0 pl-3.5 sm:pl-4 flex items-center pointer-events-none">
+                        <svg class="h-4 sm:h-5 w-4 sm:w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
                     </span>
                     <input type="text" @bind="keyword" @bind:event="oninput" @onkeyup="HandleSearchKeyup"
                            placeholder="Search manga title..."
-                           class="w-full pl-11 pr-4 py-2.5 bg-bg-app border border-border-main rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm text-text-main" />
+                           class="w-full pl-10 sm:pl-11 pr-4 py-2.5 bg-bg-app border border-border-main rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-xs sm:text-sm text-text-main" />
                 </div>
             </div>
 
             <!-- Action Buttons -->
-            <div class="flex items-end gap-2">
+            <div class="flex items-stretch sm:items-end gap-2 w-full md:w-auto">
                 <button @onclick="ToggleAdvancedFilters" 
-                        class="px-4 py-2.5 bg-surface border border-border-main rounded-xl text-sm font-semibold text-text-main hover:bg-bg-app transition-all shadow-sm flex items-center gap-1.5">
+                        class="flex-1 sm:flex-initial justify-center px-4 py-2.5 bg-surface border border-border-main rounded-xl text-xs sm:text-sm font-semibold text-text-main hover:bg-bg-app transition-all shadow-sm flex items-center gap-1.5">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
                     </svg>
                     Filters
                 </button>
                 <button @onclick="ApplySearch" disabled="@(string.IsNullOrEmpty(selectedProvider))"
-                        class="px-6 py-2.5 bg-primary text-white font-bold text-xs uppercase tracking-widest rounded-xl hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 disabled:opacity-40 disabled:cursor-not-allowed">
+                        class="flex-1 sm:flex-initial justify-center px-6 py-2.5 bg-primary text-white font-bold text-xs uppercase tracking-widest rounded-xl hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 disabled:opacity-40 disabled:cursor-not-allowed">
                     Search
                 </button>
             </div>
@@ -250,12 +250,12 @@
 <!-- ===== Scrap Action Modal ===== -->
 @if (selectedItem != null)
 {
-    <div class="fixed inset-0 z-50 flex items-center justify-center p-4" @onclick="CloseModal">
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4" @onclick="CloseModal">
         <!-- Backdrop -->
         <div class="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"></div>
 
         <!-- Modal Card -->
-        <div class="relative z-10 w-full max-w-3xl bg-surface rounded-2xl border border-border-main shadow-2xl overflow-hidden animate-in zoom-in-95 fade-in duration-200"
+        <div class="relative z-10 w-full max-w-3xl bg-surface rounded-2xl border border-border-main shadow-2xl overflow-hidden animate-in zoom-in-95 fade-in duration-200 max-h-[90vh] flex flex-col"
              @onclick:stopPropagation="true">
 
             <!-- Close Button -->
@@ -266,12 +266,12 @@
                 </svg>
             </button>
 
-            <div class="grid grid-cols-1 md:grid-cols-5 h-[85vh] md:h-[620px]">
+            <div class="grid grid-cols-1 md:grid-cols-5 overflow-y-auto md:overflow-hidden md:h-[620px]">
                 
                 <!-- Left Column: Details & Actions (Grid col-span 3) -->
-                <div class="md:col-span-3 flex flex-col h-full border-r border-border-main/50 overflow-y-auto">
+                <div class="md:col-span-3 flex flex-col border-b md:border-b-0 md:border-r border-border-main/50 md:overflow-y-auto">
                     <!-- Thumbnail Header -->
-                    <div class="relative h-40 bg-bg-app overflow-hidden flex-shrink-0">
+                    <div class="relative h-36 sm:h-40 bg-bg-app overflow-hidden flex-shrink-0">
                         @if (detailManga != null && !string.IsNullOrEmpty(detailManga.ImageUrl))
                         {
                             <img src="@ProxyThumbnail(detailManga.ImageUrl)" alt="@selectedItem.Title"
@@ -490,7 +490,7 @@
                 </div>
 
                 <!-- Right Column: Chapters List (Grid col-span 2) -->
-                <div class="md:col-span-2 flex flex-col h-full bg-bg-app/20 p-5 overflow-hidden">
+                <div class="md:col-span-2 flex flex-col min-h-[220px] md:min-h-0 md:h-full bg-bg-app/20 p-4 sm:p-5 overflow-hidden">
                     <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3 flex-shrink-0">Chapters List</p>
                     
                     <div class="flex-grow overflow-y-auto space-y-2 pr-1">

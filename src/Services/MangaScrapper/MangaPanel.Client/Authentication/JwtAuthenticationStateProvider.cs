@@ -5,9 +5,10 @@ using Microsoft.AspNetCore.Components.Authorization;
 
 namespace MangaPanel.Client.Authentication;
 
-public class JwtAuthenticationStateProvider : AuthenticationStateProvider
+public class JwtAuthenticationStateProvider : AuthenticationStateProvider, IDisposable
 {
     private readonly HttpClient _http;
+    private Timer? _heartbeatTimer;
 
     public JwtAuthenticationStateProvider(HttpClient http)
     {
@@ -23,15 +24,20 @@ public class JwtAuthenticationStateProvider : AuthenticationStateProvider
 
             if (userInfo == null || !userInfo.IsAuthenticated)
             {
+                StopHeartbeatTimer();
                 return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
             }
+
+            // Trigger immediate heartbeat and start periodic timer
+            _ = SendHeartbeatAsync();
+            StartHeartbeatTimer();
 
             var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.NameIdentifier, userInfo.UserId),
                 new Claim(ClaimTypes.Name, userInfo.Username),
                 new Claim("Username", userInfo.Username),
-                new Claim(ClaimTypes.Email,userInfo.Email)
+                new Claim(ClaimTypes.Email, userInfo.Email)
             };
             
             foreach (var role in userInfo.Roles)
@@ -44,8 +50,39 @@ public class JwtAuthenticationStateProvider : AuthenticationStateProvider
         }
         catch
         {
+            StopHeartbeatTimer();
             return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
         }
+    }
+
+    public async Task SendHeartbeatAsync()
+    {
+        try
+        {
+            await _http.PatchAsync("api/v1/users/heartbeat", null);
+        }
+        catch
+        {
+            // Ignore background heartbeat failures
+        }
+    }
+
+    private void StartHeartbeatTimer()
+    {
+        if (_heartbeatTimer is null)
+        {
+            // Send heartbeat periodically every 1 minute
+            _heartbeatTimer = new Timer(async _ =>
+            {
+                await SendHeartbeatAsync();
+            }, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
+        }
+    }
+
+    private void StopHeartbeatTimer()
+    {
+        _heartbeatTimer?.Dispose();
+        _heartbeatTimer = null;
     }
 
     public void NotifyUserAuthentication()
@@ -57,8 +94,14 @@ public class JwtAuthenticationStateProvider : AuthenticationStateProvider
 
     public void NotifyUserLogout()
     {
+        StopHeartbeatTimer();
         var anonymousUser = new ClaimsPrincipal(new ClaimsIdentity());
         var authState = Task.FromResult(new AuthenticationState(anonymousUser));
         NotifyAuthenticationStateChanged(authState);
+    }
+
+    public void Dispose()
+    {
+        StopHeartbeatTimer();
     }
 }

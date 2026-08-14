@@ -1,91 +1,91 @@
-<div class="space-y-4">
-    <div class="flex gap-2 p-1 bg-surface border border-border-main rounded-xl overflow-x-auto custom-scrollbar">
+<div class="space-y-3 sm:space-y-4">
+    <div class="flex gap-1.5 sm:gap-2 p-1 bg-surface border border-border-main rounded-xl overflow-x-auto">
         @foreach (var mode in new[] { "Custom", "Minutes", "Hourly", "Daily", "Weekly", "Monthly" })
         {
             <button type="button" @onclick="() => SetMode(mode)" 
-                    class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap @(CurrentMode == mode ? "bg-primary text-white shadow-sm shadow-primary/20" : "text-slate-500 hover:bg-bg-app")">
+                    class="px-3 sm:px-4 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap @(CurrentMode == mode ? "bg-primary text-white shadow-sm shadow-primary/20" : "text-slate-500 hover:bg-bg-app")">
                 @mode
             </button>
         }
     </div>
 
     <!-- Mode Panels -->
-    <div class="p-4 bg-bg-app border border-border-main rounded-xl">
+    <div class="p-3 sm:p-4 bg-bg-app border border-border-main rounded-xl">
         
         @if (CurrentMode == "Custom")
         {
             <div class="space-y-2">
                 <input type="text" @bind="CronExpression" @bind:event="oninput" @onkeyup="HandleCustomChange"
-                       class="w-full px-4 py-2 bg-surface text-text-main border border-border-main rounded-lg text-sm outline-none focus:border-primary font-mono"
+                       class="w-full px-3.5 py-2 bg-surface text-text-main border border-border-main rounded-lg text-xs sm:text-sm outline-none focus:border-primary font-mono"
                        placeholder="e.g. 0 0 * * *" />
             </div>
         }
         else if (CurrentMode == "Minutes")
         {
-            <div class="flex items-center gap-3">
-                <span class="text-sm text-text-main font-medium">Every</span>
+            <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+                <span class="text-xs sm:text-sm text-text-main font-medium">Every</span>
                 <input type="number" min="1" max="59" @bind="minutesInterval" @bind:event="oninput" @onkeyup="UpdateMinutesCron" @onchange="UpdateMinutesCron"
-                       class="w-20 px-3 py-1.5 bg-surface text-text-main border border-border-main rounded-lg text-sm outline-none focus:border-primary text-center" />
-                <span class="text-sm text-text-main font-medium">minutes</span>
+                       class="w-16 sm:w-20 px-2.5 sm:px-3 py-1.5 bg-surface text-text-main border border-border-main rounded-lg text-xs sm:text-sm outline-none focus:border-primary text-center" />
+                <span class="text-xs sm:text-sm text-text-main font-medium">minutes</span>
             </div>
         }
         else if (CurrentMode == "Hourly")
         {
-            <div class="flex items-center gap-3">
-                <span class="text-sm text-text-main font-medium">Every</span>
+            <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+                <span class="text-xs sm:text-sm text-text-main font-medium">Every</span>
                 <input type="number" min="1" max="23" @bind="hourlyInterval" @bind:event="oninput" @onkeyup="UpdateHourlyCron" @onchange="UpdateHourlyCron"
-                       class="w-20 px-3 py-1.5 bg-surface text-text-main border border-border-main rounded-lg text-sm outline-none focus:border-primary text-center" />
-                <span class="text-sm text-text-main font-medium">hours</span>
+                       class="w-16 sm:w-20 px-2.5 sm:px-3 py-1.5 bg-surface text-text-main border border-border-main rounded-lg text-xs sm:text-sm outline-none focus:border-primary text-center" />
+                <span class="text-xs sm:text-sm text-text-main font-medium">hours</span>
             </div>
         }
         else if (CurrentMode == "Daily")
         {
-            <div class="flex items-center gap-3">
-                <span class="text-sm text-text-main font-medium">Every day at</span>
+            <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+                <span class="text-xs sm:text-sm text-text-main font-medium">Every day at</span>
                 <input type="time" @bind="dailyTime" @bind:event="oninput" @onchange="UpdateDailyCron"
-                       class="px-3 py-1.5 bg-surface text-text-main border border-border-main rounded-lg text-sm outline-none focus:border-primary" />
+                       class="px-2.5 sm:px-3 py-1.5 bg-surface text-text-main border border-border-main rounded-lg text-xs sm:text-sm outline-none focus:border-primary" />
             </div>
         }
         else if (CurrentMode == "Weekly")
         {
-            <div class="space-y-4">
-                <div class="flex flex-wrap gap-2">
+            <div class="space-y-3 sm:space-y-4">
+                <div class="flex flex-wrap gap-1.5 sm:gap-2">
                     @foreach (var day in new[] { "MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN" })
                     {
                         <button type="button" @onclick="() => ToggleDay(day)" 
-                                class="px-3 py-1 rounded-lg text-xs font-semibold transition-all border @(selectedDays.Contains(day) ? "bg-primary border-primary text-white" : "bg-surface border-border-main text-slate-500 hover:border-slate-400")">
+                                class="px-2.5 sm:px-3 py-1 rounded-lg text-[11px] sm:text-xs font-semibold transition-all border @(selectedDays.Contains(day) ? "bg-primary border-primary text-white" : "bg-surface border-border-main text-slate-500 hover:border-slate-400")">
                             @day
                         </button>
                     }
                 </div>
-                <div class="flex items-center gap-3">
-                    <span class="text-sm text-text-main font-medium">at</span>
+                <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+                    <span class="text-xs sm:text-sm text-text-main font-medium">at</span>
                     <input type="time" @bind="weeklyTime" @bind:event="oninput" @onchange="UpdateWeeklyCron"
-                           class="px-3 py-1.5 bg-surface text-text-main border border-border-main rounded-lg text-sm outline-none focus:border-primary" />
+                           class="px-2.5 sm:px-3 py-1.5 bg-surface text-text-main border border-border-main rounded-lg text-xs sm:text-sm outline-none focus:border-primary" />
                 </div>
             </div>
         }
         else if (CurrentMode == "Monthly")
         {
-            <div class="flex items-center gap-3">
-                <span class="text-sm text-text-main font-medium">On day</span>
+            <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+                <span class="text-xs sm:text-sm text-text-main font-medium">On day</span>
                 <input type="number" min="1" max="31" @bind="monthDay" @bind:event="oninput" @onkeyup="UpdateMonthlyCron" @onchange="UpdateMonthlyCron"
-                       class="w-20 px-3 py-1.5 bg-surface text-text-main border border-border-main rounded-lg text-sm outline-none focus:border-primary text-center" />
-                <span class="text-sm text-text-main font-medium">at</span>
+                       class="w-16 sm:w-20 px-2.5 sm:px-3 py-1.5 bg-surface text-text-main border border-border-main rounded-lg text-xs sm:text-sm outline-none focus:border-primary text-center" />
+                <span class="text-xs sm:text-sm text-text-main font-medium">at</span>
                 <input type="time" @bind="monthlyTime" @bind:event="oninput" @onchange="UpdateMonthlyCron"
-                       class="px-3 py-1.5 bg-surface text-text-main border border-border-main rounded-lg text-sm outline-none focus:border-primary" />
+                       class="px-2.5 sm:px-3 py-1.5 bg-surface text-text-main border border-border-main rounded-lg text-xs sm:text-sm outline-none focus:border-primary" />
             </div>
         }
 
     </div>
 
     <!-- Preview -->
-    <div class="p-3 bg-surface border border-border-main rounded-xl flex justify-between items-center">
+    <div class="p-3 bg-surface border border-border-main rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
-            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Generated Cron</p>
-            <p class="text-sm font-mono text-text-main font-semibold">@CronExpression</p>
+            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Generated Cron</p>
+            <p class="text-xs sm:text-sm font-mono text-text-main font-semibold break-all">@CronExpression</p>
         </div>
-        <div class="text-xs text-primary font-medium bg-primary/10 px-3 py-1.5 rounded-lg border border-primary/20">
+        <div class="text-[11px] sm:text-xs text-primary font-medium bg-primary/10 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg border border-primary/20 self-start sm:self-auto">
             @GetFriendlyDescription()
         </div>
     </div>

@@ -34,6 +34,15 @@ public sealed class LogoutEndpoint : IEndpointDefinition
     private static async Task<IResult> HandleAsync(ISender sender, HttpContext httpContext, CancellationToken ct)
     {
         await httpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+
+        httpContext.Response.Cookies.Delete("MangaScrapper.Auth", new CookieOptions
+        {
+            HttpOnly = true,
+            SameSite = SameSiteMode.Strict,
+            Path = "/"
+        });
+        httpContext.Response.Cookies.Delete("MangaScrapper.Auth");
+
         var result = await sender.Send(new LogoutCommand(), ct);
         return result.IsSuccess
             ? Results.Ok(ApiResponse.Ok<object?>(null, "Logged out successfully."))

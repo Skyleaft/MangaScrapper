@@ -50,6 +50,8 @@ public sealed class GetPagedUserEndpoints : IEndpointDefinition
             var res = await sender.Send(new GetPagedUserQuery(search, page, pageSize, sortBy, orderBy), ct);
             return res.IsSuccess ? Results.Ok(ApiResponse.Ok(res.Value)) : res.Error.ToHttpResult();
         }).WithName("GetPagedUser")
+        .WithDescription("Get paged users")
+        .WithTags("Users")
         .Produces<ApiResponse<PagedResponse<UserResponse>>>();
     }
 }

@@ -28,3 +28,8 @@ public record UserResponse(
     bool IsActive,
     string FirebaseUid,
     DateTime CreatedAt);
+
+public record UserHeartbeatResponse(
+    Guid UserId,
+    string Username,
+    DateTime LastActive);

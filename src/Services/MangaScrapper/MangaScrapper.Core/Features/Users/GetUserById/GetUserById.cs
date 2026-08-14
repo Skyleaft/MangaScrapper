@@ -34,6 +34,8 @@ public sealed class GetUserByIdEndpoints : IEndpointDefinition
             var res = await sender.Send(new GetUserByIdQuery(userId), ct);
             return res.IsSuccess ? Results.Ok(ApiResponse.Ok(res.Value)) : res.Error.ToHttpResult();
         }).WithName("GetUserById")
+        .WithDescription("Get user by id")
+        .WithTags("Users")
         .Produces<ApiResponse<UserResponse>>();
     }
 }
