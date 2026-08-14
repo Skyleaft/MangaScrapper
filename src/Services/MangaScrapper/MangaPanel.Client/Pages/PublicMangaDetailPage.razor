@@ -280,27 +280,12 @@
 
                         <!-- Reading CTA Action Buttons -->
                         <div class="flex flex-wrap items-center gap-3 pt-3">
-                            @if (Chapters.Any())
-                            {
-                                var firstChapter = Chapters.OrderBy(c => c.Number).FirstOrDefault();
-                                var latestChapter = Chapters.OrderByDescending(c => c.Number).FirstOrDefault();
-
-                                @if (firstChapter != null)
-                                {
-                                    <button @onclick="() => ReadChapter(firstChapter)" class="px-6 py-3 bg-primary hover:bg-primary/90 text-white text-xs font-bold uppercase tracking-wider rounded-xl shadow-lg shadow-primary/20 flex items-center gap-2 transition-all">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                                        </svg>
-                                        <span>Read First (Ch. @firstChapter.Number)</span>
-                                    </button>
-                                }
-                                @if (latestChapter != null && latestChapter != firstChapter)
-                                {
-                                    <button @onclick="() => ReadChapter(latestChapter)" class="px-6 py-3 bg-surface hover:bg-bg-app border border-border-main text-text-main text-xs font-bold uppercase tracking-wider rounded-xl shadow-sm flex items-center gap-2 transition-all">
-                                        <span>Read Latest (Ch. @latestChapter.Number)</span>
-                                    </button>
-                                }
-                            }
+                            <a href="open-manga-reader://manga/@mangaId" class="px-6 py-3 bg-primary hover:bg-primary/90 text-white text-xs font-bold uppercase tracking-wider rounded-xl shadow-lg shadow-primary/20 flex items-center gap-2 transition-all">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                                </svg>
+                                <span>📖 Read in App</span>
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -361,8 +346,7 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     @foreach (var chapter in FilteredChapters)
                     {
-                        <div class="group bg-surface hover:bg-bg-app border border-border-main hover:border-primary/50 rounded-2xl p-4 transition-all duration-200 shadow-sm flex flex-col justify-between cursor-pointer"
-                             @onclick="() => ReadChapter(chapter)">
+                        <div class="group bg-surface hover:bg-bg-app border border-border-main hover:border-primary/50 rounded-2xl p-4 transition-all duration-200 shadow-sm flex flex-col justify-between cursor-pointer">
                             
                             <div class="flex items-start justify-between gap-2 mb-2">
                                 <div class="flex items-center gap-2">
@@ -521,14 +505,6 @@
     private void GoBack()
     {
         Navigation.NavigateTo("/");
-    }
-
-    private void ReadChapter(ChapterResponse chapter)
-    {
-        if (!string.IsNullOrEmpty(chapter.Link))
-        {
-            Navigation.NavigateTo(chapter.Link, forceLoad: true);
-        }
     }
 
     private static string GetStatusClass(string status) => status?.ToLower() switch
