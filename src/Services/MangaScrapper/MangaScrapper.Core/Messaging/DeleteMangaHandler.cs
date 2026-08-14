@@ -76,6 +76,13 @@ public sealed class DeleteMangaHandler(
                 }
             }
 
+            // Cascade delete user libraries and user progressions
+            var libraryRepo = scope.ServiceProvider.GetRequiredService<IUserLibraryRepository>();
+            var progressionRepo = scope.ServiceProvider.GetRequiredService<IUserProgressionRepository>();
+
+            await libraryRepo.DeleteByMangaIdAsync(evt.MangaId, ct);
+            await progressionRepo.DeleteByMangaIdAsync(evt.MangaId, ct);
+
             // Remove from all stores
             await repo.DeleteAsync(MangaId.From(evt.MangaId), ct);
             await meilisearch.DeleteMangaAsync(evt.MangaId, ct);
