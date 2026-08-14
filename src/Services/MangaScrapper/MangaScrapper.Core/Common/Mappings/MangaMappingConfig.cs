@@ -46,6 +46,9 @@ public sealed class MangaMappingConfig : IRegister
 
         config.NewConfig<MeiliMangaDocument, Manga>()
             .Map(dest => dest.Id, src => MangaId.From(Guid.Parse(src.Id)))
+            .Map(dest => dest.ReleaseDate, src => src.ReleaseDate > 0 ? DateTimeOffset.FromUnixTimeSeconds(src.ReleaseDate).UtcDateTime : (DateTime?)null)
+            .Map(dest => dest.CreatedAt, src => src.CreatedAtTimestamp > 0 ? DateTimeOffset.FromUnixTimeSeconds(src.CreatedAtTimestamp).UtcDateTime : DateTime.UtcNow)
+            .Map(dest => dest.UpdatedAt, src => src.UpdatedAtTimestamp > 0 ? DateTimeOffset.FromUnixTimeSeconds(src.UpdatedAtTimestamp).UtcDateTime : DateTime.UtcNow)
             .ConstructUsing(doc => Manga.Reconstitute(
                 MangaId.From(Guid.Parse(doc.Id)),
                 doc.Title,
@@ -65,26 +68,28 @@ public sealed class MangaMappingConfig : IRegister
                 doc.Members,
                 doc.Nsfw,
                 doc.Status,
-                DateTimeOffset.FromUnixTimeSeconds(doc.ReleaseDate).UtcDateTime,
+                doc.ReleaseDate > 0 ? DateTimeOffset.FromUnixTimeSeconds(doc.ReleaseDate).UtcDateTime : null,
                 doc.TotalView,
-                DateTimeOffset.FromUnixTimeSeconds(doc.CreatedAtTimestamp).UtcDateTime,
-                DateTimeOffset.FromUnixTimeSeconds(doc.UpdatedAtTimestamp).UtcDateTime,
+                doc.CreatedAtTimestamp > 0 ? DateTimeOffset.FromUnixTimeSeconds(doc.CreatedAtTimestamp).UtcDateTime : DateTime.UtcNow,
+                doc.UpdatedAtTimestamp > 0 ? DateTimeOffset.FromUnixTimeSeconds(doc.UpdatedAtTimestamp).UtcDateTime : DateTime.UtcNow,
                 doc.Url,
-                new List<Chapter>()
-                {
-                    new Chapter(
-                        ChapterId.From(Guid.Parse(doc.LatestChapter.Id)),
-                        doc.LatestChapter.Number,
-                        doc.LatestChapter.Link,
-                        doc.LatestChapter.ChapterProvider,
-                        doc.LatestChapter.ChapterProviderIcon,
-                        doc.LatestChapter.Language,
-                        doc.LatestChapter.TotalView,
-                        DateTimeOffset.FromUnixTimeSeconds(doc.LatestChapter.UploadDateTimestamp).UtcDateTime,
-                        null
-                    )
-                }
-                ));
+                doc.LatestChapter != null && !string.IsNullOrWhiteSpace(doc.LatestChapter.Id)
+                    ? new List<Chapter>
+                    {
+                        new Chapter(
+                            ChapterId.From(Guid.Parse(doc.LatestChapter.Id)),
+                            doc.LatestChapter.Number,
+                            doc.LatestChapter.Link,
+                            doc.LatestChapter.ChapterProvider,
+                            doc.LatestChapter.ChapterProviderIcon,
+                            doc.LatestChapter.Language,
+                            doc.LatestChapter.TotalView,
+                            doc.LatestChapter.UploadDateTimestamp > 0 ? DateTimeOffset.FromUnixTimeSeconds(doc.LatestChapter.UploadDateTimestamp).UtcDateTime : DateTime.UtcNow,
+                            null
+                        )
+                    }
+                    : new List<Chapter>()
+            ));
         
 
         // ── Persistence BSON Document Mappings ─────────────────────────────

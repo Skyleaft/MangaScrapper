@@ -1,6 +1,7 @@
 using MangaScrapper.Core.Aggregates;
 using MangaScrapper.Core.Common.Abstractions;
 using MangaScrapper.Core.Repositories;
+using Mapster;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -39,56 +40,10 @@ public sealed class GetPagedMangaQueryHandler(
             query.Page,
             query.PageSize,
             ct);
-
-        var ids = data.Items.Select(x => x.Id.Value).ToList();
-
-        var mongoDocs = new Dictionary<Guid, Manga>();
-        if (ids.Count > 0)
-        {
-            var fullDocs = await mangaRepository.GetByIdsAsync(ids, ct);
-            mongoDocs = fullDocs.ToDictionary(m => m.Id.Value);
-        }
-
-        var mapped = data.Items.Select(m =>
-        {
-            var id = m.Id.Value;
-            mongoDocs.TryGetValue(id, out var mongoDoc);
-
-            var latest = mongoDoc?.Chapters.OrderByDescending(c => c.Number).FirstOrDefault();
-            var latestSummary = latest is null
-                ? new ChapterResponse(Guid.Empty, 0, "", new List<string>(), "", null, null, DateTime.MinValue, 0)
-                : new ChapterResponse(latest.Id.Value, latest.Number, latest.Link, new(), latest.Language, latest.ChapterProvider, latest.ChapterProviderIcon, latest.UploadDate, latest.TotalView);
-
-            return new MangaSummaryResponse(
-                id,
-                mongoDoc?.MalId ?? 0,
-                mongoDoc?.AnilistId ?? 0,
-                m.MangaUpdateId,
-                m.Title,
-                m.Author,
-                m.Type,
-                m.Genres,
-                m.Categories,
-                m.Description,
-                m.ImageUrl,
-                m.LocalImageUrl,
-                m.ThumbnailSize,
-                m.Rating,
-                m.Popularity,
-                mongoDoc?.Members ?? 0,
-                m.ReleaseDate,
-                m.Nsfw,
-                m.Status,
-                m.CreatedAt,
-                m.UpdatedAt,
-                mongoDoc?.Url ?? string.Empty,
-                m.TotalView > 0 ? m.TotalView : mongoDoc?.Chapters.Sum(c => c.TotalView) ?? 0,
-                latestSummary
-            );
-        });
+        
 
         return PagedResponse<MangaSummaryResponse>.Create(
-            mapped,
+            data.Items.Select(x=>x.Adapt<MangaSummaryResponse>()),
             data.Page,
             data.PageSize,
             data.TotalCount);
