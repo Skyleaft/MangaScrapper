@@ -26,7 +26,7 @@ public class MangaMappingTests
             Title = "Test Manga",
             Author = "Test Author",
             Type = "Manga",
-            MalID = 123,
+            MalId = 123,
             Status = "Ongoing",
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,

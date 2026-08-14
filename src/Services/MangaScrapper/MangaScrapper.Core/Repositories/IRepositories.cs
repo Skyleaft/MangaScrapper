@@ -57,6 +57,7 @@ public interface IMangaExternalRepository
     Task<List<Manga>> GetSimilarFilteredAsync(Guid mangaId, string? status, string? type, List<string>? genres, int limit, CancellationToken ct = default);
     Task<List<Manga>> GetAdvancedRecommendationAsync(List<Guid> likedIds, List<Guid> dislikedIds, int limit, CancellationToken ct = default);
     Task IndexMangaAsync(Manga manga, CancellationToken ct = default);
+    Task UpsertMangaAsync(Manga manga,CancellationToken ct = default);
 }
 
 public interface IUserRepository

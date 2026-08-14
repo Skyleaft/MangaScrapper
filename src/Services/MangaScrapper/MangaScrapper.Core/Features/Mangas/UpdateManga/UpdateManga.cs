@@ -61,8 +61,9 @@ internal sealed class UpdateMangaCommandHandler(
 
         await mangaRepository.UpdateAsync(manga, ct);
 
-        // Update Meilisearch via external repository
+        // Update Meilisearch,Qdrant via external repository
         await mangaExternalRepository.IndexMangaAsync(manga, ct);
+        await mangaExternalRepository.UpsertMangaAsync(manga, ct);
 
         return manga.Adapt<MangaSummaryResponse>();
     }

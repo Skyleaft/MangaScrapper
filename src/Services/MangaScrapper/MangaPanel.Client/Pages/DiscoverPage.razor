@@ -569,8 +569,8 @@
     {
         [JsonPropertyName("mangaUrl")]
         public string MangaUrl { get; set; } = string.Empty;
-        [JsonPropertyName("scrapChapters")]
-        public bool ScrapChapters { get; set; }
+        [JsonPropertyName("scrapChapterPages")]
+        public bool ScrapChapterPages { get; set; }
         [JsonPropertyName("linkId")]
         public string? LinkId { get; set; }
     }
@@ -935,7 +935,7 @@
             var request = new ScrapRequest
             {
                 MangaUrl = selectedItem.DetailUrl,
-                ScrapChapters = scrapChapters,
+                ScrapChapterPages = scrapChapters,
                 LinkId = linkToExisting && selectedLinkManga != null ? selectedLinkManga.Id.ToString() : null
             };
 

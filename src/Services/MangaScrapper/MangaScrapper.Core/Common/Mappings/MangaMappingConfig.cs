@@ -51,9 +51,9 @@ public sealed class MangaMappingConfig : IRegister
                 doc.Title,
                 doc.Author,
                 doc.Type,
-                doc.MalID,
-                doc.AnilistID,
-                doc.MangaUpdateID,
+                doc.MalId,
+                doc.AnilistId,
+                doc.MangaUpdateId,
                 doc.Genres,
                 doc.Categories,
                 doc.Description,
@@ -84,7 +84,7 @@ public sealed class MangaMappingConfig : IRegister
 
         config.NewConfig<Manga, MangaDocument>()
             .Map(dest => dest.Id, src => src.Id.Value)
-            .Map(dest => dest.MalID, src => src.MalId)
+            .Map(dest => dest.MalId, src => src.MalId)
             .Map(dest => dest.Chapters, src => src.Chapters.Select(c => new ChapterDocument
             {
                 Id = c.Id.Value,

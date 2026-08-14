@@ -110,4 +110,9 @@ public class MangaExternalService(ILogger<MangaExternalService> logger,
     {
         await meilisearchService.IndexMangaAsync(manga, ct);
     }
+
+    public async Task UpsertMangaAsync(Manga manga, CancellationToken ct = default)
+    {
+        await qdrantService.UpsertMangaAsync(manga, ct);
+    }
 }
