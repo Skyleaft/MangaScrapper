@@ -54,7 +54,7 @@ public class MeiliMangaDocument
     public long CreatedAtTimestamp { get; set; }
     public long UpdatedAtTimestamp { get; set; }
     public string? Url { get; set; }
-    public List<MeiliChapterDocument> LatestChapter { get; set; } = new();
+    public MeiliChapterDocument LatestChapter { get; set; } = new();
 }
 
 public class MeiliChapterDocument

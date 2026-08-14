@@ -31,6 +31,11 @@ public sealed class MangaMappingConfig : IRegister
             .Map(dest => dest.Id, src => src.Id.Value)
             .Map(dest => dest.Pages, src => src.Pages.Select(x => x.LocalImageUrl).ToList());
 
+        
+        config.NewConfig<Chapter, MeiliChapterDocument>()
+            .Map(dest => dest.Id, src => src.Id.Value.ToString())
+            .Map(dest => dest.UploadDateTimestamp, src => ((DateTimeOffset)src.UploadDate.ToUniversalTime()).ToUnixTimeSeconds());
+        
         config.NewConfig<Manga, MeiliMangaDocument>()
             .Map(dest => dest.Id, src => src.Id.Value.ToString())
             .Map(dest => dest.ReleaseDate, src => ((DateTimeOffset)src.ReleaseDate.GetValueOrDefault().ToUniversalTime()).ToUnixTimeSeconds())
@@ -39,9 +44,48 @@ public sealed class MangaMappingConfig : IRegister
             .Map(dest => dest.TotalView, src => src.Chapters.Sum(x => x.TotalView))
             .Map(dest => dest.LatestChapter, src => src.Chapters.OrderByDescending(c => c.Number).FirstOrDefault().Adapt<MeiliChapterDocument>());
 
-        config.NewConfig<Chapter, MeiliChapterDocument>()
-            .Map(dest => dest.Id, src => src.Id.Value.ToString())
-            .Map(dest => dest.UploadDateTimestamp, src => ((DateTimeOffset)src.UploadDate.ToUniversalTime()).ToUnixTimeSeconds());
+        config.NewConfig<MeiliMangaDocument, Manga>()
+            .Map(dest => dest.Id, src => MangaId.From(Guid.Parse(src.Id)))
+            .ConstructUsing(doc => Manga.Reconstitute(
+                MangaId.From(Guid.Parse(doc.Id)),
+                doc.Title,
+                doc.Author,
+                doc.Type,
+                doc.MalId,
+                doc.AnilistId,
+                doc.MangaUpdateId,
+                doc.Genres,
+                doc.Categories,
+                doc.Description,
+                doc.ImageUrl,
+                doc.LocalImageUrl,
+                0,
+                doc.Rating,
+                doc.Popularity,
+                doc.Members,
+                doc.Nsfw,
+                doc.Status,
+                DateTimeOffset.FromUnixTimeSeconds(doc.ReleaseDate).UtcDateTime,
+                doc.TotalView,
+                DateTimeOffset.FromUnixTimeSeconds(doc.CreatedAtTimestamp).UtcDateTime,
+                DateTimeOffset.FromUnixTimeSeconds(doc.UpdatedAtTimestamp).UtcDateTime,
+                doc.Url,
+                new List<Chapter>()
+                {
+                    new Chapter(
+                        ChapterId.From(Guid.Parse(doc.LatestChapter.Id)),
+                        doc.LatestChapter.Number,
+                        doc.LatestChapter.Link,
+                        doc.LatestChapter.ChapterProvider,
+                        doc.LatestChapter.ChapterProviderIcon,
+                        doc.LatestChapter.Language,
+                        doc.LatestChapter.TotalView,
+                        DateTimeOffset.FromUnixTimeSeconds(doc.LatestChapter.UploadDateTimestamp).UtcDateTime,
+                        null
+                    )
+                }
+                ));
+        
 
         // ── Persistence BSON Document Mappings ─────────────────────────────
         config.NewConfig<MangaDocument, Manga>()

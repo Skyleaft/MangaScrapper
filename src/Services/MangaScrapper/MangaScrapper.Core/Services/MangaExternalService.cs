@@ -17,7 +17,7 @@ public class MangaExternalService(ILogger<MangaExternalService> logger,
         int pageSize, CancellationToken ct = default)
     {
         var data = await meilisearchService.SearchAsync(search, genres, status, type, sortBy, orderBy, page, pageSize, ct);
-        var items = data.Items.Select(MapToDomain).ToList();
+        var items = data.Items.Select(c=>c.Adapt<Manga>()).ToList();
         return new PagedList<Manga>(items, page, pageSize, data.TotalCount);
     }
 
@@ -66,45 +66,7 @@ public class MangaExternalService(ILogger<MangaExternalService> logger,
         if (ids.Count == 0) return new List<Manga>();
         return await mangaRepository.GetByIdsAsync(ids, ct);
     }
-
-    private static Manga MapToDomain(MeiliMangaDocument doc)
-    {
-        return Manga.Reconstitute(
-            MangaId.From(Guid.Parse(doc.Id)),
-            doc.Title,
-            doc.Author,
-            doc.Type,
-            doc.MalId,
-            doc.AnilistId,
-            doc.MangaUpdateId,
-            doc.Genres,
-            doc.Categories,
-            doc.Description,
-            doc.ImageUrl,
-            doc.LocalImageUrl,
-            0,
-            doc.Rating,
-            doc.Popularity,
-            doc.Members,
-            doc.Nsfw,
-            doc.Status,
-            DateTimeOffset.FromUnixTimeSeconds(doc.ReleaseDate).UtcDateTime,
-            doc.TotalView,
-            DateTimeOffset.FromUnixTimeSeconds(doc.CreatedAtTimestamp).UtcDateTime,
-            DateTimeOffset.FromUnixTimeSeconds(doc.UpdatedAtTimestamp).UtcDateTime,
-            doc.Url,
-            doc.LatestChapter.Select(c=>new Chapter(
-                ChapterId.From(Guid.Parse(c.Id)),
-                c.Number,
-                c.Link,
-                c.ChapterProvider,
-                c.ChapterProviderIcon,
-                c.Language,
-                c.TotalView,
-                DateTimeOffset.FromUnixTimeSeconds(c.UploadDateTimestamp).UtcDateTime,
-                null
-                )).ToList());
-    }
+    
 
     public async Task IndexMangaAsync(Manga manga, CancellationToken ct = default)
     {
