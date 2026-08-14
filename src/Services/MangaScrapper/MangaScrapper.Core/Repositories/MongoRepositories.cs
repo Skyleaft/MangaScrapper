@@ -226,6 +226,11 @@ public class MongoUserLibraryRepository(MangaMongoDbContext dbContext) : IUserLi
         await dbContext.UserLibraries.DeleteOneAsync(l => l.Id == id, ct);
     }
 
+    public async Task DeleteByMangaIdAsync(Guid mangaId, CancellationToken ct = default)
+    {
+        await dbContext.UserLibraries.DeleteManyAsync(l => l.MangaId == mangaId, ct);
+    }
+
     private static UserLibrary MapToDomain(UserLibraryDocument doc)
     {
         return UserLibrary.Reconstitute(doc.Id, doc.UserId.ToString(), MangaId.From(doc.MangaId), doc.AddedAt,doc.UpdatedAt,doc.Status,doc.IsFavorite);
@@ -271,6 +276,21 @@ public class MongoUserProgressionRepository(MangaMongoDbContext dbContext) : IUs
             doc,
             new ReplaceOptions { IsUpsert = true },
             cancellationToken: ct);
+    }
+
+    public async Task DeleteByMangaIdAsync(Guid mangaId, CancellationToken ct = default)
+    {
+        await dbContext.UserProgressions.DeleteManyAsync(p => p.MangaId == mangaId, ct);
+    }
+
+    public async Task RemoveChapterLogAsync(Guid mangaId, Guid chapterId, CancellationToken ct = default)
+    {
+        var filter = Builders<UserProgressionDocument>.Filter.Eq(p => p.MangaId, mangaId);
+        var update = Builders<UserProgressionDocument>.Update.PullFilter(
+            p => p.ChapterLogs,
+            log => log.ChapterId == chapterId);
+
+        await dbContext.UserProgressions.UpdateManyAsync(filter, update, cancellationToken: ct);
     }
 
     private static UserProgression MapToDomain(UserProgressionDocument doc)

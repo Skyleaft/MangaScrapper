@@ -87,6 +87,7 @@ public interface IUserLibraryRepository
     Task AddAsync(UserLibrary userLibrary, CancellationToken ct = default);
     Task UpdateAsync(UserLibrary userLibrary, CancellationToken ct = default);
     Task DeleteAsync(Guid id, CancellationToken ct = default);
+    Task DeleteByMangaIdAsync(Guid mangaId, CancellationToken ct = default);
 }
 
 public interface IUserProgressionRepository
@@ -94,4 +95,6 @@ public interface IUserProgressionRepository
     Task<UserProgression?> GetByUserIdAndMangaIdAsync(string userId, MangaId mangaId, CancellationToken ct = default);
     Task<List<UserProgression>> GetByUserIdAsync(string userId, CancellationToken ct = default);
     Task AddOrUpdateAsync(UserProgression userProgression, CancellationToken ct = default);
+    Task DeleteByMangaIdAsync(Guid mangaId, CancellationToken ct = default);
+    Task RemoveChapterLogAsync(Guid mangaId, Guid chapterId, CancellationToken ct = default);
 }

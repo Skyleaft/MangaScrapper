@@ -67,6 +67,9 @@ public sealed class DeleteChapterHandler(
             manga.DeleteChapter(ChapterId.From(evt.ChapterId));
             await repo.UpdateAsync(manga, ct);
 
+            var progressionRepo = scope.ServiceProvider.GetRequiredService<IUserProgressionRepository>();
+            await progressionRepo.RemoveChapterLogAsync(evt.MangaId, evt.ChapterId, ct);
+
             logger.LogInformation(
                 "Finished DeleteChapter event: MangaId={MangaId}, ChapterId={ChapterId}",
                 evt.MangaId, evt.ChapterId);
