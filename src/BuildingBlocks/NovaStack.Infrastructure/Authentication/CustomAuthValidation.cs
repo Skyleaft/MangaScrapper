@@ -57,21 +57,16 @@ public class CustomAuthValidation : AuthenticationHandler<CustomAuthSchemeOption
         {
             var key = Encoding.ASCII.GetBytes(_config["JwtSigningKey"] ?? "a_very_secret_key_that_is_at_least_32_chars_long!!");
             var tokenHandler = new JwtSecurityTokenHandler();
-            tokenHandler.ValidateToken(token, new TokenValidationParameters
+            var principal = tokenHandler.ValidateToken(token, new TokenValidationParameters
             {
                 ValidateIssuerSigningKey = true,
                 IssuerSigningKey = new SymmetricSecurityKey(key),
                 ValidateIssuer = false,
                 ValidateAudience = false,
                 ClockSkew = TimeSpan.Zero
-            }, out SecurityToken validatedToken);
+            }, out _);
 
-            var jwtToken = (JwtSecurityToken)validatedToken;
-            var claims = jwtToken.Claims;
-            var identity = new ClaimsIdentity(claims, Scheme.Name);
-            var principal = new ClaimsPrincipal(identity);
             var ticket = new AuthenticationTicket(principal, Scheme.Name);
-
             return AuthenticateResult.Success(ticket);
         }
         catch (Exception ex)

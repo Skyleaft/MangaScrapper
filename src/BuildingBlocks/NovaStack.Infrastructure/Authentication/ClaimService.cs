@@ -12,7 +12,8 @@ public sealed class ClaimService(IHttpContextAccessor httpContextAccessor) : ICl
     {
         var user = httpContextAccessor.HttpContext?.User;
         return user?.FindFirstValue(ClaimTypes.NameIdentifier)
-            ?? user?.FindFirstValue("sub");
+            ?? user?.FindFirstValue("sub")
+            ?? user?.FindFirstValue("nameid");
     }
 
     public string? GetCurrentUserEmail()
