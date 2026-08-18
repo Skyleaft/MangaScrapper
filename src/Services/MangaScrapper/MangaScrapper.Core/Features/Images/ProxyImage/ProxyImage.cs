@@ -7,6 +7,7 @@ using NovaStack.SharedKernel.Results;
 
 namespace MangaScrapper.Core.Features.Images.ProxyImage;
 
+[NoLogging]
 public record ProxyImageQuery(string Url) : IQuery<(byte[] Bytes, string ContentType)>;
 
 internal sealed class ProxyImageQueryHandler(IHttpClientFactory httpClientFactory)

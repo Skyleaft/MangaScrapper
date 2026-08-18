@@ -349,7 +349,7 @@ public static class CoreExtensions
                 if (FirebaseAdmin.FirebaseApp.DefaultInstance is null)
                 {
                     FirebaseAdmin.FirebaseApp.Create();
-                    Console.WriteLine($"FirebaseApp initialized with credentials from: {credentialPath}");
+                    Serilog.Log.Information("FirebaseApp initialized with credentials from: {CredentialPath}", credentialPath);
                 }
             }
             else
@@ -370,7 +370,7 @@ public static class CoreExtensions
                     if (FirebaseAdmin.FirebaseApp.DefaultInstance is null)
                     {
                         FirebaseAdmin.FirebaseApp.Create();
-                        Console.WriteLine($"FirebaseApp initialized with fallback credentials from: {fallbackPath}");
+                        Serilog.Log.Information("FirebaseApp initialized with fallback credentials from: {FallbackPath}", fallbackPath);
                     }
                 }
                 else
@@ -384,19 +384,19 @@ public static class CoreExtensions
                         if (FirebaseAdmin.FirebaseApp.DefaultInstance is null)
                         {
                             FirebaseAdmin.FirebaseApp.Create();
-                            Console.WriteLine("FirebaseApp initialized with GCP default credentials.");
+                            Serilog.Log.Information("FirebaseApp initialized with GCP default credentials.");
                         }
                     }
                     else
                     {
-                        Console.WriteLine("FirebaseApp was NOT initialized: No credentials file found and not running on GCP.");
+                        Serilog.Log.Warning("FirebaseApp was NOT initialized: No credentials file found and not running on GCP.");
                     }
                 }
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"FirebaseApp initialization failed: {ex.Message}");
+            Serilog.Log.Error(ex, "FirebaseApp initialization failed: {ErrorMessage}", ex.Message);
         }
 
         return services;

@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Hangfire;
 using MangaScrapper.Api.Components;
 using MangaScrapper.Core.DependencyInjection;
@@ -85,31 +86,38 @@ try
         {
             var path = httpContext.Request.Path.Value;
 
-            if (string.IsNullOrEmpty(path))
-                return LogEventLevel.Information;
-
-            if (path.StartsWith("/images", StringComparison.OrdinalIgnoreCase) ||
-                path.StartsWith("/hangfire", StringComparison.OrdinalIgnoreCase) ||
-                path.StartsWith("/metrics", StringComparison.OrdinalIgnoreCase) ||
-                path.StartsWith("/api/v1/images", StringComparison.OrdinalIgnoreCase) ||
-                path.StartsWith("/scalar", StringComparison.OrdinalIgnoreCase))
+            if (!string.IsNullOrEmpty(path))
             {
-                return LogEventLevel.Verbose;
-            }
-
-            if (path.EndsWith(".js", StringComparison.OrdinalIgnoreCase) ||
-                path.EndsWith(".css", StringComparison.OrdinalIgnoreCase) ||
-                path.EndsWith(".pdb", StringComparison.OrdinalIgnoreCase) ||
-                path.EndsWith(".wasm", StringComparison.OrdinalIgnoreCase))
-            {
-                return LogEventLevel.Verbose;
+                if (path.StartsWith("/images", StringComparison.OrdinalIgnoreCase) ||
+                    path.StartsWith("/metrics", StringComparison.OrdinalIgnoreCase) ||
+                    path.StartsWith("/health", StringComparison.OrdinalIgnoreCase) ||
+                    path.StartsWith("/api/v1/images", StringComparison.OrdinalIgnoreCase) ||
+                    path.EndsWith(".js", StringComparison.OrdinalIgnoreCase) ||
+                    path.EndsWith(".css", StringComparison.OrdinalIgnoreCase) ||
+                    path.EndsWith(".pdb", StringComparison.OrdinalIgnoreCase) ||
+                    path.EndsWith(".wasm", StringComparison.OrdinalIgnoreCase))
+                {
+                    return LogEventLevel.Verbose;
+                }
             }
 
             if (ex != null || httpContext.Response.StatusCode >= 500)
                 return LogEventLevel.Error;
 
-            return LogEventLevel.Debug;
+            if (httpContext.Response.StatusCode >= 400)
+                return LogEventLevel.Warning;
+
+            return LogEventLevel.Information;
         };
+
+        options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
+        {
+            diagnosticContext.Set("ClientIp", httpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown");
+            diagnosticContext.Set("UserAgent", httpContext.Request.Headers.UserAgent.ToString());
+            diagnosticContext.Set("UserId", httpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "Anonymous");
+            diagnosticContext.Set("Endpoint", httpContext.GetEndpoint()?.DisplayName ?? "None");
+        };
+
         options.MessageTemplate =
             "HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000}ms";
     });

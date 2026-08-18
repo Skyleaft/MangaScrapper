@@ -22,6 +22,18 @@ try
     Log.Information(asciiArt);
     Log.Information("Starting Scrapper.Worker...");
 
+    AppDomain.CurrentDomain.UnhandledException += (sender, eventArgs) =>
+    {
+        if (eventArgs.ExceptionObject is Exception ex)
+            Log.Fatal(ex, "Unhandled AppDomain exception occurred in Scrapper.Worker.");
+    };
+
+    TaskScheduler.UnobservedTaskException += (sender, eventArgs) =>
+    {
+        Log.Error(eventArgs.Exception, "Unobserved task exception occurred in Scrapper.Worker.");
+        eventArgs.SetObserved();
+    };
+
     var host = Host.CreateDefaultBuilder(args)
         .UseNovaStackSerilog()
         .ConfigureServices((hostContext, services) =>
