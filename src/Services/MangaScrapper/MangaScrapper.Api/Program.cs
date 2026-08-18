@@ -51,8 +51,8 @@ try
 
     // ── OpenTelemetry ────────────────────────────────────────────────────────
     builder.Services.AddNovaStackObservability(
-        "MangaScrapper.Api",
-        otlpEndpoint: builder.Configuration["Observability:OtlpEndpoint"]);
+        builder.Configuration,
+        "MangaScrapper.Api");
 
     // ── Core VSA Layer (CQRS, Scrapers, Repositories, Background Jobs, Messaging) ──
     builder.Services.AddMangaScrapperCore(builder.Configuration);
@@ -123,7 +123,7 @@ try
         options.MessageTemplate =
             "HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000}ms";
     });
-    app.MapPrometheusScrapingEndpoint();
+    app.MapNovaStackPrometheus();
 
     if (app.Environment.IsDevelopment())
     {

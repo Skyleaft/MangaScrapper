@@ -29,6 +29,10 @@ services:
       - Messaging__RabbitMQ__Password=guest
       - Scrapper__ImageStoragePath=/app/images
       - Scrapper__MaxParallelDownloads=10
+      - Observability__AspireDashboard__Enabled=true
+      - Observability__AspireDashboard__Endpoint=http://aspire-dashboard:18889
+      - Observability__UsePrometheus__Enabled=false
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://aspire-dashboard:18889
       - Cors__AllowedOrigins=http://localhost:3000,http://localhost:5191
       - TZ=Asia/Jakarta
     volumes:
@@ -65,11 +69,28 @@ services:
       - Messaging__RabbitMQ__Password=guest
       - Scrapper__ImageStoragePath=/app/images
       - Scrapper__MaxParallelDownloads=10
+      - Observability__AspireDashboard__Enabled=true
+      - Observability__AspireDashboard__Endpoint=http://aspire-dashboard:18889
+      - Observability__UsePrometheus__Enabled=false
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://aspire-dashboard:18889
       - TZ=Asia/Jakarta
     volumes:
       - ./images:/app/images
       - ./logs:/app/logs
       - ./keys:/app/keys
+
+  aspire-dashboard:
+    image: mcr.microsoft.com/dotnet/aspire-dashboard:latest
+    container_name: aspire-dashboard
+    profiles:
+      - optional
+    restart: unless-stopped
+    ports:
+      - "18888:18888" # Aspire Dashboard UI
+      - "18889:18889" # OTLP gRPC endpoint
+    environment:
+      - DOTNET_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS=true
+      - DASHBOARD__FRONTEND__AUTHMODE=Unsecured
 
   mongodb:
     image: mongo:latest

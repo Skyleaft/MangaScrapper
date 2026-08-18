@@ -40,8 +40,8 @@ try
         {
             // ── OpenTelemetry Observability ──────────────────────────────────────────
             services.AddNovaStackObservability(
-                "Scrapper.Worker",
-                otlpEndpoint: hostContext.Configuration["Observability:OtlpEndpoint"]);
+                hostContext.Configuration,
+                "Scrapper.Worker");
 
             // ── Core VSA Layer (MongoDB, Scrapers, Repositories, Hangfire Server & Jobs) ────
             services.AddMangaScrapperCore(

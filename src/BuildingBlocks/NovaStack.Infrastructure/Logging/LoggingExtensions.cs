@@ -55,6 +55,30 @@ public static class LoggingExtensions
                         fileSizeLimitBytes: 20 * 1024 * 1024,
                         retainedFileCountLimit: 14,
                         outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff} {Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}");
+
+                    var otlpEndpoint = context.Configuration["Observability:OtlpEndpoint"]
+                                       ?? context.Configuration["Observability:AspireDashboard:Endpoint"]
+                                       ?? Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT");
+
+                    var useAspire = context.Configuration.GetValue<bool>("Observability:AspireDashboard:Enabled")
+                                    || context.Configuration.GetValue<bool>("Observability:UseAspireDashboard");
+
+                    if (string.IsNullOrWhiteSpace(otlpEndpoint) && useAspire)
+                    {
+                        otlpEndpoint = "http://localhost:18889";
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(otlpEndpoint))
+                    {
+                        wt.OpenTelemetry(options =>
+                        {
+                            options.Endpoint = otlpEndpoint;
+                            options.ResourceAttributes = new Dictionary<string, object>
+                            {
+                                ["service.name"] = context.HostingEnvironment.ApplicationName
+                            };
+                        });
+                    }
                 });
         });
 
