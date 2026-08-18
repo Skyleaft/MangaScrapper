@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Serilog;
 using Serilog.Events;
@@ -15,7 +16,7 @@ public static class LoggingExtensions
         this IHostBuilder hostBuilder) =>
         hostBuilder.UseSerilog((context, services, loggerConfig) =>
         {
-            var isDevelopment = context.HostingEnvironment.IsDevelopment();
+            var useJsonConsole = context.Configuration.GetValue<bool>("Serilog:UseJsonConsole");
 
             loggerConfig
                 .ReadFrom.Configuration(context.Configuration)
@@ -37,14 +38,14 @@ public static class LoggingExtensions
                 .Enrich.WithProperty("Application", context.HostingEnvironment.ApplicationName)
                 .WriteTo.Async(wt =>
                 {
-                    if (isDevelopment)
+                    if (useJsonConsole)
                     {
-                        wt.Console(
-                            outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}");
+                        wt.Console(new Serilog.Formatting.Compact.CompactJsonFormatter());
                     }
                     else
                     {
-                        wt.Console(new Serilog.Formatting.Compact.CompactJsonFormatter());
+                        wt.Console(
+                            outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff} {Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}");
                     }
 
                     wt.File(

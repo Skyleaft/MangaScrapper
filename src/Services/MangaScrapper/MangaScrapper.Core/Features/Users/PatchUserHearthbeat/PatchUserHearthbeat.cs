@@ -11,6 +11,7 @@ using NovaStack.SharedKernel.Results;
 
 namespace MangaScrapper.Core.Features.Users.PatchUserHearthbeat;
 
+[NoLogging]
 public record PatchUserHearthbeatCommand : ICommand<UserHeartbeatResponse>;
 
 public sealed class PatchUserHearthbeatCommandHandler(IUserRepository userRepository, IClaimService claimService) : ICommandHandler<PatchUserHearthbeatCommand, UserHeartbeatResponse>
