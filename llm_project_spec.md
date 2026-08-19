@@ -51,12 +51,12 @@ This document provides a token-efficient, high-density architectural and coding 
 │   │   │   ├── Services/                  # MeilisearchService, QdrantService, DiscordWebhookService, StorageSyncService
 │   │   │   ├── Hubs/                      # SignalR Hubs (MangaHub)
 │   │   │   ├── BackgroundJobs/            # Hangfire background jobs (MeiliSyncJob, DeleteMangaJob, LatestChapterScrapingJob)
-│   │   │   ├── Messaging/                 # RabbitMQ integration event handlers (ScrapChapterPagesHandler, ChapterPagesScrapedSignalRHandler)
+│   │   │   ├── Messaging/                 # RabbitMQ handlers (ScrapChapterPagesHandler, ChapterPagesScrapedSignalRHandler, ChapterScrapingProgressSignalRHandler)
 │   │   │   ├── Security/                  # Custom Auth validation & JwtAuthTokenService
 │   │   │   └── DependencyInjection/       # CoreExtensions (AddMangaScrapperCore & MapMangaScrapperEndpoints)
 │   │   │
 │   │   ├── MangaScrapper.Api/             # Thin Web API Host entry point (Program.cs, Swagger/Scalar, Auth, SignalR mapping)
-│   │   └── MangaPanel.Client/             # Blazor WebAssembly Frontend Client (SignalR Client, TailWind UI)
+│   │   └── MangaPanel.Client/             # Blazor WebAssembly Frontend Client (SignalR Client, TailWind UI, Live Progress Bar)
 │   │
 │   └── Workers/
 │       └── Scrapper.Worker/               # Thin Background Worker Host entry point (Hangfire Server & RabbitMQ Consumer)
@@ -103,16 +103,23 @@ All services, MediatR handlers, validators, scrapers, background jobs, messaging
   ```
 
 > [!NOTE]
-> `includeSignalRConsumer: true` enables ONLY the SignalR notification consumer on the API host, preventing the API from consuming heavy worker job queues. `includeRabbitMqConsumer: true` on the worker enables background scraping task queues.
+> `includeSignalRConsumer: true` enables ONLY the SignalR notification consumers (`chapter-pages-scraped` and `chapter-scraping-progress`) on the API host, preventing the API from consuming heavy worker job queues. `includeRabbitMqConsumer: true` on the worker enables background scraping task queues.
 
 ---
 
-### 3. Real-Time Cross-Service Notifications (SignalR + RabbitMQ)
+### 3. Real-Time Cross-Service Notifications & Progress Streaming (SignalR + RabbitMQ)
 
-When background scraping tasks finish in `Scrapper.Worker`:
-1. `ScrapChapterPagesHandler` updates MongoDB and publishes `ChapterPagesScrapedIntegrationEvent` to RabbitMQ queue `"chapter-pages-scraped"`.
-2. `ChapterPagesScrapedSignalRHandler` in `MangaScrapper.Api` consumes the event and broadcasts `"ChaptersUpdated"` via `IHubContext<MangaHub>` to group `$"manga-{mangaId}"` and all connected clients.
-3. Blazor UI clients (`PublicMangaDetailPage.razor`, `MangaDetailModal.razor`) listen on `/hubs/manga` and automatically re-query `GetAllChaptersQuery` without full-page reloads.
+The architecture supports both incremental progress streaming and completion events:
+
+1. **Live Scraping Progress Stream**:
+   - As `Scrapper.Worker` downloads and converts each page to WebP in `GetChapterPage`, `ScrapChapterPagesHandler` publishes `ChapterScrapingProgressIntegrationEvent` (reporting `DownloadedPages`, `TotalPages`, `Percent`, `Status`) to RabbitMQ queue `"chapter-scraping-progress"`.
+   - `ChapterScrapingProgressSignalRHandler` in `MangaScrapper.Api` consumes the event and broadcasts `"ChapterScrapingProgress"` via `IHubContext<MangaHub>` to group `$"manga-{mangaId}"` and all connected clients.
+   - Blazor UI clients (`MangaDetailModal.razor`) render a live animated progress bar with exact page counters and chapter row indicators.
+
+2. **Chapter Scraping Completion Broadcast**:
+   - When a chapter finishes, `ScrapChapterPagesHandler` updates MongoDB and publishes `ChapterPagesScrapedIntegrationEvent` to RabbitMQ queue `"chapter-pages-scraped"`.
+   - `ChapterPagesScrapedSignalRHandler` in `MangaScrapper.Api` consumes the event and broadcasts `"ChaptersUpdated"` via `IHubContext<MangaHub>`.
+   - Blazor UI clients (`PublicMangaDetailPage.razor`, `MangaDetailModal.razor`) automatically re-query `GetAllChaptersQuery` without full-page reloads.
 
 ---
 

@@ -26,13 +26,15 @@ For the mobile-first reading experience, check out the [Open Manga Reader](https
   - **Vector Similarity Search**: Find semantically similar manga based on content embeddings with support for status, type, and genre payload filters.
   - **Preference Recommendations**: Centroid-based history recommendations and advanced multi-item recommendations using native positive (liked) and negative (disliked) example vector arithmetic.
 - **Smart Background Processing**: Integration with **Hangfire** (MongoDB storage) for reliable background scraping jobs and recurring sync tasks.
-- **Event Bus Messaging & Real-Time SignalR**: Native **RabbitMQ** event bus integration for asynchronous background tasks coupled with **ASP.NET Core SignalR** (`/hubs/manga`) for pushing instant real-time chapter scraping completion events (`ChaptersUpdated`) to connected clients.
+- **Event Bus Messaging & Real-Time SignalR**: Native **RabbitMQ** event bus integration coupled with **ASP.NET Core SignalR** (`/hubs/manga`) for:
+  - **Live Scraping Progress Streaming**: Incremental page-by-page progress bars and metrics (`ChapterScrapingProgress`) streamed in real-time as `Scrapper.Worker` downloads and converts pages.
+  - **Instant Chapter Update Broadcasts**: Real-time chapter completion events (`ChaptersUpdated`) triggering automatic client refreshes without full-page reloads.
 - **Discord Notifications**: Webhook-based Discord notifications for scraping events and job completions.
 - **User Library & Progression**: Track per-user manga libraries and reading progression (chapter-level tracking) backed by custom auth and Firebase authentication.
 - **Admin Dashboard**: Real-time statistics, monthly scrap charts, and recent activity monitoring.
 - **Advanced Management**:
   - Dynamic manga list with pagination, multi-genre filtering, and advanced sorting.
-  - Interactive Manga Detail Modal for editing metadata and managing chapters with live SignalR chapter auto-refresh.
+  - Interactive Manga Detail Modal with live gradient scraping progress bars, animated status badges, metadata editing, and chapter management.
   - Manual `TotalView` overrides and chapter availability indicators.
 - **Optimized Storage**: Automatic image conversion using **SkiaSharp** and centralized local storage with optional sync service.
 - **Observability**: Full **OpenTelemetry** integration with Prometheus metrics scraping (`/metrics`), OTLP trace/metric/log export, and runtime instrumentation.
@@ -60,7 +62,7 @@ For the mobile-first reading experience, check out the [Open Manga Reader](https
 ### Frontend (MangaPanel — Blazor WASM)
 
 - **Blazor WebAssembly** (.NET 10)
-- **Microsoft.AspNetCore.SignalR.Client** for real-time chapter update notifications
+- **Microsoft.AspNetCore.SignalR.Client** for live scraping progress bars and real-time updates
 - **Blazored.LocalStorage** for client-side state persistence
 - **Cookie Handler** for transparent cookie forwarding from WASM to the API
 - **JWT / Custom Auth State Provider** for Blazor auth integration
@@ -72,7 +74,6 @@ For the mobile-first reading experience, check out the [Open Manga Reader](https
 ## 📂 Project Structure
 
 ```text
-NewArchitecture/
 ├── src/
 │   ├── BuildingBlocks/
 │   │   ├── NovaStack.SharedKernel/        # Result<T>, Error, ICommand/IQuery, Base Entity, Result extensions
@@ -82,14 +83,14 @@ NewArchitecture/
 │   ├── Services/MangaScrapper/
 │   │   ├── MangaScrapper.Core/            # Unified VSA Core Library Project
 │   │   │   ├── Features/                  # 30 Vertical Feature Slices (Co-located Request, Handler, Endpoint)
-│   │   │   │   ├── Mangas/                # GetPagedManga, GetMangaById, GetChapter, DeleteManga, UpdateManga
+│   │   │   │   ├── Mangas/                # GetPagedManga, GetMangaById, GetAllChapters, DeleteManga, UpdateManga
 │   │   │   │   ├── ProviderScrapers/      # Komiku, Kiryuu, Komikcast, MangaDex slices
 │   │   │   │   ├── Scrapper/              # GetAllProviders, ScrapChapterPages, GetQueue, FixFile
 │   │   │   │   ├── UserLibrary/           # AddOrUpdateUserLibrary, GetUserLibrary, RemoveUserLibrary
 │   │   │   │   ├── UserProgression/       # UpdateUserProgression, GetUserProgression, GetMangaProgression
 │   │   │   │   ├── Users/                 # GetPagedUser, GetUserById, PatchUserActivity
 │   │   │   │   ├── Providers/             # GetProvider
-│   │   │   │   ├── Dashboard/             # GetStatistics, SyncStorage
+│   │   │   │   ├── Dashboard/             # GetStatistics, SyncStorage, SyncQdrant, SyncMeilisearch
 │   │   │   │   ├── Images/                # ProxyImage
 │   │   │   │   └── RecurringJobs/         # GetRecurringJobs, CreateOrUpdate, Delete, Trigger
 │   │   │   │
@@ -100,12 +101,12 @@ NewArchitecture/
 │   │   │   ├── Services/                  # MeilisearchService, QdrantService, DiscordWebhookService, StorageSyncService
 │   │   │   ├── Hubs/                      # SignalR Real-Time Hubs (MangaHub)
 │   │   │   ├── BackgroundJobs/            # Hangfire background jobs (MeiliSyncJob, DeleteMangaJob, LatestChapterScrapingJob)
-│   │   │   ├── Messaging/                 # RabbitMQ integration event handlers (ScrapChapterPagesHandler, ChapterPagesScrapedSignalRHandler, DeleteMangaHandler)
+│   │   │   ├── Messaging/                 # RabbitMQ handlers (ScrapChapterPagesHandler, ChapterPagesScrapedSignalRHandler, ChapterScrapingProgressSignalRHandler, DeleteMangaHandler)
 │   │   │   ├── Security/                  # Custom Auth validation & JwtAuthTokenService
 │   │   │   └── DependencyInjection/       # CoreExtensions (AddMangaScrapperCore & MapMangaScrapperEndpoints)
 │   │   │
-│   │   ├── MangaScrapper.Api/             # Thin Web API Host entry point (Program.cs, Swagger/Scalar, Auth)
-│   │   └── MangaPanel.Client/             # Blazor WebAssembly Frontend Client
+│   │   ├── MangaScrapper.Api/             # Thin Web API Host entry point (Program.cs, Swagger/Scalar, Auth, SignalR Hubs)
+│   │   └── MangaPanel.Client/             # Blazor WebAssembly Frontend Client (SignalR Client, Live Progress Bar)
 │   │
 │   └── Workers/
 │       └── Scrapper.Worker/               # Thin Background Worker Host entry point (Hangfire Server & RabbitMQ Consumer)
