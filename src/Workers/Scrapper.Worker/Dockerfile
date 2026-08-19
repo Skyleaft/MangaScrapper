@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine AS build
 WORKDIR /src
 
 # Copy solution and project files for caching restore
@@ -14,9 +14,14 @@ RUN dotnet restore "src/Workers/Scrapper.Worker/Scrapper.Worker.csproj"
 # Copy full source and publish
 COPY . .
 WORKDIR "/src/src/Workers/Scrapper.Worker"
-RUN dotnet publish "Scrapper.Worker.csproj" -c Release -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "Scrapper.Worker.csproj" -c Release -o /app/publish --no-restore /p:UseAppHost=false
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS final
 WORKDIR /app
+
+# Install tzdata and icu-libs for timezone and full globalization support in Alpine
+RUN apk add --no-cache tzdata icu-libs
+ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
+
 COPY --from=build /app/publish .
 ENTRYPOINT ["dotnet", "Scrapper.Worker.dll"]
