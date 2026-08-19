@@ -14,7 +14,7 @@ RUN dotnet restore "src/Workers/Scrapper.Worker/Scrapper.Worker.csproj"
 # Copy full source and publish
 COPY . .
 WORKDIR "/src/src/Workers/Scrapper.Worker"
-RUN dotnet publish "Scrapper.Worker.csproj" -c Release -o /app/publish --no-restore /p:UseAppHost=false
+RUN dotnet publish "Scrapper.Worker.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS final
 WORKDIR /app

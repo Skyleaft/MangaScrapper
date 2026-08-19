@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine AS build
 WORKDIR /src
 
 # Copy solution and project files for caching restore
@@ -17,8 +17,13 @@ COPY . .
 WORKDIR "/src/src/Services/MangaScrapper/MangaScrapper.Api"
 RUN dotnet publish "MangaScrapper.Api.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS final
 WORKDIR /app
+
+# Install tzdata and icu-libs for timezone and full globalization support in Alpine
+RUN apk add --no-cache tzdata icu-libs
+ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
+
 
 EXPOSE 8080
 
