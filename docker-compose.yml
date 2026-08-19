@@ -33,6 +33,7 @@ services:
       - Observability__AspireDashboard__Endpoint=http://aspire-dashboard:18889
       - Observability__UsePrometheus__Enabled=false
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://aspire-dashboard:18889
+      - OTEL_SERVICE_NAME=prod-manga-api
       - Cors__AllowedOrigins=http://localhost:3000,http://localhost:5191
       - TZ=Asia/Jakarta
     volumes:
@@ -73,6 +74,7 @@ services:
       - Observability__AspireDashboard__Endpoint=http://aspire-dashboard:18889
       - Observability__UsePrometheus__Enabled=false
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://aspire-dashboard:18889
+      - OTEL_SERVICE_NAME=prod-manga-worker
       - TZ=Asia/Jakarta
     volumes:
       - ./images:/app/images

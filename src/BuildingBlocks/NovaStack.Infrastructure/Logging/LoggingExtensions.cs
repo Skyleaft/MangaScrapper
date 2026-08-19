@@ -68,14 +68,28 @@ public static class LoggingExtensions
                         otlpEndpoint = "http://localhost:18889";
                     }
 
+                    var serviceName = Environment.GetEnvironmentVariable("OTEL_SERVICE_NAME")
+                                      ?? context.Configuration["Observability:ServiceName"]
+                                      ?? context.HostingEnvironment.ApplicationName;
+
+                    var protocolStr = context.Configuration["Observability:AspireDashboard:Protocol"]
+                                      ?? context.Configuration["Observability:OtlpProtocol"]
+                                      ?? Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_PROTOCOL");
+
+                    var isHttpProtobuf = string.Equals(protocolStr, "HttpProtobuf", StringComparison.OrdinalIgnoreCase) ||
+                                         string.Equals(protocolStr, "http/protobuf", StringComparison.OrdinalIgnoreCase);
+
                     if (!string.IsNullOrWhiteSpace(otlpEndpoint))
                     {
                         wt.OpenTelemetry(options =>
                         {
                             options.Endpoint = otlpEndpoint;
+                            options.Protocol = isHttpProtobuf
+                                ? Serilog.Sinks.OpenTelemetry.OtlpProtocol.HttpProtobuf
+                                : Serilog.Sinks.OpenTelemetry.OtlpProtocol.Grpc;
                             options.ResourceAttributes = new Dictionary<string, object>
                             {
-                                ["service.name"] = context.HostingEnvironment.ApplicationName
+                                ["service.name"] = serviceName
                             };
                         });
                     }
