@@ -25,18 +25,30 @@ public static class ObservabilityExtensions
         var aspireEnabled = configuration.GetValue<bool>("Observability:AspireDashboard:Enabled")
                             || configuration.GetValue<bool>("Observability:UseAspireDashboard");
 
-        var otlpEndpoint = configuration["Observability:OtlpEndpoint"]
-                           ?? configuration["Observability:AspireDashboard:Endpoint"]
-                           ?? Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT");
-
+        // Safely resolve endpoint, ignoring empty strings from configuration
+        var otlpEndpoint = configuration["Observability:OtlpEndpoint"];
+        if (string.IsNullOrWhiteSpace(otlpEndpoint))
+        {
+            otlpEndpoint = configuration["Observability:AspireDashboard:Endpoint"];
+        }
+        if (string.IsNullOrWhiteSpace(otlpEndpoint))
+        {
+            otlpEndpoint = Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT");
+        }
         if (string.IsNullOrWhiteSpace(otlpEndpoint) && aspireEnabled)
         {
             otlpEndpoint = "http://localhost:18889";
         }
 
-        var protocolStr = configuration["Observability:AspireDashboard:Protocol"]
-                          ?? configuration["Observability:OtlpProtocol"]
-                          ?? Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_PROTOCOL");
+        var protocolStr = configuration["Observability:AspireDashboard:Protocol"];
+        if (string.IsNullOrWhiteSpace(protocolStr))
+        {
+            protocolStr = configuration["Observability:OtlpProtocol"];
+        }
+        if (string.IsNullOrWhiteSpace(protocolStr))
+        {
+            protocolStr = Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_PROTOCOL");
+        }
 
         var protocol = string.Equals(protocolStr, "HttpProtobuf", StringComparison.OrdinalIgnoreCase) ||
                        string.Equals(protocolStr, "http/protobuf", StringComparison.OrdinalIgnoreCase)
@@ -46,8 +58,12 @@ public static class ObservabilityExtensions
         var usePrometheus = configuration.GetValue<bool?>("Observability:UsePrometheus:Enabled")
                             ?? configuration.GetValue<bool>("Observability:UsePrometheus", true);
 
+        var resolvedServiceName = Environment.GetEnvironmentVariable("OTEL_SERVICE_NAME")
+                                  ?? configuration["Observability:ServiceName"]
+                                  ?? serviceName;
+
         return services.AddNovaStackObservability(
-            serviceName: serviceName,
+            serviceName: resolvedServiceName,
             serviceVersion: serviceVersion,
             otlpEndpoint: otlpEndpoint,
             usePrometheus: usePrometheus,
@@ -96,6 +112,7 @@ public static class ObservabilityExtensions
                         options.RecordException = true;
                     })
                     .AddSource(serviceName)
+                    .AddSource("RabbitMQ.Client")
                     .AddSource("MongoDB.Driver.Core.Extensions.DiagnosticSources");
 
                 if (!string.IsNullOrWhiteSpace(resolvedOtlpEndpoint))
@@ -118,7 +135,17 @@ public static class ObservabilityExtensions
                     .AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation()
                     .AddRuntimeInstrumentation()
-                    .AddProcessInstrumentation();
+                    .AddProcessInstrumentation()
+                    .AddMeter(
+                        "Microsoft.AspNetCore.Hosting",
+                        "Microsoft.AspNetCore.Server.Kestrel",
+                        "Microsoft.AspNetCore.Routing",
+                        "Microsoft.AspNetCore.Diagnostics",
+                        "Microsoft.AspNetCore.RateLimiting",
+                        "Microsoft.AspNetCore.Http.Connections",
+                        "System.Net.Http",
+                        "System.Net.NameResolution",
+                        serviceName);
 
                 if (usePrometheus)
                 {

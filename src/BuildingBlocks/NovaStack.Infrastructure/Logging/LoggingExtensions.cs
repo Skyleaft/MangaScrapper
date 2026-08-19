@@ -56,9 +56,15 @@ public static class LoggingExtensions
                         retainedFileCountLimit: 14,
                         outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff} {Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}");
 
-                    var otlpEndpoint = context.Configuration["Observability:OtlpEndpoint"]
-                                       ?? context.Configuration["Observability:AspireDashboard:Endpoint"]
-                                       ?? Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT");
+                    var otlpEndpoint = context.Configuration["Observability:OtlpEndpoint"];
+                    if (string.IsNullOrWhiteSpace(otlpEndpoint))
+                    {
+                        otlpEndpoint = context.Configuration["Observability:AspireDashboard:Endpoint"];
+                    }
+                    if (string.IsNullOrWhiteSpace(otlpEndpoint))
+                    {
+                        otlpEndpoint = Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT");
+                    }
 
                     var useAspire = context.Configuration.GetValue<bool>("Observability:AspireDashboard:Enabled")
                                     || context.Configuration.GetValue<bool>("Observability:UseAspireDashboard");
@@ -72,9 +78,15 @@ public static class LoggingExtensions
                                       ?? context.Configuration["Observability:ServiceName"]
                                       ?? context.HostingEnvironment.ApplicationName;
 
-                    var protocolStr = context.Configuration["Observability:AspireDashboard:Protocol"]
-                                      ?? context.Configuration["Observability:OtlpProtocol"]
-                                      ?? Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_PROTOCOL");
+                    var protocolStr = context.Configuration["Observability:AspireDashboard:Protocol"];
+                    if (string.IsNullOrWhiteSpace(protocolStr))
+                    {
+                        protocolStr = context.Configuration["Observability:OtlpProtocol"];
+                    }
+                    if (string.IsNullOrWhiteSpace(protocolStr))
+                    {
+                        protocolStr = Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_PROTOCOL");
+                    }
 
                     var isHttpProtobuf = string.Equals(protocolStr, "HttpProtobuf", StringComparison.OrdinalIgnoreCase) ||
                                          string.Equals(protocolStr, "http/protobuf", StringComparison.OrdinalIgnoreCase);
