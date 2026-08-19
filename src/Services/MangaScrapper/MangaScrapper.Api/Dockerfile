@@ -15,7 +15,7 @@ RUN dotnet restore "src/Services/MangaScrapper/MangaScrapper.Api/MangaScrapper.A
 # Copy full source and publish
 COPY . .
 WORKDIR "/src/src/Services/MangaScrapper/MangaScrapper.Api"
-RUN dotnet publish "MangaScrapper.Api.csproj" -c Release -o /app/publish --no-restore /p:UseAppHost=false
+RUN dotnet publish "MangaScrapper.Api.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
