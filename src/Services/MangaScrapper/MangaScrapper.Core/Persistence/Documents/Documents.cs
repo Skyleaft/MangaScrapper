@@ -95,6 +95,7 @@ public class UserDocument
     public List<string> Roles { get; set; } = new();
     public bool IsActive { get; set; } = true;
     public string? FirebaseUid { get; set; }
+    public List<string> FcmTokens { get; set; } = new();
 
     [BsonDateTimeOptions(Kind = DateTimeKind.Utc)]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

@@ -150,6 +150,7 @@ public static class CoreExtensions
         services.AddScoped<MeilisearchService>();
         services.AddScoped<QdrantService>();
         services.AddScoped<StorageSyncService>();
+        services.AddScoped<FcmNotificationService>();
 
         services.AddScoped<IMangaExternalRepository, MangaExternalService>();
         services.AddScoped<IMangaMessagePublisher, MangaMessagePublisher>();

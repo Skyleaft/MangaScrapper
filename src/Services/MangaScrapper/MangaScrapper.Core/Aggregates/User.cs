@@ -18,12 +18,12 @@ public class User : Entity<UserId>
     public List<string> Roles { get; set; } = new();
     public bool IsActive { get; set; } = true;
     public string? FirebaseUid { get; set; }
+    public List<string> FcmTokens { get; set; } = new();
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? LastActiveAt { get; set; }
     public string? ClientIpAddress { get; set; }
     
-    
-    private User(UserId id, string username, string passwordHash, string email, List<string> roles, bool isActive, string? firebaseUid, DateTime? createdAt, DateTime? lastActiveAt, string? clientIpAddress)
+    private User(UserId id, string username, string passwordHash, string email, List<string> roles, bool isActive, string? firebaseUid, List<string>? fcmTokens, DateTime? createdAt, DateTime? lastActiveAt, string? clientIpAddress)
         : base(id)
     {
         Username = username;
@@ -32,19 +32,34 @@ public class User : Entity<UserId>
         Roles = roles;
         IsActive = isActive;
         FirebaseUid = firebaseUid;
+        FcmTokens = fcmTokens ?? new();
         CreatedAt = createdAt ?? DateTime.UtcNow;
         LastActiveAt = lastActiveAt;
         ClientIpAddress = clientIpAddress;
     }
     
-    
-    public static User Create(UserId id, string username, string passwordHash, string email, List<string> roles, string? firebaseUid = null, DateTime? lastActiveAt = null, string? clientIpAddress = null)
+    public void AddFcmToken(string token)
     {
-        return new User(id, username, passwordHash, email, roles, true, firebaseUid, DateTime.UtcNow, lastActiveAt, clientIpAddress);
+        if (string.IsNullOrWhiteSpace(token)) return;
+        if (!FcmTokens.Contains(token))
+        {
+            FcmTokens.Add(token);
+        }
     }
 
-    public static User Reconstitute(UserId id, string username, string passwordHash, string email, List<string> roles, bool isActive, string? firebaseUid, DateTime? createdAt, DateTime? lastActiveAt, string? clientIpAddress)
+    public void RemoveFcmToken(string token)
     {
-        return new User(id, username, passwordHash, email, roles, isActive, firebaseUid, createdAt, lastActiveAt, clientIpAddress);
+        if (string.IsNullOrWhiteSpace(token)) return;
+        FcmTokens.Remove(token);
+    }
+    
+    public static User Create(UserId id, string username, string passwordHash, string email, List<string> roles, string? firebaseUid = null, List<string>? fcmTokens = null, DateTime? lastActiveAt = null, string? clientIpAddress = null)
+    {
+        return new User(id, username, passwordHash, email, roles, true, firebaseUid, fcmTokens, DateTime.UtcNow, lastActiveAt, clientIpAddress);
+    }
+
+    public static User Reconstitute(UserId id, string username, string passwordHash, string email, List<string> roles, bool isActive, string? firebaseUid, List<string>? fcmTokens, DateTime? createdAt, DateTime? lastActiveAt, string? clientIpAddress)
+    {
+        return new User(id, username, passwordHash, email, roles, isActive, firebaseUid, fcmTokens, createdAt, lastActiveAt, clientIpAddress);
     }
 }

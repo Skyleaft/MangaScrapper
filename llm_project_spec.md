@@ -32,13 +32,13 @@ This document provides a token-efficient, high-density architectural and coding 
 │   │
 │   ├── Services/MangaScrapper/
 │   │   ├── MangaScrapper.Core/            # Unified VSA Core Library Project
-│   │   │   ├── Features/                  # 30 Vertical Feature Slices (Co-located Request, Handler, Endpoint)
+│   │   │   ├── Features/                  # 32 Vertical Feature Slices (Co-located Request, Handler, Endpoint)
 │   │   │   │   ├── Mangas/                # GetPagedManga, GetMangaById, GetAllChapters, DeleteManga, UpdateManga
 │   │   │   │   ├── ProviderScrapers/      # Komiku, Kiryuu, Komikcast, MangaDex slices
 │   │   │   │   ├── Scrapper/              # GetAllProviders, ScrapChapterPages, GetQueue, FixFile
 │   │   │   │   ├── UserLibrary/           # AddOrUpdateUserLibrary, GetUserLibrary, RemoveUserLibrary
 │   │   │   │   ├── UserProgression/       # UpdateUserProgression, GetUserProgression, GetMangaProgression
-│   │   │   │   ├── Users/                 # GetPagedUser, GetUserById, PatchUserActivity
+│   │   │   │   ├── Users/                 # GetPagedUser, GetUserById, PatchUserActivity, RegisterFcmToken, UnregisterFcmToken
 │   │   │   │   ├── Providers/             # GetProvider
 │   │   │   │   ├── Dashboard/             # GetStatistics, SyncStorage, SyncQdrant, SyncMeilisearch
 │   │   │   │   ├── Images/                # ProxyImage
@@ -46,9 +46,9 @@ This document provides a token-efficient, high-density architectural and coding 
 │   │   │   │
 │   │   │   ├── Domain/                    # Domain Layer (Aggregates, Value Objects, Domain Events)
 │   │   │   ├── Scrapers/                  # Scraper Provider Implementations (Komiku, Kiryuu, Komikcast, MangaDex)
-│   │   │   ├── Persistence/               # Mongo DbContext, BSON Document schemas (MangaDocument, etc.)
+│   │   │   ├── Persistence/               # Mongo DbContext, BSON Document schemas (MangaDocument, UserDocument, etc.)
 │   │   │   ├── Repositories/              # MongoMangaRepository, MongoUserRepository, MongoUserLibraryRepository
-│   │   │   ├── Services/                  # MeilisearchService, QdrantService, DiscordWebhookService, StorageSyncService
+│   │   │   ├── Services/                  # MeilisearchService, QdrantService, DiscordWebhookService, StorageSyncService, FcmNotificationService
 │   │   │   ├── Hubs/                      # SignalR Hubs (MangaHub)
 │   │   │   ├── BackgroundJobs/            # Hangfire background jobs (MeiliSyncJob, DeleteMangaJob, LatestChapterScrapingJob)
 │   │   │   ├── Messaging/                 # RabbitMQ handlers (ScrapChapterPagesHandler, ChapterPagesScrapedSignalRHandler, ChapterScrapingProgressSignalRHandler)
@@ -169,7 +169,16 @@ Error.Validation("Request.Invalid", "Search parameter cannot be empty.");
 
 ---
 
-### 7. Unique Identifier Generation
+### 7. Push Notifications (Firebase Cloud Messaging - FCM)
+
+For mobile clients (`Open-Manga-Reader` Flutter app), real-time push notifications are dispatched when new chapters are scraped:
+1. **Device Token Registration**: The Flutter client calls `POST /api/v1/users/fcm-token` upon login to store the device token on `User.FcmTokens`.
+2. **Library-Based Multicast**: When new chapters are detected in `ScrapperServiceBase.ExtractManga`, `FcmNotificationService` finds all users with that manga in `UserLibrary`, retrieves their device tokens, and dispatches an FCM multicast message in batches of 500.
+3. **Topic Broadcasts**: Notifications are simultaneously published to the topic `$"manga_{mangaId:N}"` allowing instant client-side topic subscription.
+
+---
+
+### 8. Unique Identifier Generation
 
 Always use `Guid.CreateVersion7()` instead of `Guid.NewGuid()` when generating new GUIDs for domain aggregates, events, and documents. This ensures sequential, time-sortable identifiers which provide better database indexing performance.
 

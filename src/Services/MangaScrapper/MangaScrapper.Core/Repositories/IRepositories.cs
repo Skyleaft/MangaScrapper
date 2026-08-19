@@ -74,6 +74,9 @@ public interface IUserRepository
         CancellationToken ct = default);
     Task<User?> GetByFirebaseUidOrEmailAsync(string firebaseUid, string email, CancellationToken ct = default);
     Task<long> CountByRoleAsync(string role, CancellationToken ct = default);
+    Task<List<string>> GetFcmTokensByUserIdsAsync(IEnumerable<Guid> userIds, CancellationToken ct = default);
+    Task AddFcmTokenAsync(UserId userId, string fcmToken, CancellationToken ct = default);
+    Task RemoveFcmTokenAsync(UserId userId, string fcmToken, CancellationToken ct = default);
     Task AddAsync(User user, CancellationToken ct = default);
     Task UpdateAsync(User user, CancellationToken ct = default);
 }
@@ -83,6 +86,7 @@ public interface IUserLibraryRepository
     Task<UserLibrary?> GetByIdAsync(Guid id, CancellationToken ct = default);
     Task<UserLibrary?> GetByUserIdAndMangaIdAsync(string userId, MangaId mangaId, CancellationToken ct = default);
     Task<List<UserLibrary>> GetAllAsync(string userId, CancellationToken ct = default);
+    Task<List<Guid>> GetUserIdsByMangaIdAsync(Guid mangaId, CancellationToken ct = default);
     Task<PagedList<UserLibrary>> GetPagedByUserIdAsync(string userId,string? search,string? type,string? status,bool? isFavorite,string sortBy, string orderBy, int page, int pageSize, CancellationToken ct = default);
     Task AddAsync(UserLibrary userLibrary, CancellationToken ct = default);
     Task UpdateAsync(UserLibrary userLibrary, CancellationToken ct = default);

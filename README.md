@@ -29,6 +29,7 @@ For the mobile-first reading experience, check out the [Open Manga Reader](https
 - **Event Bus Messaging & Real-Time SignalR**: Native **RabbitMQ** event bus integration coupled with **ASP.NET Core SignalR** (`/hubs/manga`) for:
   - **Live Scraping Progress Streaming**: Incremental page-by-page progress bars and metrics (`ChapterScrapingProgress`) streamed in real-time as `Scrapper.Worker` downloads and converts pages.
   - **Instant Chapter Update Broadcasts**: Real-time chapter completion events (`ChaptersUpdated`) triggering automatic client refreshes without full-page reloads.
+- **Firebase Cloud Messaging (FCM)**: Push notification integration for Flutter mobile clients (`Open-Manga-Reader`) delivering instant new chapter notifications to users based on their bookmarked `UserLibrary` and topic subscriptions (`manga_{mangaId}`).
 - **Discord Notifications**: Webhook-based Discord notifications for scraping events and job completions.
 - **User Library & Progression**: Track per-user manga libraries and reading progression (chapter-level tracking) backed by custom auth and Firebase authentication.
 - **Admin Dashboard**: Real-time statistics, monthly scrap charts, and recent activity monitoring.
@@ -49,6 +50,7 @@ For the mobile-first reading experience, check out the [Open Manga Reader](https
 - **Architectural Style**: **Vertical Slice Architecture (VSA)** & **Domain-Driven Design (DDD)** — Unified Two-Tier Structure (`MangaScrapper.Core` + Thin Host Executables)
 - **CQRS & Mediator**: MediatR 14 (with logging and validation pipeline behaviors)
 - **APIs & Real-Time**: ASP.NET Core Minimal APIs with reflection-based endpoint discovery (`IEndpointDefinition`) & **SignalR** Hubs (`MangaHub`)
+- **Push Notifications**: **Firebase Admin .NET SDK** (`FirebaseAdmin.Messaging`) for real-time FCM multicast and topic broadcasts
 - **Database & Persistence**: MongoDB 8 via `MongoDB.Driver` 3.x, Meilisearch 0.17 (full-text search), Qdrant 1.13 (vector search)
 - **Domain Aggregates**: Centralized domain aggregates (`Manga`, `Chapter`, `Page`) produced directly by provider scrapers and mapped transparently to BSON documents for MongoDB persistence.
 - **Identifier Generation**: Standardized on UUIDv7 (`Guid.CreateVersion7()`) for sequential, time-sortable database identifiers to improve index locality.
@@ -59,9 +61,10 @@ For the mobile-first reading experience, check out the [Open Manga Reader](https
 - **Messaging & Event Bus**: Native RabbitMQ EventBus (`NovaStack.Infrastructure`) & Integration Event Handlers
 - **Scrapers & Helpers**: HtmlAgilityPack, Microsoft Playwright, FlareSolverr HTTP client, SkiaSharp image processing
 
-### Frontend (MangaPanel — Blazor WASM)
+### Frontend & Mobile Clients
 
-- **Blazor WebAssembly** (.NET 10)
+- **Blazor WebAssembly** (.NET 10) — Admin Web Client
+- **Flutter Mobile Client** (`Open-Manga-Reader`) — Multiplatform Reader App consuming FCM new chapter push notifications
 - **Microsoft.AspNetCore.SignalR.Client** for live scraping progress bars and real-time updates
 - **Blazored.LocalStorage** for client-side state persistence
 - **Cookie Handler** for transparent cookie forwarding from WASM to the API
@@ -82,13 +85,13 @@ For the mobile-first reading experience, check out the [Open Manga Reader](https
 │   │
 │   ├── Services/MangaScrapper/
 │   │   ├── MangaScrapper.Core/            # Unified VSA Core Library Project
-│   │   │   ├── Features/                  # 30 Vertical Feature Slices (Co-located Request, Handler, Endpoint)
+│   │   │   ├── Features/                  # 32 Vertical Feature Slices (Co-located Request, Handler, Endpoint)
 │   │   │   │   ├── Mangas/                # GetPagedManga, GetMangaById, GetAllChapters, DeleteManga, UpdateManga
 │   │   │   │   ├── ProviderScrapers/      # Komiku, Kiryuu, Komikcast, MangaDex slices
 │   │   │   │   ├── Scrapper/              # GetAllProviders, ScrapChapterPages, GetQueue, FixFile
 │   │   │   │   ├── UserLibrary/           # AddOrUpdateUserLibrary, GetUserLibrary, RemoveUserLibrary
 │   │   │   │   ├── UserProgression/       # UpdateUserProgression, GetUserProgression, GetMangaProgression
-│   │   │   │   ├── Users/                 # GetPagedUser, GetUserById, PatchUserActivity
+│   │   │   │   ├── Users/                 # GetPagedUser, GetUserById, PatchUserActivity, RegisterFcmToken, UnregisterFcmToken
 │   │   │   │   ├── Providers/             # GetProvider
 │   │   │   │   ├── Dashboard/             # GetStatistics, SyncStorage, SyncQdrant, SyncMeilisearch
 │   │   │   │   ├── Images/                # ProxyImage
@@ -96,9 +99,9 @@ For the mobile-first reading experience, check out the [Open Manga Reader](https
 │   │   │   │
 │   │   │   ├── Domain/                    # Domain Aggregates (Manga, Chapter, Page, Value Objects, Domain Events)
 │   │   │   ├── Scrapers/                  # Provider Scrapers producing Domain Aggregates (Komiku, Kiryuu, Komikcast, MangaDex)
-│   │   │   ├── Persistence/               # Mongo DbContext, BSON Document schemas (MangaDocument, etc.)
+│   │   │   ├── Persistence/               # Mongo DbContext, BSON Document schemas (MangaDocument, UserDocument, etc.)
 │   │   │   ├── Repositories/              # MongoMangaRepository, MongoUserRepository, MongoUserLibraryRepository
-│   │   │   ├── Services/                  # MeilisearchService, QdrantService, DiscordWebhookService, StorageSyncService
+│   │   │   ├── Services/                  # MeilisearchService, QdrantService, DiscordWebhookService, StorageSyncService, FcmNotificationService
 │   │   │   ├── Hubs/                      # SignalR Real-Time Hubs (MangaHub)
 │   │   │   ├── BackgroundJobs/            # Hangfire background jobs (MeiliSyncJob, DeleteMangaJob, LatestChapterScrapingJob)
 │   │   │   ├── Messaging/                 # RabbitMQ handlers (ScrapChapterPagesHandler, ChapterPagesScrapedSignalRHandler, ChapterScrapingProgressSignalRHandler, DeleteMangaHandler)

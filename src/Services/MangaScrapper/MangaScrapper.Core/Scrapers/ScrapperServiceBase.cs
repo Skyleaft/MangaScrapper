@@ -437,6 +437,20 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
                 var webhookService = scope.ServiceProvider.GetService<DiscordWebhookService>();
                 if (webhookService != null)
                     await webhookService.SendNewChaptersNotificationAsync(existingManga, newChapters, ct);
+
+                var fcmService = scope.ServiceProvider.GetService<FcmNotificationService>();
+                if (fcmService != null)
+                {
+                    foreach (var chapter in newChapters)
+                    {
+                        await fcmService.SendNewChapterNotificationToUserLibraryAsync(
+                            existingManga.Id.Value,
+                            existingManga.Title,
+                            chapter.Number,
+                            existingManga.ImageUrl,
+                            ct);
+                    }
+                }
             }
 
             existingManga = await UpdateMangaMetaData(existingManga, ct);

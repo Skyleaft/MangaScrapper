@@ -73,6 +73,33 @@ public class MongoUserRepository(MangaMongoDbContext dbContext) : IUserRepositor
         return await dbContext.Users.CountDocumentsAsync(u => u.Roles.Contains(role), cancellationToken: ct);
     }
 
+    public async Task<List<string>> GetFcmTokensByUserIdsAsync(IEnumerable<Guid> userIds, CancellationToken ct = default)
+    {
+        var idList = userIds.ToList();
+        if (idList.Count == 0) return new List<string>();
+
+        var docs = await dbContext.Users
+            .Find(u => idList.Contains(u.Id) && u.IsActive && u.FcmTokens.Count > 0)
+            .Project(u => u.FcmTokens)
+            .ToListAsync(ct);
+
+        return docs.SelectMany(t => t).Where(t => !string.IsNullOrWhiteSpace(t)).Distinct().ToList();
+    }
+
+    public async Task AddFcmTokenAsync(UserId userId, string fcmToken, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(fcmToken)) return;
+        var update = Builders<UserDocument>.Update.AddToSet(u => u.FcmTokens, fcmToken);
+        await dbContext.Users.UpdateOneAsync(u => u.Id == userId.Value, update, cancellationToken: ct);
+    }
+
+    public async Task RemoveFcmTokenAsync(UserId userId, string fcmToken, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(fcmToken)) return;
+        var update = Builders<UserDocument>.Update.Pull(u => u.FcmTokens, fcmToken);
+        await dbContext.Users.UpdateOneAsync(u => u.Id == userId.Value, update, cancellationToken: ct);
+    }
+
     public async Task AddAsync(User user, CancellationToken ct = default)
     {
         var doc = MapToDocument(user);
@@ -95,6 +122,7 @@ public class MongoUserRepository(MangaMongoDbContext dbContext) : IUserRepositor
             doc.Roles ?? new List<string>(),
             doc.IsActive,
             doc.FirebaseUid,
+            doc.FcmTokens ?? new List<string>(),
             doc.CreatedAt,
             doc.LastActiveAt,
             doc.ClientIpAddress);
@@ -111,6 +139,7 @@ public class MongoUserRepository(MangaMongoDbContext dbContext) : IUserRepositor
             Roles = user.Roles ?? new List<string>(),
             IsActive = user.IsActive,
             FirebaseUid = user.FirebaseUid,
+            FcmTokens = user.FcmTokens ?? new List<string>(),
             CreatedAt = user.CreatedAt,
             LastActiveAt = user.LastActiveAt,
             ClientIpAddress = user.ClientIpAddress
@@ -138,6 +167,15 @@ public class MongoUserLibraryRepository(MangaMongoDbContext dbContext) : IUserLi
         if (!Guid.TryParse(userId, out var userGuid)) return new List<UserLibrary>();
         var doc = await dbContext.UserLibraries.Find(l => l.UserId == userGuid).ToListAsync(ct);
         return doc is null ? new() : doc.Select(MapToDomain).ToList();
+    }
+
+    public async Task<List<Guid>> GetUserIdsByMangaIdAsync(Guid mangaId, CancellationToken ct = default)
+    {
+        var docs = await dbContext.UserLibraries
+            .Find(l => l.MangaId == mangaId)
+            .Project(l => l.UserId)
+            .ToListAsync(ct);
+        return docs.Distinct().ToList();
     }
 
     public async Task<PagedList<UserLibrary>> GetPagedByUserIdAsync(string userId,string? search,string? type,string? status,bool? isFavorite,string sortBy, string orderBy, int page, int pageSize, CancellationToken ct = default)
