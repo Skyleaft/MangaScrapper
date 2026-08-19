@@ -300,11 +300,93 @@
                                             <span class="font-bold text-rose-400">@(Chapters.Count - availableCount)</span> missing
                                         </span>
                                     </div>
-                                    <button @onclick="ScrapMissingChapters" class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-secondary/10 text-secondary hover:bg-secondary/20 rounded-lg transition-all text-[9px] sm:text-[10px] font-bold uppercase tracking-wider">
-                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                                        Scrap Missing
+                                    <button @onclick="ScrapMissingChapters" disabled="@_isScrapingActive" class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-secondary/10 text-secondary hover:bg-secondary/20 rounded-lg transition-all text-[9px] sm:text-[10px] font-bold uppercase tracking-wider disabled:opacity-50">
+                                        @if (_isScrapingActive)
+                                        {
+                                            <div class="w-3.5 h-3.5 border-2 border-secondary/30 border-t-secondary rounded-full animate-spin"></div>
+                                            <span>Scraping...</span>
+                                        }
+                                        else
+                                        {
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                                            <span>Scrap Missing</span>
+                                        }
                                     </button>
                                 </div>
+
+                                @if (_isScrapingActive)
+                                {
+                                    <!-- Live Scraping Progress Bar Widget -->
+                                    <div class="p-3 sm:p-4 bg-surface border-b border-border-main transition-all">
+                                        <div class="p-3.5 sm:p-4 bg-bg-app rounded-xl border border-secondary/30 shadow-sm relative overflow-hidden">
+                                            <!-- Top Line Gradient Fill -->
+                                            <div class="absolute inset-x-0 top-0 h-1 bg-slate-200 dark:bg-slate-800">
+                                                <div class="h-full bg-gradient-to-r from-secondary to-primary transition-all duration-300" style="width: @(_scrapingPercent)%"></div>
+                                            </div>
+
+                                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+                                                <div class="flex items-center gap-3">
+                                                    <div class="w-9 h-9 rounded-xl bg-secondary/10 text-secondary flex items-center justify-center flex-shrink-0">
+                                                        @if (_scrapingStatus == "Completed")
+                                                        {
+                                                            <svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
+                                                        }
+                                                        else if (_scrapingStatus == "Failed")
+                                                        {
+                                                            <svg class="w-5 h-5 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
+                                                        }
+                                                        else
+                                                        {
+                                                            <div class="w-4 h-4 border-2 border-secondary/30 border-t-secondary rounded-full animate-spin"></div>
+                                                        }
+                                                    </div>
+                                                    <div>
+                                                        <div class="flex items-center gap-2">
+                                                            <span class="text-xs font-bold text-text-main">
+                                                                @if (_scrapingStatus == "Completed")
+                                                                {
+                                                                    <span class="text-emerald-500">Chapter @_scrapingChapterNumber completed!</span>
+                                                                }
+                                                                else if (_scrapingStatus == "Failed")
+                                                                {
+                                                                    <span class="text-rose-500">Failed scraping Chapter @_scrapingChapterNumber</span>
+                                                                }
+                                                                else if (_scrapingStatus == "Queued")
+                                                                {
+                                                                    <span>Queued for scraping...</span>
+                                                                }
+                                                                else
+                                                                {
+                                                                    <span>Scraping Chapter @_scrapingChapterNumber</span>
+                                                                }
+                                                            </span>
+                                                            <span class="px-2 py-0.5 bg-secondary/10 text-secondary text-[9px] font-bold rounded-full uppercase">
+                                                                @_scrapingStatus
+                                                            </span>
+                                                        </div>
+                                                        <p class="text-[11px] text-slate-400 mt-0.5">
+                                                            @if (_scrapingTotalPages > 0)
+                                                            {
+                                                                <span>Downloading page @_scrapingDownloadedPages of @_scrapingTotalPages (@_scrapingPercent%)</span>
+                                                            }
+                                                            else
+                                                            {
+                                                                <span>Worker processing chapter download...</span>
+                                                            }
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                <div class="flex items-center gap-2.5 w-full sm:w-48 flex-shrink-0">
+                                                    <div class="flex-grow bg-slate-200 dark:bg-slate-700/60 rounded-full h-2 overflow-hidden">
+                                                        <div class="h-full bg-gradient-to-r from-secondary to-primary transition-all duration-300 rounded-full" style="width: @(_scrapingPercent)%"></div>
+                                                    </div>
+                                                    <span class="text-xs font-bold text-text-main w-8 text-right">@_scrapingPercent%</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
 
                                 <!-- Chapters Table -->
                                 <div class="overflow-x-auto">
@@ -344,7 +426,14 @@
                                                             <span class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-500 text-[9px] sm:text-[10px] font-bold rounded uppercase">@(string.IsNullOrEmpty(chapter.Language) ? "—" : chapter.Language)</span>
                                                         </td>
                                                         <td class="px-4 sm:px-5 py-2.5">
-                                                            @if (chapter.Pages.Count>0)
+                                                            @if (_isScrapingActive && (_scrapingChapterId == chapter.Id || _scrapingChapterNumber == chapter.Number) && _scrapingStatus != "Completed")
+                                                            {
+                                                                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-secondary/10 text-secondary rounded-full text-[9px] sm:text-[10px] font-bold animate-pulse">
+                                                                    <span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+                                                                    @(_scrapingPercent > 0 ? $"{_scrapingPercent}%" : "Scraping")
+                                                                </span>
+                                                            }
+                                                            else if (chapter.Pages.Count>0)
                                                             {
                                                                 <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 rounded-full text-[9px] sm:text-[10px] font-bold">
                                                                     <span class="w-1 h-1 rounded-full bg-emerald-500"></span>
@@ -679,6 +768,15 @@
     
     private HubConnection? _hubConnection;
     private Guid _currentJoinedMangaId;
+
+    // Real-Time Scraping Progress State
+    private bool _isScrapingActive = false;
+    private double _scrapingChapterNumber = 0;
+    private Guid _scrapingChapterId = Guid.Empty;
+    private int _scrapingDownloadedPages = 0;
+    private int _scrapingTotalPages = 0;
+    private int _scrapingPercent = 0;
+    private string _scrapingStatus = "InProgress";
     
     private bool _isSearchJikanOpen = false;
     private string _jikanSearchQuery = "";
@@ -736,6 +834,59 @@
                         if (match)
                         {
                             await RefreshChapters();
+                        }
+                    }
+                });
+
+                _hubConnection.On<System.Text.Json.JsonElement>("ChapterScrapingProgress", async (payload) =>
+                {
+                    if (MangaId != Guid.Empty)
+                    {
+                        var match = false;
+                        if (payload.TryGetProperty("mangaId", out var mangaIdProp))
+                        {
+                            if (mangaIdProp.ValueKind == System.Text.Json.JsonValueKind.String &&
+                                Guid.TryParse(mangaIdProp.GetString(), out var eventMangaId) &&
+                                eventMangaId == MangaId)
+                            {
+                                match = true;
+                            }
+                        }
+
+                        if (match)
+                        {
+                            _isScrapingActive = true;
+                            if (payload.TryGetProperty("chapterNumber", out var chProp)) _scrapingChapterNumber = chProp.GetDouble();
+                            if (payload.TryGetProperty("chapterId", out var chIdProp) && Guid.TryParse(chIdProp.GetString(), out var chId)) _scrapingChapterId = chId;
+                            if (payload.TryGetProperty("downloadedPages", out var dlProp)) _scrapingDownloadedPages = dlProp.GetInt32();
+                            if (payload.TryGetProperty("totalPages", out var totalProp)) _scrapingTotalPages = totalProp.GetInt32();
+                            if (payload.TryGetProperty("percent", out var pctProp)) _scrapingPercent = pctProp.GetInt32();
+                            if (payload.TryGetProperty("status", out var statusProp)) _scrapingStatus = statusProp.GetString() ?? "InProgress";
+
+                            if (_scrapingStatus == "Completed")
+                            {
+                                await RefreshChapters();
+                                _ = Task.Run(async () =>
+                                {
+                                    await Task.Delay(4000);
+                                    if (_scrapingStatus == "Completed" && _scrapingPercent >= 100)
+                                    {
+                                        _isScrapingActive = false;
+                                        await InvokeAsync(StateHasChanged);
+                                    }
+                                });
+                            }
+                            else if (_scrapingStatus == "Failed")
+                            {
+                                _ = Task.Run(async () =>
+                                {
+                                    await Task.Delay(5000);
+                                    _isScrapingActive = false;
+                                    await InvokeAsync(StateHasChanged);
+                                });
+                            }
+
+                            await InvokeAsync(StateHasChanged);
                         }
                     }
                 });
@@ -923,16 +1074,25 @@
     {
         try 
         {
+            _isScrapingActive = true;
+            _scrapingStatus = "Queued";
+            _scrapingPercent = 0;
+            _scrapingDownloadedPages = 0;
+            _scrapingTotalPages = 0;
+            StateHasChanged();
+
             var response = await Http.GetAsync($"/api/v1/scrapper/manga/{MangaId}/chapter-pages");
-            if (response.IsSuccessStatusCode)
+            if (!response.IsSuccessStatusCode)
             {
-                await JS.InvokeVoidAsync("alert", "Scraping jobs have been queued for missing chapters!");
-                await Close();
+                _scrapingStatus = "Failed";
+                StateHasChanged();
             }
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error triggering scrap: {ex.Message}");
+            _scrapingStatus = "Failed";
+            StateHasChanged();
         }
     }
 

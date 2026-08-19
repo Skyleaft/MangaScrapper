@@ -40,21 +40,89 @@ public sealed class ScrapChapterPagesHandler(
             if (chapter is null)
                 throw new InvalidOperationException($"Chapter '{evt.ChapterId}' not found in manga '{evt.MangaTitle}'.");
 
-            var processedChapter = await scrapper.GetChapterPage(evt.MangaTitle, chapter, ct);
+            var eventBus = scope.ServiceProvider.GetService<IEventBus>();
+            if (eventBus != null)
+            {
+                await eventBus.PublishAsync(
+                    new ChapterScrapingProgressIntegrationEvent(
+                        evt.MangaId,
+                        evt.MangaTitle,
+                        chapterId,
+                        evt.ChapterNumber,
+                        downloadedPages: 0,
+                        totalPages: 0,
+                        percent: 0,
+                        status: "Starting"),
+                    "chapter-scraping-progress",
+                    ct);
+            }
+
+            Func<int, int, Task>? onProgress = null;
+            if (eventBus != null)
+            {
+                onProgress = async (downloaded, total) =>
+                {
+                    var percent = total > 0 ? (int)Math.Round((double)downloaded / total * 100) : 0;
+                    await eventBus.PublishAsync(
+                        new ChapterScrapingProgressIntegrationEvent(
+                            evt.MangaId,
+                            evt.MangaTitle,
+                            chapterId,
+                            evt.ChapterNumber,
+                            downloadedPages: downloaded,
+                            totalPages: total,
+                            percent: percent,
+                            status: "InProgress"),
+                        "chapter-scraping-progress",
+                        ct);
+                };
+            }
+
+            var processedChapter = await scrapper.GetChapterPage(evt.MangaTitle, chapter, ct, onProgress);
 
             if (processedChapter.Pages is not { Count: > 0 })
             {
                 logger.LogWarning(
                     "No pages scraped for Manga={MangaTitle}, Chapter={ChapterNumber}. Skipping update.",
                     evt.MangaTitle, evt.ChapterNumber);
+
+                if (eventBus != null)
+                {
+                    await eventBus.PublishAsync(
+                        new ChapterScrapingProgressIntegrationEvent(
+                            evt.MangaId,
+                            evt.MangaTitle,
+                            chapterId,
+                            evt.ChapterNumber,
+                            downloadedPages: 0,
+                            totalPages: 0,
+                            percent: 0,
+                            status: "Failed"),
+                        "chapter-scraping-progress",
+                        ct);
+                }
+
                 return;
             }
 
             await repo.UpdateChapterPagesAsync(evt.MangaId, chapterId, processedChapter.Pages, ct);
 
-            var eventBus = scope.ServiceProvider.GetService<IEventBus>();
             if (eventBus != null)
             {
+                // Publish progress completed
+                await eventBus.PublishAsync(
+                    new ChapterScrapingProgressIntegrationEvent(
+                        evt.MangaId,
+                        evt.MangaTitle,
+                        chapterId,
+                        evt.ChapterNumber,
+                        downloadedPages: processedChapter.Pages.Count,
+                        totalPages: processedChapter.Pages.Count,
+                        percent: 100,
+                        status: "Completed"),
+                    "chapter-scraping-progress",
+                    ct);
+
                 var scrapedEvent = new ChapterPagesScrapedIntegrationEvent(
                     evt.MangaId,
                     evt.MangaTitle,

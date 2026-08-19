@@ -116,3 +116,46 @@ public sealed record ChapterPagesScrapedIntegrationEvent : IIntegrationEvent
     }
 }
 
+/// <summary>
+/// Integration event published by Scrapper.Worker during scraping to report live progress.
+/// Consumed by MangaScrapper.Api to broadcast real-time progress bars to connected clients.
+/// </summary>
+public sealed record ChapterScrapingProgressIntegrationEvent : IIntegrationEvent
+{
+    public Guid EventId { get; init; } = Guid.CreateVersion7();
+    public DateTime OccurredOn { get; init; } = DateTime.UtcNow;
+    public string EventType { get; init; } = nameof(ChapterScrapingProgressIntegrationEvent);
+
+    public Guid MangaId { get; init; }
+    public string MangaTitle { get; init; } = string.Empty;
+    public Guid ChapterId { get; init; }
+    public double ChapterNumber { get; init; }
+    public int DownloadedPages { get; init; }
+    public int TotalPages { get; init; }
+    public int Percent { get; init; }
+    public string Status { get; init; } = "InProgress"; // "Starting", "InProgress", "Completed", "Failed"
+
+    public ChapterScrapingProgressIntegrationEvent() { }
+
+    public ChapterScrapingProgressIntegrationEvent(
+        Guid mangaId,
+        string mangaTitle,
+        Guid chapterId,
+        double chapterNumber,
+        int downloadedPages,
+        int totalPages,
+        int percent,
+        string status = "InProgress")
+    {
+        MangaId = mangaId;
+        MangaTitle = mangaTitle;
+        ChapterId = chapterId;
+        ChapterNumber = chapterNumber;
+        DownloadedPages = downloadedPages;
+        TotalPages = totalPages;
+        Percent = percent;
+        Status = status;
+    }
+}
+
+

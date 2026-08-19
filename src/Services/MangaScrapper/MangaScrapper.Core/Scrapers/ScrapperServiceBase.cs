@@ -26,7 +26,7 @@ public interface IScrapperService
     Task<Manga> UpdateMangaMetaData(Manga manga, CancellationToken ct = default);
     Task<Manga> ExtractManga(string url, CancellationToken ct, bool scrapChapters = true, string? linkedId = null);
     Task<Manga> GetDetail(string url, CancellationToken ct);
-    Task<Chapter> GetChapterPage(string mangaTitle, Chapter chapter, CancellationToken ct = default);
+    Task<Chapter> GetChapterPage(string mangaTitle, Chapter chapter, CancellationToken ct = default, Func<int, int, Task>? onProgress = null);
     Task QueueChapterScraping(Guid mangaId, string mangaTitle, Chapter chapter, CancellationToken ct = default);
     Task<List<SearchItem>> SearchManga(SearchRequest request, CancellationToken ct);
     Task<List<Page>> GetAllPages(string url, CancellationToken ct = default);
@@ -484,7 +484,7 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
     protected abstract Manga ExtractMangaMetadata(string url);
     protected abstract Task<List<Chapter>> ExtractChaptersMetadata(CancellationToken ct = default);
 
-    public virtual async Task<Chapter> GetChapterPage(string mangaTitle, Chapter chapter, CancellationToken ct = default)
+    public virtual async Task<Chapter> GetChapterPage(string mangaTitle, Chapter chapter, CancellationToken ct = default, Func<int, int, Task>? onProgress = null)
     {
         var url = chapter.Link;
         if (string.IsNullOrWhiteSpace(url)) return chapter;
@@ -495,6 +495,13 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
         var imageNodes = doc.DocumentNode.SelectNodes(Provider.PageSelectors.Images);
         if (imageNodes == null) return chapter;
 
+        var total = imageNodes.Count;
+        var completed = 0;
+        if (onProgress != null && total > 0)
+        {
+            await onProgress(0, total);
+        }
+
         var downloadTasks = imageNodes.Select(async (imgNode, index) =>
         {
             var imageUrl = imgNode.GetAttributeValue("src", string.Empty);
@@ -504,6 +511,11 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
             try
             {
                 var result = await DownloadAndConvertToWebP(mangaTitle, chapter.Number.ToString(CultureInfo.InvariantCulture), imageUrl, index + 1, ct);
+                var current = Interlocked.Increment(ref completed);
+                if (onProgress != null)
+                {
+                    await onProgress(current, total);
+                }
                 return (Index: index, Page: new Page(Guid.CreateVersion7(), imageUrl, result.path, result.size));
             }
             catch (Exception ex)
@@ -546,7 +558,7 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
     public async Task<List<Page>> GetAllPages(string url, CancellationToken ct = default)
     {
         var chapter = new Chapter(ChapterId.New(), 0, url, null, null, DefaultIndonesianLanguage, 0, DateTime.UtcNow);
-        return (await GetChapterPage("temp", chapter, ct)).Pages;
+        return (await GetChapterPage("temp", chapter, ct, null)).Pages;
     }
 
     public async Task<List<ScrapperProvider>> GetAllProvider()

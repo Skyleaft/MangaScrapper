@@ -72,7 +72,7 @@ public class KomikcastService : ScrapperServiceBase
         return chapters;
     }
 
-    public override async Task<Chapter> GetChapterPage(string mangaTitle, Chapter chapter, CancellationToken ct = default)
+    public override async Task<Chapter> GetChapterPage(string mangaTitle, Chapter chapter, CancellationToken ct = default, Func<int, int, Task>? onProgress = null)
     {
         var url = chapter.Link;
         if (string.IsNullOrWhiteSpace(url)) return chapter;
@@ -84,6 +84,13 @@ public class KomikcastService : ScrapperServiceBase
         }
 
         var images = response.Data.Data.Images;
+        var total = images.Count;
+        var completed = 0;
+        if (onProgress != null && total > 0)
+        {
+            await onProgress(0, total);
+        }
+
         var downloadTasks = images.Select(async (imageUrl, index) =>
         {
             if (string.IsNullOrWhiteSpace(imageUrl)) return (Index: index, Page: null as Page);
@@ -97,6 +104,12 @@ public class KomikcastService : ScrapperServiceBase
                     imageUrl,
                     index + 1,
                     ct);
+
+                var current = Interlocked.Increment(ref completed);
+                if (onProgress != null)
+                {
+                    await onProgress(current, total);
+                }
 
                 return (Index: index, Page: new Page(Guid.CreateVersion7(), imageUrl, result.path, result.size));
             }

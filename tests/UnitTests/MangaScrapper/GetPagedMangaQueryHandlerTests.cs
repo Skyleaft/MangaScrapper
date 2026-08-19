@@ -1,7 +1,9 @@
 using FluentAssertions;
 using MangaScrapper.Core.Aggregates;
+using MangaScrapper.Core.Common.Mappings;
 using MangaScrapper.Core.Features.Mangas.GetPagedManga;
 using MangaScrapper.Core.Repositories;
+using Mapster;
 using Moq;
 using NovaStack.SharedKernel.Common;
 using Xunit;
@@ -16,6 +18,7 @@ public class GetPagedMangaQueryHandlerTests
 
     public GetPagedMangaQueryHandlerTests()
     {
+        TypeAdapterConfig.GlobalSettings.Scan(typeof(MangaMappingConfig).Assembly);
         _mangaRepositoryMock = new Mock<IMangaRepository>();
         _searchRepositoryMock = new Mock<IMangaExternalRepository>();
         _handler = new GetPagedMangaQueryHandler(_mangaRepositoryMock.Object,_searchRepositoryMock.Object);

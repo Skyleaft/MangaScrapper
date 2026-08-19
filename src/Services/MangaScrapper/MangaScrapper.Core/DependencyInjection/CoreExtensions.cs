@@ -265,8 +265,8 @@ public static class CoreExtensions
         
         services.AddScoped<SyncStorageHandler>();
         services.AddScoped<SyncQdrantHandler>();
-        services.AddScoped<SyncMeilisearchHandler>();
         services.AddScoped<ChapterPagesScrapedSignalRHandler>();
+        services.AddScoped<ChapterScrapingProgressSignalRHandler>();
 
         if (includeWorkerConsumer)
         {
@@ -293,6 +293,9 @@ public static class CoreExtensions
         {
             services.AddRabbitMqConsumer<ChapterPagesScrapedIntegrationEvent, ChapterPagesScrapedSignalRHandler>(
                 "chapter-pages-scraped");
+                
+            services.AddRabbitMqConsumer<ChapterScrapingProgressIntegrationEvent, ChapterScrapingProgressSignalRHandler>(
+                "chapter-scraping-progress");
         }
 
         return services;

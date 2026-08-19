@@ -256,7 +256,7 @@ public class MangaDexService : ScrapperServiceBase
     // ──────────────────────────────────────────────
     // Chapter pages ────────────────────────────────
 
-    public override async Task<Chapter> GetChapterPage(string mangaTitle, Chapter chapter, CancellationToken ct = default)
+    public override async Task<Chapter> GetChapterPage(string mangaTitle, Chapter chapter, CancellationToken ct = default, Func<int, int, Task>? onProgress = null)
     {
         var url = chapter.Link;
         if (string.IsNullOrWhiteSpace(url))
@@ -273,6 +273,13 @@ public class MangaDexService : ScrapperServiceBase
             .Select(fileName => $"{response.BaseUrl}/data/{response.Chapter.Hash}/{fileName}")
             .ToList();
 
+        var total = imageUrls.Count;
+        var completed = 0;
+        if (onProgress != null && total > 0)
+        {
+            await onProgress(0, total);
+        }
+
         var downloadTasks = imageUrls.Select(async (imageUrl, index) =>
         {
             if (string.IsNullOrWhiteSpace(imageUrl))
@@ -287,6 +294,12 @@ public class MangaDexService : ScrapperServiceBase
                     imageUrl,
                     index + 1,
                     ct);
+
+                var current = Interlocked.Increment(ref completed);
+                if (onProgress != null)
+                {
+                    await onProgress(current, total);
+                }
 
                 return (Index: index, Page: new Page(Guid.CreateVersion7(), imageUrl, result.path, result.size));
             }
