@@ -6,6 +6,7 @@ using MangaScrapper.Core.ValueObjects;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using NovaStack.Contracts.Responses;
 using NovaStack.SharedKernel.Abstractions;
@@ -47,12 +48,12 @@ public sealed class UnregisterFcmTokenEndpoints : IEndpointDefinition
         var group = app.MapGroup("/api/v1/users").WithTags("Users");
 
         group.MapDelete("/fcm-token", async (
-            UnregisterFcmTokenRequest request,
+            [FromBody]UnregisterFcmTokenRequest request,
             IClaimService claimService,
             ISender sender,
             CancellationToken ct) =>
-            {
-                var userIdStr = claimService.GetCurrentUserId();
+        {
+            var userIdStr = claimService.GetCurrentUserId();
             if (string.IsNullOrEmpty(userIdStr) || !Guid.TryParse(userIdStr, out var userId))
                 return Results.Unauthorized();
 

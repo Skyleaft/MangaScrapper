@@ -6,8 +6,10 @@ using MangaScrapper.Core.ValueObjects;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using NovaStack.Contracts.Responses;
+using NovaStack.Infrastructure.Authentication;
 using NovaStack.SharedKernel.Abstractions;
 using NovaStack.SharedKernel.Results;
 
@@ -47,7 +49,7 @@ public sealed class RegisterFcmTokenEndpoints : IEndpointDefinition
         var group = app.MapGroup("/api/v1/users").WithTags("Users");
 
         group.MapPost("/fcm-token", async (
-            RegisterFcmTokenRequest request,
+                [FromBody]RegisterFcmTokenRequest request,
             IClaimService claimService,
             ISender sender,
             CancellationToken ct) =>
