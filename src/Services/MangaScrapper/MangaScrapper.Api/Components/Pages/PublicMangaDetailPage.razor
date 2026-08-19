@@ -1,6 +1,8 @@
 @page "/manga/{mangaId}"
 @rendermode @(new InteractiveServerRenderMode(prerender: true))
+@implements IAsyncDisposable
 @using MediatR
+@using Microsoft.AspNetCore.SignalR.Client
 @using MangaScrapper.Core.Features.Mangas.GetMangaById
 @using MangaScrapper.Core.Features.Mangas.GetAllChapters
 @using NovaStack.Contracts.Responses
@@ -484,16 +486,110 @@
         }
     }
 
+    private HubConnection? _hubConnection;
+    private string? _currentJoinedMangaId;
+
     protected override async Task OnParametersSetAsync()
     {
         if (Guid.TryParse(mangaId, out var id))
         {
             await LoadMangaDetails(id);
+            await UpdateSignalRGroup(id.ToString());
         }
         else
         {
             HasError = true;
             IsLoading = false;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await SetupSignalR();
+        }
+    }
+
+    private async Task SetupSignalR()
+    {
+        try
+        {
+            _hubConnection = new HubConnectionBuilder()
+                .WithUrl(Navigation.ToAbsoluteUri("/hubs/manga"))
+                .WithAutomaticReconnect()
+                .Build();
+
+            _hubConnection.On<System.Text.Json.JsonElement>("ChaptersUpdated", async (payload) =>
+            {
+                if (Guid.TryParse(mangaId, out var currentId))
+                {
+                    var match = false;
+                    if (payload.TryGetProperty("mangaId", out var mangaIdProp))
+                    {
+                        if (mangaIdProp.ValueKind == System.Text.Json.JsonValueKind.String &&
+                            Guid.TryParse(mangaIdProp.GetString(), out var eventMangaId) &&
+                            eventMangaId == currentId)
+                        {
+                            match = true;
+                        }
+                    }
+
+                    if (match)
+                    {
+                        await RefreshChapters(currentId);
+                    }
+                }
+            });
+
+            await _hubConnection.StartAsync();
+
+            if (Guid.TryParse(mangaId, out var id))
+            {
+                await UpdateSignalRGroup(id.ToString());
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[PublicMangaDetailPage] SignalR error: {ex.Message}");
+        }
+    }
+
+    private async Task UpdateSignalRGroup(string newMangaId)
+    {
+        if (_hubConnection is { State: HubConnectionState.Connected })
+        {
+            try
+            {
+                if (!string.IsNullOrEmpty(_currentJoinedMangaId) && _currentJoinedMangaId != newMangaId)
+                {
+                    await _hubConnection.SendAsync("LeaveMangaGroup", _currentJoinedMangaId);
+                }
+
+                await _hubConnection.SendAsync("JoinMangaGroup", newMangaId);
+                _currentJoinedMangaId = newMangaId;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[PublicMangaDetailPage] Error updating SignalR group: {ex.Message}");
+            }
+        }
+    }
+
+    private async Task RefreshChapters(Guid id)
+    {
+        try
+        {
+            var chaptersResult = await Sender.Send(new GetAllChaptersQuery(id));
+            if (chaptersResult.IsSuccess && chaptersResult.Value != null)
+            {
+                Chapters = chaptersResult.Value;
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[PublicMangaDetailPage] Error refreshing chapters via SignalR: {ex.Message}");
         }
     }
 
@@ -564,4 +660,23 @@
         "upcoming" => "bg-violet-500/10 text-violet-600 dark:text-violet-400 border border-violet-500/20",
         _ => "bg-slate-500/10 text-slate-500 dark:text-slate-400 border border-slate-500/20"
     };
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_hubConnection != null)
+        {
+            try
+            {
+                if (!string.IsNullOrEmpty(_currentJoinedMangaId))
+                {
+                    await _hubConnection.SendAsync("LeaveMangaGroup", _currentJoinedMangaId);
+                }
+                await _hubConnection.DisposeAsync();
+            }
+            catch
+            {
+                // Ignore disposal exceptions
+            }
+        }
+    }
 }

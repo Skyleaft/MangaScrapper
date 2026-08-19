@@ -1,6 +1,9 @@
+@implements IAsyncDisposable
 @using System.Net.Http.Json
+@using Microsoft.AspNetCore.SignalR.Client
 @inject HttpClient Http
 @inject IJSRuntime JS
+@inject NavigationManager Navigation
 
 @* Removed top-level if to allow opening animation to trigger immediately *@
 
@@ -674,6 +677,9 @@
     private bool _isClosing = false;
     private int _activeTab = 0;
     
+    private HubConnection? _hubConnection;
+    private Guid _currentJoinedMangaId;
+    
     private bool _isSearchJikanOpen = false;
     private string _jikanSearchQuery = "";
     private List<MangaSummaryResponse> _jikanSearchResults = new();
@@ -697,6 +703,76 @@
         if (MangaId != Guid.Empty)
         {
             await LoadManga();
+            await SetupSignalR();
+        }
+    }
+
+    private async Task SetupSignalR()
+    {
+        try
+        {
+            if (_hubConnection == null)
+            {
+                _hubConnection = new HubConnectionBuilder()
+                    .WithUrl(Navigation.ToAbsoluteUri("/hubs/manga"))
+                    .WithAutomaticReconnect()
+                    .Build();
+
+                _hubConnection.On<System.Text.Json.JsonElement>("ChaptersUpdated", async (payload) =>
+                {
+                    if (MangaId != Guid.Empty)
+                    {
+                        var match = false;
+                        if (payload.TryGetProperty("mangaId", out var mangaIdProp))
+                        {
+                            if (mangaIdProp.ValueKind == System.Text.Json.JsonValueKind.String &&
+                                Guid.TryParse(mangaIdProp.GetString(), out var eventMangaId) &&
+                                eventMangaId == MangaId)
+                            {
+                                match = true;
+                            }
+                        }
+
+                        if (match)
+                        {
+                            await RefreshChapters();
+                        }
+                    }
+                });
+
+                await _hubConnection.StartAsync();
+            }
+
+            if (_hubConnection.State == HubConnectionState.Connected)
+            {
+                if (_currentJoinedMangaId != Guid.Empty && _currentJoinedMangaId != MangaId)
+                {
+                    await _hubConnection.SendAsync("LeaveMangaGroup", _currentJoinedMangaId.ToString());
+                }
+                await _hubConnection.SendAsync("JoinMangaGroup", MangaId.ToString());
+                _currentJoinedMangaId = MangaId;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[MangaDetailModal] SignalR error: {ex.Message}");
+        }
+    }
+
+    private async Task RefreshChapters()
+    {
+        try
+        {
+            var chapters = await Http.GetApiDataAsync<List<ChapterResponse>>($"/api/v1/manga/{MangaId}/chapters");
+            if (chapters != null)
+            {
+                Chapters = chapters;
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[MangaDetailModal] Error refreshing chapters via SignalR: {ex.Message}");
         }
     }
 
@@ -1152,5 +1228,24 @@
         public string? ChapterProviderIcon { get; set; }
         public DateTime UploadDate { get; set; }
         public int TotalView { get; set; }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_hubConnection != null)
+        {
+            try
+            {
+                if (_currentJoinedMangaId != Guid.Empty)
+                {
+                    await _hubConnection.SendAsync("LeaveMangaGroup", _currentJoinedMangaId.ToString());
+                }
+                await _hubConnection.DisposeAsync();
+            }
+            catch
+            {
+                // Ignore disposal exceptions
+            }
+        }
     }
 }

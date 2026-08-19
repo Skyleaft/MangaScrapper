@@ -14,6 +14,8 @@ using Scalar.AspNetCore;
 using Serilog;
 using Serilog.Events;
 
+using MangaScrapper.Core.Hubs;
+
 // ── Bootstrap logger (captures startup errors) ───────────────────────────────
 LoggingExtensions.BootstrapLogger();
 
@@ -65,7 +67,9 @@ try
         "MangaScrapper.Api");
 
     // ── Core VSA Layer (CQRS, Scrapers, Repositories, Background Jobs, Messaging) ──
-    builder.Services.AddMangaScrapperCore(builder.Configuration);
+    builder.Services.AddMangaScrapperCore(
+        builder.Configuration,
+        includeSignalRConsumer: true);
     builder.Services.AddNovaStackMappings(typeof(CoreExtensions).Assembly);
 
     // ── CORS ─────────────────────────────────────────────────────────────────
@@ -177,6 +181,7 @@ try
     app.MapOpenApi(); // Access via /openapi/v1.json
     app.MapScalarApiReference();
     app.MapMangaScrapperEndpoints();
+    app.MapHub<MangaHub>("/hubs/manga");
     app.MapHealthChecks("/health");
 
     app.MapRazorComponents<App>()

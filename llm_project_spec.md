@@ -9,7 +9,7 @@ This document provides a token-efficient, high-density architectural and coding 
 - **Runtime & Language**: .NET 10.0, C# 13.0
 - **Architectural Style**: Vertical Slice Architecture (VSA) — Unified Two-Tier Structure (`MangaScrapper.Core` + Thin Host Executables)
 - **CQRS & Mediator**: MediatR 14 (with logging and validation pipeline behaviors)
-- **APIs**: ASP.NET Core Minimal APIs with automatic endpoint discovery (`IEndpointDefinition`)
+- **APIs & Real-Time**: ASP.NET Core Minimal APIs with automatic endpoint discovery (`IEndpointDefinition`) & **SignalR** Hubs (`MangaHub`)
 - **Database & Persistence**: MongoDB 8 via `MongoDB.Driver` 3.x, Meilisearch 0.17 (full-text search), Qdrant 1.13 (vector search & embeddings)
 - **Object Mapping**: Mapster 10.x (centralized in `MangaInfrastructureMapping.cs` & `MangaMappingConfig.cs`)
 - **Validation**: FluentValidation 12
@@ -24,7 +24,6 @@ This document provides a token-efficient, high-density architectural and coding 
 ## 📂 Project Structure
 
 ```text
-NewArchitecture/
 ├── src/
 │   ├── BuildingBlocks/
 │   │   ├── NovaStack.SharedKernel/        # Result<T>, Error, ICommand/IQuery, Base Entity, Result extensions
@@ -33,41 +32,31 @@ NewArchitecture/
 │   │
 │   ├── Services/MangaScrapper/
 │   │   ├── MangaScrapper.Core/            # Unified VSA Core Library Project
-│   │   │   ├── Features/                  # 26 Vertical Feature Slices (Co-located Request, Handler, Endpoint)
-│   │   │   │   ├── Mangas/                # GetPagedManga, GetMangaById, GetChapter, DeleteManga, UpdateManga
+│   │   │   ├── Features/                  # 30 Vertical Feature Slices (Co-located Request, Handler, Endpoint)
+│   │   │   │   ├── Mangas/                # GetPagedManga, GetMangaById, GetAllChapters, DeleteManga, UpdateManga
 │   │   │   │   ├── ProviderScrapers/      # Komiku, Kiryuu, Komikcast, MangaDex slices
 │   │   │   │   ├── Scrapper/              # GetAllProviders, ScrapChapterPages, GetQueue, FixFile
 │   │   │   │   ├── UserLibrary/           # AddOrUpdateUserLibrary, GetUserLibrary, RemoveUserLibrary
 │   │   │   │   ├── UserProgression/       # UpdateUserProgression, GetUserProgression, GetMangaProgression
 │   │   │   │   ├── Users/                 # GetPagedUser, GetUserById, PatchUserActivity
 │   │   │   │   ├── Providers/             # GetProvider
-│   │   │   │   ├── Dashboard/             # GetStatistics, SyncStorage
+│   │   │   │   ├── Dashboard/             # GetStatistics, SyncStorage, SyncQdrant, SyncMeilisearch
 │   │   │   │   ├── Images/                # ProxyImage
 │   │   │   │   └── RecurringJobs/         # GetRecurringJobs, CreateOrUpdate, Delete, Trigger
 │   │   │   │
-│   │   │   ├── Domain/                    # Domain Layer
-│   │   │   │   ├── Aggregates/            # Manga (Aggregate Root), Chapter, Page, User, UserLibrary, UserProgression
-│   │   │   │   ├── ValueObjects/          # MangaId, UserId, ChapterId, PageId
-│   │   │   │   ├── DomainEvents/          # ChapterAddedDomainEvent, MangaCreatedDomainEvent
-│   │   │   │   └── Repositories/          # IMangaRepository, IUserRepository, IUserLibraryRepository
-│   │   │   │
-│   │   │   ├── Scrapers/                  # Scraper Provider Implementations
-│   │   │   │   ├── Abstractions/          # ScrapperServiceBase, IScrapperService, IScrapperRepository
-│   │   │   │   ├── Komiku/                # KomikuService
-│   │   │   │   ├── Kiryuu/                # KiryuuService
-│   │   │   │   ├── Komikcast/             # KomikcastService, KomikcastModel
-│   │   │   │   └── MangaDex/              # MangaDexService, MangaDexModel
-│   │   │   │
+│   │   │   ├── Domain/                    # Domain Layer (Aggregates, Value Objects, Domain Events)
+│   │   │   ├── Scrapers/                  # Scraper Provider Implementations (Komiku, Kiryuu, Komikcast, MangaDex)
 │   │   │   ├── Persistence/               # Mongo DbContext, BSON Document schemas (MangaDocument, etc.)
 │   │   │   ├── Repositories/              # MongoMangaRepository, MongoUserRepository, MongoUserLibraryRepository
 │   │   │   ├── Services/                  # MeilisearchService, QdrantService, DiscordWebhookService, StorageSyncService
+│   │   │   ├── Hubs/                      # SignalR Hubs (MangaHub)
 │   │   │   ├── BackgroundJobs/            # Hangfire background jobs (MeiliSyncJob, DeleteMangaJob, LatestChapterScrapingJob)
-│   │   │   ├── Messaging/                 # RabbitMQ integration event handlers (ScrapChapterPagesHandler, DeleteMangaHandler)
+│   │   │   ├── Messaging/                 # RabbitMQ integration event handlers (ScrapChapterPagesHandler, ChapterPagesScrapedSignalRHandler)
 │   │   │   ├── Security/                  # Custom Auth validation & JwtAuthTokenService
 │   │   │   └── DependencyInjection/       # CoreExtensions (AddMangaScrapperCore & MapMangaScrapperEndpoints)
 │   │   │
-│   │   ├── MangaScrapper.Api/             # Thin Web API Host entry point (Program.cs, Swagger/Scalar, Auth)
-│   │   └── MangaPanel.Client/             # Blazor WebAssembly Frontend Client
+│   │   ├── MangaScrapper.Api/             # Thin Web API Host entry point (Program.cs, Swagger/Scalar, Auth, SignalR mapping)
+│   │   └── MangaPanel.Client/             # Blazor WebAssembly Frontend Client (SignalR Client, TailWind UI)
 │   │
 │   └── Workers/
 │       └── Scrapper.Worker/               # Thin Background Worker Host entry point (Hangfire Server & RabbitMQ Consumer)
@@ -99,8 +88,11 @@ All services, MediatR handlers, validators, scrapers, background jobs, messaging
 
 - **API Host (`MangaScrapper.Api/Program.cs`)**:
   ```csharp
-  builder.Services.AddMangaScrapperCore(builder.Configuration);
+  builder.Services.AddMangaScrapperCore(
+      builder.Configuration,
+      includeSignalRConsumer: true);
   app.MapMangaScrapperEndpoints();
+  app.MapHub<MangaHub>("/hubs/manga");
   ```
 - **Worker Host (`Scrapper.Worker/Program.cs`)**:
   ```csharp
@@ -110,9 +102,21 @@ All services, MediatR handlers, validators, scrapers, background jobs, messaging
       includeRabbitMqConsumer: true);
   ```
 
+> [!NOTE]
+> `includeSignalRConsumer: true` enables ONLY the SignalR notification consumer on the API host, preventing the API from consuming heavy worker job queues. `includeRabbitMqConsumer: true` on the worker enables background scraping task queues.
+
 ---
 
-### 3. Domain Model Centralization & Scraper DDD Pattern
+### 3. Real-Time Cross-Service Notifications (SignalR + RabbitMQ)
+
+When background scraping tasks finish in `Scrapper.Worker`:
+1. `ScrapChapterPagesHandler` updates MongoDB and publishes `ChapterPagesScrapedIntegrationEvent` to RabbitMQ queue `"chapter-pages-scraped"`.
+2. `ChapterPagesScrapedSignalRHandler` in `MangaScrapper.Api` consumes the event and broadcasts `"ChaptersUpdated"` via `IHubContext<MangaHub>` to group `$"manga-{mangaId}"` and all connected clients.
+3. Blazor UI clients (`PublicMangaDetailPage.razor`, `MangaDetailModal.razor`) listen on `/hubs/manga` and automatically re-query `GetAllChaptersQuery` without full-page reloads.
+
+---
+
+### 4. Domain Model Centralization & Scraper DDD Pattern
 
 1. **Domain Aggregates**: All business rules, domain operations, and scraper abstractions center on the `Manga` Domain Aggregate (`MangaScrapper.Core.Aggregates.Manga`), `Chapter`, and `Page`.
 2. **Domain-Driven Scrapers**: Scraper implementations (`KomikuService`, `KiryuuService`, `KomikcastService`, `MangaDexService`) construct and return `Manga`, `Chapter`, and `Page` domain aggregate instances instead of BSON document models.
@@ -123,7 +127,7 @@ All services, MediatR handlers, validators, scrapers, background jobs, messaging
 
 ---
 
-### 4. Automatic Minimal API Endpoint Registration
+### 5. Automatic Minimal API Endpoint Registration
 
 Endpoints are automatically discovered via reflection at startup by `MapMangaScrapperEndpoints()` scanning `MangaScrapper.Core`:
 ```csharp
@@ -145,7 +149,7 @@ public static WebApplication MapMangaScrapperEndpoints(this WebApplication app)
 
 ---
 
-### 5. Railway-Oriented Error Handling (`Result<T>`)
+### 6. Railway-Oriented Error Handling (`Result<T>`)
 
 Do NOT throw domain exceptions for business validation failures. Use `Result.Success()` or `Result.Failure(Error)`:
 
@@ -158,7 +162,7 @@ Error.Validation("Request.Invalid", "Search parameter cannot be empty.");
 
 ---
 
-### 6. Unique Identifier Generation
+### 7. Unique Identifier Generation
 
 Always use `Guid.CreateVersion7()` instead of `Guid.NewGuid()` when generating new GUIDs for domain aggregates, events, and documents. This ensures sequential, time-sortable identifiers which provide better database indexing performance.
 
@@ -170,13 +174,13 @@ To verify changes in this solution:
 
 - **Build Solution**:
   ```bash
-  dotnet build NewArchitecture/MangaScrapperStack.sln
+  dotnet build MangaScrapperStack.sln
   ```
 - **Run Unit Tests**:
   ```bash
-  dotnet test NewArchitecture/tests/UnitTests/UnitTests.csproj
+  dotnet test tests/UnitTests/UnitTests.csproj
   ```
 - **Run Architecture Tests**:
   ```bash
-  dotnet test NewArchitecture/tests/ArchitectureTests/ArchitectureTests.csproj
+  dotnet test tests/ArchitectureTests/ArchitectureTests.csproj
   ```

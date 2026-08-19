@@ -46,7 +46,8 @@ public static class CoreExtensions
         this IServiceCollection services,
         IConfiguration configuration,
         bool includeHangfireServer = false,
-        bool includeRabbitMqConsumer = false)
+        bool includeRabbitMqConsumer = false,
+        bool includeSignalRConsumer = false)
     {
         var assembly = typeof(CoreExtensions).Assembly;
 
@@ -61,6 +62,9 @@ public static class CoreExtensions
         // FluentValidation
         services.AddValidatorsFromAssembly(assembly);
 
+        // SignalR Real-Time Notifications
+        services.AddSignalR();
+
         // Core Subsystems
         services
             .AddMongoDb(configuration)
@@ -68,7 +72,7 @@ public static class CoreExtensions
             .AddExternalServices(configuration)
             .AddScraperServices(configuration)
             .AddHangfireWithMongo(configuration, includeHangfireServer)
-            .AddRabbitMqMessaging(configuration, includeRabbitMqConsumer)
+            .AddRabbitMqMessaging(configuration, includeRabbitMqConsumer, includeSignalRConsumer)
             .AddSecurityServices()
             .AddFirebaseApp(configuration);
 
@@ -248,7 +252,8 @@ public static class CoreExtensions
     private static IServiceCollection AddRabbitMqMessaging(
         this IServiceCollection services,
         IConfiguration configuration,
-        bool includeConsumer)
+        bool includeWorkerConsumer,
+        bool includeSignalRConsumer)
     {
         services.Configure<MessagingOptions>(configuration.GetSection(MessagingOptions.SectionName));
 
@@ -261,8 +266,9 @@ public static class CoreExtensions
         services.AddScoped<SyncStorageHandler>();
         services.AddScoped<SyncQdrantHandler>();
         services.AddScoped<SyncMeilisearchHandler>();
+        services.AddScoped<ChapterPagesScrapedSignalRHandler>();
 
-        if (includeConsumer)
+        if (includeWorkerConsumer)
         {
             services.AddRabbitMqConsumer<ScrapChapterPagesIntegrationEvent, ScrapChapterPagesHandler>(
                 "scrape-chapter-pages");
@@ -281,6 +287,12 @@ public static class CoreExtensions
                 
             services.AddRabbitMqConsumer<SyncMeilisearchIntegrationEvent, SyncMeilisearchHandler>(
                 "sync-meilisearch");
+        }
+
+        if (includeSignalRConsumer)
+        {
+            services.AddRabbitMqConsumer<ChapterPagesScrapedIntegrationEvent, ChapterPagesScrapedSignalRHandler>(
+                "chapter-pages-scraped");
         }
 
         return services;

@@ -26,13 +26,13 @@ For the mobile-first reading experience, check out the [Open Manga Reader](https
   - **Vector Similarity Search**: Find semantically similar manga based on content embeddings with support for status, type, and genre payload filters.
   - **Preference Recommendations**: Centroid-based history recommendations and advanced multi-item recommendations using native positive (liked) and negative (disliked) example vector arithmetic.
 - **Smart Background Processing**: Integration with **Hangfire** (MongoDB storage) for reliable background scraping jobs and recurring sync tasks.
-- **Event Bus Messaging**: Native **RabbitMQ** event bus integration for asynchronous chapter page scraping and deletion tasks.
+- **Event Bus Messaging & Real-Time SignalR**: Native **RabbitMQ** event bus integration for asynchronous background tasks coupled with **ASP.NET Core SignalR** (`/hubs/manga`) for pushing instant real-time chapter scraping completion events (`ChaptersUpdated`) to connected clients.
 - **Discord Notifications**: Webhook-based Discord notifications for scraping events and job completions.
 - **User Library & Progression**: Track per-user manga libraries and reading progression (chapter-level tracking) backed by custom auth and Firebase authentication.
 - **Admin Dashboard**: Real-time statistics, monthly scrap charts, and recent activity monitoring.
 - **Advanced Management**:
   - Dynamic manga list with pagination, multi-genre filtering, and advanced sorting.
-  - Interactive Manga Detail Modal for editing metadata and managing chapters.
+  - Interactive Manga Detail Modal for editing metadata and managing chapters with live SignalR chapter auto-refresh.
   - Manual `TotalView` overrides and chapter availability indicators.
 - **Optimized Storage**: Automatic image conversion using **SkiaSharp** and centralized local storage with optional sync service.
 - **Observability**: Full **OpenTelemetry** integration with Prometheus metrics scraping (`/metrics`), OTLP trace/metric/log export, and runtime instrumentation.
@@ -46,7 +46,7 @@ For the mobile-first reading experience, check out the [Open Manga Reader](https
 - **Runtime & Language**: .NET 10.0, C# 13.0
 - **Architectural Style**: **Vertical Slice Architecture (VSA)** & **Domain-Driven Design (DDD)** — Unified Two-Tier Structure (`MangaScrapper.Core` + Thin Host Executables)
 - **CQRS & Mediator**: MediatR 14 (with logging and validation pipeline behaviors)
-- **APIs**: ASP.NET Core Minimal APIs with reflection-based endpoint discovery (`IEndpointDefinition`)
+- **APIs & Real-Time**: ASP.NET Core Minimal APIs with reflection-based endpoint discovery (`IEndpointDefinition`) & **SignalR** Hubs (`MangaHub`)
 - **Database & Persistence**: MongoDB 8 via `MongoDB.Driver` 3.x, Meilisearch 0.17 (full-text search), Qdrant 1.13 (vector search)
 - **Domain Aggregates**: Centralized domain aggregates (`Manga`, `Chapter`, `Page`) produced directly by provider scrapers and mapped transparently to BSON documents for MongoDB persistence.
 - **Identifier Generation**: Standardized on UUIDv7 (`Guid.CreateVersion7()`) for sequential, time-sortable database identifiers to improve index locality.
@@ -60,6 +60,7 @@ For the mobile-first reading experience, check out the [Open Manga Reader](https
 ### Frontend (MangaPanel — Blazor WASM)
 
 - **Blazor WebAssembly** (.NET 10)
+- **Microsoft.AspNetCore.SignalR.Client** for real-time chapter update notifications
 - **Blazored.LocalStorage** for client-side state persistence
 - **Cookie Handler** for transparent cookie forwarding from WASM to the API
 - **JWT / Custom Auth State Provider** for Blazor auth integration
@@ -97,8 +98,9 @@ NewArchitecture/
 │   │   │   ├── Persistence/               # Mongo DbContext, BSON Document schemas (MangaDocument, etc.)
 │   │   │   ├── Repositories/              # MongoMangaRepository, MongoUserRepository, MongoUserLibraryRepository
 │   │   │   ├── Services/                  # MeilisearchService, QdrantService, DiscordWebhookService, StorageSyncService
+│   │   │   ├── Hubs/                      # SignalR Real-Time Hubs (MangaHub)
 │   │   │   ├── BackgroundJobs/            # Hangfire background jobs (MeiliSyncJob, DeleteMangaJob, LatestChapterScrapingJob)
-│   │   │   ├── Messaging/                 # RabbitMQ integration event handlers (ScrapChapterPagesHandler, DeleteMangaHandler)
+│   │   │   ├── Messaging/                 # RabbitMQ integration event handlers (ScrapChapterPagesHandler, ChapterPagesScrapedSignalRHandler, DeleteMangaHandler)
 │   │   │   ├── Security/                  # Custom Auth validation & JwtAuthTokenService
 │   │   │   └── DependencyInjection/       # CoreExtensions (AddMangaScrapperCore & MapMangaScrapperEndpoints)
 │   │   │
@@ -172,20 +174,20 @@ Main configuration is defined in `appsettings.json` within `MangaScrapper.Api` a
 1. **Clone the repository**
 2. **Build the solution**:
    ```powershell
-   dotnet build NewArchitecture/MangaScrapperStack.sln
+   dotnet build MangaScrapperStack.sln
    ```
 3. **Run Unit & Architecture Tests**:
    ```powershell
-   dotnet test NewArchitecture/tests/UnitTests/UnitTests.csproj
-   dotnet test NewArchitecture/tests/ArchitectureTests/ArchitectureTests.csproj
+   dotnet test tests/UnitTests/UnitTests.csproj
+   dotnet test tests/ArchitectureTests/ArchitectureTests.csproj
    ```
 4. **Run the API Host**:
    ```powershell
-   dotnet run --project NewArchitecture/src/Services/MangaScrapper/MangaScrapper.Api/MangaScrapper.Api.csproj
+   dotnet run --project src/Services/MangaScrapper/MangaScrapper.Api/MangaScrapper.Api.csproj
    ```
 5. **Run the Background Worker Host**:
    ```powershell
-   dotnet run --project NewArchitecture/src/Workers/Scrapper.Worker/Scrapper.Worker.csproj
+   dotnet run --project src/Workers/Scrapper.Worker/Scrapper.Worker.csproj
    ```
 
 ### 🐳 Docker Compose

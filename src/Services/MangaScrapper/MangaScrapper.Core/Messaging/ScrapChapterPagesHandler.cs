@@ -52,6 +52,22 @@ public sealed class ScrapChapterPagesHandler(
 
             await repo.UpdateChapterPagesAsync(evt.MangaId, chapterId, processedChapter.Pages, ct);
 
+            var eventBus = scope.ServiceProvider.GetService<IEventBus>();
+            if (eventBus != null)
+            {
+                var scrapedEvent = new ChapterPagesScrapedIntegrationEvent(
+                    evt.MangaId,
+                    evt.MangaTitle,
+                    chapterId,
+                    evt.ChapterNumber,
+                    processedChapter.Pages.Count);
+
+                await eventBus.PublishAsync(scrapedEvent, "chapter-pages-scraped", ct);
+                logger.LogInformation(
+                    "Published ChapterPagesScrapedIntegrationEvent for Manga={MangaTitle}, Chapter={ChapterNumber}",
+                    evt.MangaTitle, evt.ChapterNumber);
+            }
+
             logger.LogInformation(
                 "Finished ScrapChapterPages: Manga={MangaTitle}, Chapter={ChapterNumber}, Pages={PageCount}",
                 evt.MangaTitle, evt.ChapterNumber, processedChapter.Pages.Count);

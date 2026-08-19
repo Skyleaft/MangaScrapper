@@ -82,3 +82,37 @@ public sealed record DeleteChapterIntegrationEvent : IIntegrationEvent
         ChapterNumber = chapterNumber;
     }
 }
+
+/// <summary>
+/// Integration event published by Scrapper.Worker when chapter pages have been scraped and updated in MongoDB.
+/// Consumed by MangaScrapper.Api to broadcast real-time SignalR notifications to connected clients.
+/// </summary>
+public sealed record ChapterPagesScrapedIntegrationEvent : IIntegrationEvent
+{
+    public Guid EventId { get; init; } = Guid.CreateVersion7();
+    public DateTime OccurredOn { get; init; } = DateTime.UtcNow;
+    public string EventType { get; init; } = nameof(ChapterPagesScrapedIntegrationEvent);
+
+    public Guid MangaId { get; init; }
+    public string MangaTitle { get; init; } = string.Empty;
+    public Guid ChapterId { get; init; }
+    public double ChapterNumber { get; init; }
+    public int PageCount { get; init; }
+
+    public ChapterPagesScrapedIntegrationEvent() { }
+
+    public ChapterPagesScrapedIntegrationEvent(
+        Guid mangaId,
+        string mangaTitle,
+        Guid chapterId,
+        double chapterNumber,
+        int pageCount)
+    {
+        MangaId = mangaId;
+        MangaTitle = mangaTitle;
+        ChapterId = chapterId;
+        ChapterNumber = chapterNumber;
+        PageCount = pageCount;
+    }
+}
+
