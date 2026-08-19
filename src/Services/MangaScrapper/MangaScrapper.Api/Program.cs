@@ -140,16 +140,15 @@ try
     {
         app.UseWebAssemblyDebugging();
     }
-    
-    // openapi
-    app.MapOpenApi(); // Access via /openapi/v1.json
-    app.MapScalarApiReference();
 
-    app.UseHttpsRedirection();
-    app.UseStaticFiles();
     app.UseCors("DefaultCors");
     app.UseAuthentication();
     app.UseAuthorization();
+    app.UseAntiforgery();
+
+    // ── Static Files & Assets ────────────────────────────────────────────────
+    app.MapStaticAssets();
+    app.UseStaticFiles();
 
     // ── Static File Serving (Local Image Storage) ────────────────────────────
     var imageStoragePath = builder.Configuration["Scrapper:ImageStoragePath"] ?? "images";
@@ -175,14 +174,10 @@ try
     });
 
     // ── Endpoints ─────────────────────────────────────────────────────────────
-    // Scan MangaScrapper.Application assembly for all IEndpointDefinition implementations
+    app.MapOpenApi(); // Access via /openapi/v1.json
+    app.MapScalarApiReference();
     app.MapMangaScrapperEndpoints();
-
-    // Health checks
     app.MapHealthChecks("/health");
-
-    app.UseAntiforgery();
-    app.MapStaticAssets();
 
     app.MapRazorComponents<App>()
         .AddInteractiveServerRenderMode()
