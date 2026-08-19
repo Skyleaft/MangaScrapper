@@ -141,13 +141,7 @@ try
         app.UseWebAssemblyDebugging();
     }
 
-    app.UseCors("DefaultCors");
-    app.UseAuthentication();
-    app.UseAuthorization();
-    app.UseAntiforgery();
-
-    // ── Static Files & Assets ────────────────────────────────────────────────
-    app.MapStaticAssets();
+    // ── Static Files (Serves physical wwwroot including _framework files) ────
     app.UseStaticFiles();
 
     // ── Static File Serving (Local Image Storage) ────────────────────────────
@@ -167,13 +161,19 @@ try
         RequestPath = "/images"
     });
 
+    app.UseCors("DefaultCors");
+    app.UseAuthentication();
+    app.UseAuthorization();
+    app.UseAntiforgery();
+
     // ── Hangfire Dashboard ───────────────────────────────────────────────────
     app.UseHangfireDashboard("/hangfire", new DashboardOptions
     {
         Authorization = new[] { new HangfireAuthFilter() }
     });
 
-    // ── Endpoints ─────────────────────────────────────────────────────────────
+    // ── Endpoints & Static Assets ─────────────────────────────────────────────
+    app.MapStaticAssets();
     app.MapOpenApi(); // Access via /openapi/v1.json
     app.MapScalarApiReference();
     app.MapMangaScrapperEndpoints();
