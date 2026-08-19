@@ -23,7 +23,7 @@ public sealed class GetPagedUserQueryHandler(IUserRepository userRepository) : I
         var data = await userRepository.GetPagedAsync(request.Search, request.SortBy ?? "createdAt", request.OrderBy ?? "desc", request.Page, request.PageSize, cancellationToken);
         var mapped = data.Items.Select(usr =>
         {
-            return new UserResponse(usr.Id.Value, usr.Username, usr.Email, usr.Roles, usr.IsActive, usr.FirebaseUid, usr.CreatedAt,usr.LastActiveAt);
+            return new UserResponse(usr.Id.Value, usr.Username, usr.Email, usr.Roles, usr.IsActive, usr.FirebaseUid, usr.CreatedAt, usr.LastActiveAt, usr.ClientIpAddress);
         });
 
         return PagedResponse<UserResponse>.Create(

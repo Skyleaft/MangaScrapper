@@ -12,11 +12,12 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using NovaStack.Contracts.Responses;
+using NovaStack.Infrastructure.Http;
 using NovaStack.SharedKernel.Results;
 
 namespace MangaScrapper.Core.Features.Auth.Register;
 
-public record RegisterCommand(string Username, string Password, string Email) : ICommand<LoginResponse>;
+public record RegisterCommand(string Username, string Password, string Email, string? ClientIpAddress = null) : ICommand<LoginResponse>;
 
 public sealed class RegisterCommandValidator : AbstractValidator<RegisterCommand>
 {
@@ -49,7 +50,9 @@ internal sealed class RegisterCommandHandler(
             command.Username,
             Argon2.Hash(command.Password),
             command.Email,
-            new List<string> { role });
+            new List<string> { role },
+            lastActiveAt: DateTime.UtcNow,
+            clientIpAddress: command.ClientIpAddress);
 
         await userRepository.AddAsync(user, ct);
 
@@ -79,7 +82,8 @@ public sealed class RegisterEndpoint : IEndpointDefinition
         HttpContext httpContext,
         CancellationToken ct)
     {
-        var command = new RegisterCommand(request.Username, request.Password, request.Email);
+        var clientIp = httpContext.GetClientIpAddress();
+        var command = new RegisterCommand(request.Username, request.Password, request.Email, clientIp);
         var result = await sender.Send(command, ct);
 
         if (!result.IsSuccess)

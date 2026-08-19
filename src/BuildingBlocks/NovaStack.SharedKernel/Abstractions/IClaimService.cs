@@ -21,4 +21,10 @@ public interface IClaimService
     /// Gets the current user's roles.
     /// </summary>
     IReadOnlyList<string> GetCurrentUserRoles();
+
+    /// <summary>
+    /// Gets the client IP address of the current request.
+    /// </summary>
+    string? GetClientIpAddress();
 }
+

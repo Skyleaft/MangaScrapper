@@ -3,8 +3,10 @@ using Hangfire;
 using MangaScrapper.Api.Components;
 using MangaScrapper.Core.DependencyInjection;
 using MangaScrapper.Core.Security;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.FileProviders;
 using NovaStack.Infrastructure.DependencyInjection;
+using NovaStack.Infrastructure.Http;
 using NovaStack.Infrastructure.Logging;
 using NovaStack.Infrastructure.Observability;
 using NovaStack.Infrastructure.Persistence.Options;
@@ -34,6 +36,14 @@ try
 
     // ── Serilog ──────────────────────────────────────────────────────────────
     builder.Host.UseNovaStackSerilog();
+
+    // ── Forwarded Headers (Reverse Proxy support) ─────────────────────────────
+    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+        options.KnownIPNetworks.Clear();
+        options.KnownProxies.Clear();
+    });
 
     // ── OpenAPI / Swagger ────────────────────────────────────────────────────
     builder.Services.AddOpenApi();
@@ -79,6 +89,7 @@ try
     var app = builder.Build();
 
     // ── Middleware ────────────────────────────────────────────────────────────
+    app.UseForwardedHeaders();
     app.UseExceptionHandler();
     app.UseSerilogRequestLogging(options =>
     {
@@ -114,7 +125,7 @@ try
 
         options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
         {
-            diagnosticContext.Set("ClientIp", httpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown");
+            diagnosticContext.Set("ClientIp", httpContext.GetClientIpAddress() ?? "Unknown");
             diagnosticContext.Set("UserAgent", httpContext.Request.Headers.UserAgent.ToString());
             diagnosticContext.Set("UserId", httpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "Anonymous");
             diagnosticContext.Set("Endpoint", httpContext.GetEndpoint()?.DisplayName ?? "None");

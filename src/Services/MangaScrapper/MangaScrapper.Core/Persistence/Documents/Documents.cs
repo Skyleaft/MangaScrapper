@@ -101,6 +101,8 @@ public class UserDocument
     [BsonDateTimeOptions(Kind = DateTimeKind.Utc)]
     [BsonIgnoreIfNull]
     public DateTime? LastActiveAt { get; set; }
+    [BsonIgnoreIfNull]
+    public string? ClientIpAddress { get; set; }
 }
 
 public class UserLibraryDocument

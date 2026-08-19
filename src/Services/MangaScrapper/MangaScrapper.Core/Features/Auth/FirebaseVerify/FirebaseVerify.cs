@@ -11,11 +11,12 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using NovaStack.Contracts.Responses;
+using NovaStack.Infrastructure.Http;
 using NovaStack.SharedKernel.Results;
 
 namespace MangaScrapper.Core.Features.Auth.FirebaseVerify;
 
-public record FirebaseVerifyCommand(string IdToken) : ICommand<LoginResponse>;
+public record FirebaseVerifyCommand(string IdToken, string? ClientIpAddress = null) : ICommand<LoginResponse>;
 
 internal sealed class FirebaseVerifyCommandHandler(
     IUserRepository userRepository,
@@ -70,14 +71,26 @@ internal sealed class FirebaseVerifyCommandHandler(
                 string.Empty, // no password for Firebase users
                 email,
                 new List<string> { "user" },
-                firebaseUid: uid);
+                firebaseUid: uid,
+                lastActiveAt: DateTime.UtcNow,
+                clientIpAddress: command.ClientIpAddress);
 
             await userRepository.AddAsync(user, ct);
         }
-        else if (string.IsNullOrEmpty(user.FirebaseUid))
+        else
         {
-            // Link existing email/password account with Firebase UID
-            user.FirebaseUid = uid;
+            if (string.IsNullOrEmpty(user.FirebaseUid))
+            {
+                // Link existing email/password account with Firebase UID
+                user.FirebaseUid = uid;
+            }
+
+            user.LastActiveAt = DateTime.UtcNow;
+            if (!string.IsNullOrWhiteSpace(command.ClientIpAddress))
+            {
+                user.ClientIpAddress = command.ClientIpAddress;
+            }
+
             await userRepository.UpdateAsync(user, ct);
         }
 
@@ -107,7 +120,8 @@ public sealed class FirebaseVerifyEndpoint : IEndpointDefinition
         HttpContext httpContext,
         CancellationToken ct)
     {
-        var command = new FirebaseVerifyCommand(request.IdToken);
+        var clientIp = httpContext.GetClientIpAddress();
+        var command = new FirebaseVerifyCommand(request.IdToken, clientIp);
         var result = await sender.Send(command, ct);
 
         if (!result.IsSuccess)

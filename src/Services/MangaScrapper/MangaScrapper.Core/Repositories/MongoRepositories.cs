@@ -96,7 +96,8 @@ public class MongoUserRepository(MangaMongoDbContext dbContext) : IUserRepositor
             doc.IsActive,
             doc.FirebaseUid,
             doc.CreatedAt,
-            doc.LastActiveAt);
+            doc.LastActiveAt,
+            doc.ClientIpAddress);
     }
 
     private static UserDocument MapToDocument(User user)
@@ -111,7 +112,8 @@ public class MongoUserRepository(MangaMongoDbContext dbContext) : IUserRepositor
             IsActive = user.IsActive,
             FirebaseUid = user.FirebaseUid,
             CreatedAt = user.CreatedAt,
-            LastActiveAt = user.LastActiveAt
+            LastActiveAt = user.LastActiveAt,
+            ClientIpAddress = user.ClientIpAddress
         };
     }
 }

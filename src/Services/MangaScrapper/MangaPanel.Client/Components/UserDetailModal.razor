@@ -319,6 +319,11 @@
                                 </div>
 
                                 <div class="p-3 bg-bg-app rounded-xl border border-border-main/50">
+                                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Last IP Address</span>
+                                    <p class="font-mono text-text-main font-bold break-all">@(string.IsNullOrWhiteSpace(User.ClientIpAddress) ? "Unknown" : User.ClientIpAddress)</p>
+                                </div>
+
+                                <div class="p-3 bg-bg-app rounded-xl border border-border-main/50">
                                     <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Registration Date</span>
                                     <p class="font-bold text-text-main">@User.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</p>
                                 </div>

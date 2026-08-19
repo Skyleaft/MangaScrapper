@@ -20,9 +20,10 @@ public class User : Entity<UserId>
     public string? FirebaseUid { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? LastActiveAt { get; set; }
+    public string? ClientIpAddress { get; set; }
     
     
-    private User(UserId id, string username, string passwordHash, string email, List<string> roles, bool isActive, string? firebaseUid, DateTime? createdAt, DateTime? lastActiveAt)
+    private User(UserId id, string username, string passwordHash, string email, List<string> roles, bool isActive, string? firebaseUid, DateTime? createdAt, DateTime? lastActiveAt, string? clientIpAddress)
         : base(id)
     {
         Username = username;
@@ -33,16 +34,17 @@ public class User : Entity<UserId>
         FirebaseUid = firebaseUid;
         CreatedAt = createdAt ?? DateTime.UtcNow;
         LastActiveAt = lastActiveAt;
+        ClientIpAddress = clientIpAddress;
     }
     
     
-    public static User Create(UserId id, string username, string passwordHash, string email, List<string> roles, string? firebaseUid = null, DateTime? lastActiveAt = null)
+    public static User Create(UserId id, string username, string passwordHash, string email, List<string> roles, string? firebaseUid = null, DateTime? lastActiveAt = null, string? clientIpAddress = null)
     {
-        return new User(id, username, passwordHash, email, roles, true, firebaseUid, DateTime.UtcNow, lastActiveAt);
+        return new User(id, username, passwordHash, email, roles, true, firebaseUid, DateTime.UtcNow, lastActiveAt, clientIpAddress);
     }
 
-    public static User Reconstitute(UserId id, string username, string passwordHash, string email, List<string> roles, bool isActive, string? firebaseUid, DateTime? createdAt, DateTime? lastActiveAt)
+    public static User Reconstitute(UserId id, string username, string passwordHash, string email, List<string> roles, bool isActive, string? firebaseUid, DateTime? createdAt, DateTime? lastActiveAt, string? clientIpAddress)
     {
-        return new User(id, username, passwordHash, email, roles, isActive, firebaseUid, createdAt, lastActiveAt);
+        return new User(id, username, passwordHash, email, roles, isActive, firebaseUid, createdAt, lastActiveAt, clientIpAddress);
     }
 }

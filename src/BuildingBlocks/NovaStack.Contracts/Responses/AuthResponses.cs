@@ -28,9 +28,12 @@ public record UserResponse(
     bool IsActive,
     string? FirebaseUid,
     DateTime CreatedAt,
-    DateTime? LastActiveAt);
+    DateTime? LastActiveAt,
+    string? ClientIpAddress = null);
 
 public record UserHeartbeatResponse(
     Guid UserId,
     string Username,
-    DateTime LastActiveAt);
+    DateTime LastActiveAt,
+    string? ClientIpAddress = null);
+

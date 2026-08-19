@@ -10,11 +10,12 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using NovaStack.Contracts.Responses;
+using NovaStack.Infrastructure.Http;
 using NovaStack.SharedKernel.Results;
 
 namespace MangaScrapper.Core.Features.Auth.Login;
 
-public record LoginCommand(string Username, string Password) : ICommand<LoginResponse>;
+public record LoginCommand(string Username, string Password, string? ClientIpAddress = null) : ICommand<LoginResponse>;
 
 public class LoginCommandValidator : AbstractValidator<LoginCommand>
 {
@@ -42,6 +43,13 @@ internal sealed class LoginCommandHandler(
             return Error.Unauthorized("Auth.Disabled", "User account is disabled.");
         }
 
+        user.LastActiveAt = DateTime.UtcNow;
+        if (!string.IsNullOrWhiteSpace(command.ClientIpAddress))
+        {
+            user.ClientIpAddress = command.ClientIpAddress;
+        }
+        await userRepository.UpdateAsync(user, ct);
+
         var (token, expiry) = authTokenService.GenerateToken(user, expiryDays: 7);
         var response = new LoginResponse(token, expiry, user.Username, user.Id.Value);
 
@@ -67,7 +75,8 @@ public sealed class LoginEndpoint : IEndpointDefinition
         HttpContext httpContext,
         CancellationToken ct)
     {
-        var command = new LoginCommand(request.Username, request.Password);
+        var clientIp = httpContext.GetClientIpAddress();
+        var command = new LoginCommand(request.Username, request.Password, clientIp);
         var result = await sender.Send(command, ct);
 
         if (!result.IsSuccess)

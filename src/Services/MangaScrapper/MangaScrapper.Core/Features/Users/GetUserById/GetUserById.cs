@@ -19,7 +19,7 @@ public sealed class GetUserByIdQueryHandler(IUserRepository userRepository) : IQ
         var user = await userRepository.GetByIdAsync(UserId.From(request.Id), cancellationToken);
         if (user is null)
             return Error.NotFound("User.NotFound", $"User with Id '{request.Id}' was not found.");
-        return new UserResponse(user.Id.Value, user.Username, user.Email, user.Roles, user.IsActive, user.FirebaseUid, user.CreatedAt,user.LastActiveAt);
+        return new UserResponse(user.Id.Value, user.Username, user.Email, user.Roles, user.IsActive, user.FirebaseUid, user.CreatedAt, user.LastActiveAt, user.ClientIpAddress);
     }
 }
 

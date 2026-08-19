@@ -38,4 +38,10 @@ public sealed class ClaimService(IHttpContextAccessor httpContextAccessor) : ICl
             .Distinct()
             .ToList();
     }
+
+    public string? GetClientIpAddress()
+    {
+        return NovaStack.Infrastructure.Http.HttpContextExtensions.GetClientIpAddress(httpContextAccessor.HttpContext);
+    }
 }
+
