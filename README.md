@@ -114,11 +114,26 @@ For the mobile-first reading experience, check out the [Open Manga Reader](https
 │   └── Workers/
 │       └── Scrapper.Worker/               # Thin Background Worker Host entry point (Hangfire Server & RabbitMQ Consumer)
 │
-└── tests/
-    ├── UnitTests/                         # Business logic tests (Moq + FluentAssertions)
-    ├── IntegrationTests/                  # Integration test harness
-    └── ArchitectureTests/                 # Architectural constraint tests (NetArchTest)
+├── tests/
+│   ├── UnitTests/                         # Business logic tests (Moq + FluentAssertions)
+│   ├── IntegrationTests/                  # Integration test harness
+│   └── ArchitectureTests/                 # Architectural constraint tests (NetArchTest)
+│
+├── asyncapi.yaml                          # AsyncAPI 3.0.0 Specification (RabbitMQ, SignalR & FCM)
+└── docker-compose.yml                     # Multi-container local orchestration
 ```
+
+---
+
+## 📡 AsyncAPI & Real-Time Specifications
+
+The asynchronous messaging architecture, SignalR WebSockets channels, and Firebase Cloud Messaging push notifications are formally documented using standard **AsyncAPI 3.0.0**:
+
+- **Specification File**: [`asyncapi.yaml`](file:///e:/repo/cs/MangaScrapper-VSlice/asyncapi.yaml)
+- **Servers**:
+  - **RabbitMQ** (`amqp://localhost:5672`): Scraping queues, file cleanup, storage & database synchronization.
+  - **SignalR Hub** (`wss://localhost:5000/hubs/manga`): Live chapter scraping progress streaming (`ChapterScrapingProgress`) & chapter refresh broadcasts (`ChaptersUpdated`).
+  - **FCM Gateway** (`https://fcm.googleapis.com`): Mobile push notifications for Flutter client (`Open-Manga-Reader`).
 
 ---
 

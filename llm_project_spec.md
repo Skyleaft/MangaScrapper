@@ -61,10 +61,13 @@ This document provides a token-efficient, high-density architectural and coding 
 │   └── Workers/
 │       └── Scrapper.Worker/               # Thin Background Worker Host entry point (Hangfire Server & RabbitMQ Consumer)
 │
-└── tests/
-    ├── UnitTests/                         # Business logic tests (Moq + FluentAssertions)
-    ├── IntegrationTests/                  # Integration test harness
-    └── ArchitectureTests/                 # Architectural constraint tests (NetArchTest)
+├── tests/
+│   ├── UnitTests/                         # Business logic tests (Moq + FluentAssertions)
+│   ├── IntegrationTests/                  # Integration test harness
+│   └── ArchitectureTests/                 # Architectural constraint tests (NetArchTest)
+│
+├── asyncapi.yaml                          # AsyncAPI 3.0.0 Specification (RabbitMQ, SignalR & FCM)
+└── docker-compose.yml                     # Multi-container orchestration
 ```
 
 ---
