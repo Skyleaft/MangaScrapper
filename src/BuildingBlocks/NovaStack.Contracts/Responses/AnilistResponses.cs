@@ -32,6 +32,7 @@ public record AnilistMedia(
     [property: JsonPropertyName("averageScore")] int? AverageScore,
     [property: JsonPropertyName("popularity")] int? Popularity,
     [property: JsonPropertyName("genres")] List<string>? Genres,
+    [property: JsonPropertyName("synonyms")] List<string>? Synonyms,
     [property: JsonPropertyName("tags")] List<AnilistTag>? Tags,
     [property: JsonPropertyName("startDate")] AnilistFuzzyDate? StartDate,
     [property: JsonPropertyName("staff")] AnilistStaffConnection? Staff)

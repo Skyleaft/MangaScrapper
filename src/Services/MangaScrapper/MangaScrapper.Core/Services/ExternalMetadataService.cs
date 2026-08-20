@@ -64,46 +64,81 @@ public sealed class ExternalMetadataService : IExternalMetadataService
     public async Task<List<Manga>> SearchAnilistAsync(string title, int? anilistId = null, CancellationToken ct = default)
     {
         var url = "https://graphql.anilist.co";
-        var query = new
-        {
-            query = @"
-                query ($id: Int, $search: String) {
-                    Page (page: 1, perPage: 10) {
-                        media (id: $id, search: $search, type: MANGA) {
-                            id
-                            idMal
-                            title { romaji english native }
-                            description
-                            countryOfOrigin
-                            format
-                            status
-                            chapters
-                            volumes
-                            coverImage { extraLarge large medium }
-                            averageScore
-                            popularity
-                            genres
-                            tags { name }
-                            startDate { year month day }
-                            staff {
-                                edges {
-                                    role
-                                    node {
-                                        name { full }
+        object queryPayload = anilistId.HasValue
+            ? new
+            {
+                query = @"
+                    query ($id: Int) {
+                        Page (page: 1, perPage: 10) {
+                            media (id: $id, type: MANGA) {
+                                id
+                                idMal
+                                title { romaji english native }
+                                description
+                                countryOfOrigin
+                                format
+                                status
+                                chapters
+                                volumes
+                                coverImage { extraLarge large medium }
+                                averageScore
+                                popularity
+                                genres
+                                synonyms
+                                tags { name }
+                                startDate { year month day }
+                                staff {
+                                    edges {
+                                        role
+                                        node {
+                                            name { full }
+                                        }
                                     }
                                 }
                             }
                         }
-                    }
-                }",
-            variables = anilistId.HasValue
-                ? new { id = (int?)anilistId.Value, search = (string?)null }
-                : new { id = (int?)null, search = (string?)title }
-        };
+                    }",
+                variables = new { id = anilistId.Value }
+            }
+            : new
+            {
+                query = @"
+                    query ($search: String) {
+                        Page (page: 1, perPage: 10) {
+                            media (search: $search, type: MANGA) {
+                                id
+                                idMal
+                                title { romaji english native }
+                                description
+                                countryOfOrigin
+                                format
+                                status
+                                chapters
+                                volumes
+                                coverImage { extraLarge large medium }
+                                averageScore
+                                popularity
+                                genres
+                                synonyms
+                                tags { name }
+                                startDate { year month day }
+                                staff {
+                                    edges {
+                                        role
+                                        node {
+                                            name { full }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }",
+                variables = new { search = title }
+            };
 
         try
         {
-            var response = await _httpClient.PostAsJsonAsync(url, query, ct);
+            var response = await _httpClient.PostAsJsonAsync(url, queryPayload, ct);
             response.EnsureSuccessStatusCode();
             var result = await response.Content.ReadFromJsonAsync<AnilistResponse>(cancellationToken: ct);
             var items = result?.Data?.Page?.Media ?? [];
