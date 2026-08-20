@@ -40,7 +40,7 @@
 
         @if (showFilters)
         {
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 pt-4 border-t border-border-main animate-in slide-in-from-top-4 duration-300">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 pt-4 border-t border-border-main animate-in slide-in-from-top-4 duration-300">
                 <div class="space-y-1.5">
                     <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Type</label>
                     <select @bind="selectedType" class="w-full px-3 py-2 bg-bg-app border border-border-main rounded-lg text-xs sm:text-sm outline-none focus:border-primary transition-all text-text-main">
@@ -58,6 +58,14 @@
                         <option value="Ongoing">Ongoing</option>
                         <option value="Completed">Completed</option>
                         <option value="Hiatus">Hiatus</option>
+                    </select>
+                </div>
+                <div class="space-y-1.5">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">NSFW</label>
+                    <select @bind="selectedNsfw" class="w-full px-3 py-2 bg-bg-app border border-border-main rounded-lg text-xs sm:text-sm outline-none focus:border-primary transition-all text-text-main">
+                        <option value="false">Safe (Non-NSFW)</option>
+                        <option value="true">NSFW (18+)</option>
+                        <option value="">All Content</option>
                     </select>
                 </div>
                 <div class="space-y-1.5">
@@ -81,7 +89,7 @@
                     </select>
                 </div>
                 
-                <div class="sm:col-span-2 lg:col-span-4 space-y-1.5">
+                <div class="sm:col-span-2 lg:col-span-5 space-y-1.5">
                     <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Genres</label>
                     <div class="flex flex-wrap gap-1.5 sm:gap-2 p-2.5 sm:p-3 bg-bg-app rounded-xl border border-border-main max-h-40 overflow-y-auto">
                         @foreach (var genre in availableGenres)
@@ -93,7 +101,7 @@
                     </div>
                 </div>
                 
-                <div class="sm:col-span-2 lg:col-span-4 flex justify-end gap-2 pt-2">
+                <div class="sm:col-span-2 lg:col-span-5 flex justify-end gap-2 pt-2">
                     <button @onclick="ResetFilters" class="px-4 py-2 text-slate-500 dark:text-slate-400 text-xs font-bold uppercase hover:bg-bg-app rounded-lg transition-all">Reset All</button>
                     <button @onclick="ApplyFilters" class="px-5 sm:px-6 py-2 bg-secondary text-white text-xs font-bold uppercase rounded-lg hover:bg-secondary/90 transition-all shadow-lg">Apply Filters</button>
                 </div>
@@ -194,6 +202,7 @@
     private string searchQuery = "";
     private string selectedType = "";
     private string selectedStatus = "";
+    private string selectedNsfw = "false";
     private string sortBy = "updatedAt";
     private string orderBy = "desc";
     private List<string> selectedGenres = new();
@@ -241,6 +250,9 @@
             
             if (!string.IsNullOrWhiteSpace(selectedStatus))
                 url += $"&status={Uri.EscapeDataString(selectedStatus)}";
+
+            if (!string.IsNullOrWhiteSpace(selectedNsfw) && bool.TryParse(selectedNsfw, out var nsfwVal))
+                url += $"&nsfw={nsfwVal.ToString().ToLowerInvariant()}";
             
             if (selectedGenres.Any())
             {
@@ -273,6 +285,7 @@
         searchQuery = "";
         selectedType = "";
         selectedStatus = "";
+        selectedNsfw = "false";
         sortBy = "updatedAt";
         orderBy = "desc";
         selectedGenres.Clear();

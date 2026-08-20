@@ -37,7 +37,17 @@ public class GetPagedMangaQueryHandlerTests
         var pagedList = new PagedList<Manga>(mangaList, page: 1, pageSize: 10, totalCount: 2);
 
         _searchRepositoryMock
-            .Setup(r => r.SearchAsync(It.IsAny<string?>(), It.IsAny<List<string>?>(), It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<string?>(),It.IsAny<string?>(),It.IsAny<int>(),It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(r => r.SearchAsync(
+                It.IsAny<string?>(),
+                It.IsAny<List<string>?>(),
+                It.IsAny<string?>(),
+                It.IsAny<string?>(),
+                It.IsAny<string?>(),
+                It.IsAny<string?>(),
+                It.IsAny<int>(),
+                It.IsAny<int>(),
+                It.IsAny<bool?>(),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync(pagedList);
 
         _mangaRepositoryMock

@@ -14,9 +14,9 @@ public class MangaExternalService(ILogger<MangaExternalService> logger,
     : IMangaExternalRepository
 {
     public async Task<PagedList<Manga>> SearchAsync(string? search, List<string>? genres, string? status, string? type, string sortBy, string orderBy, int page,
-        int pageSize, CancellationToken ct = default)
+        int pageSize, bool? nsfw = null, CancellationToken ct = default)
     {
-        var data = await meilisearchService.SearchAsync(search, genres, status, type, sortBy, orderBy, page, pageSize, ct);
+        var data = await meilisearchService.SearchAsync(search, genres, status, type, sortBy, orderBy, page, pageSize, nsfw, ct);
         var items = data.Items.Select(c=>c.Adapt<Manga>()).ToList();
         return new PagedList<Manga>(items, page, pageSize, data.TotalCount);
     }
