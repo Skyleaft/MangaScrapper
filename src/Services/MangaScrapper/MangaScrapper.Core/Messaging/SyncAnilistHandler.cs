@@ -63,7 +63,7 @@ public sealed class SyncAnilistHandler(
                     }
 
                     // Respect AniList API rate limit (90 requests/minute)
-                    await Task.Delay(400, ct);
+                    await Task.Delay(500, ct);
                 }
                 catch (Exception ex)
                 {
