@@ -69,6 +69,10 @@ public sealed class QueryPagedMangaValidator : AbstractValidator<QueryPagedManga
             RuleFor(x => x.Filter!)
                 .Must(f => !f.StartReleaseDate.HasValue || !f.EndReleaseDate.HasValue || f.StartReleaseDate.Value <= f.EndReleaseDate.Value)
                 .WithMessage("StartReleaseDate cannot be after EndReleaseDate.");
+
+            RuleFor(x => x.Filter!.AnilistId)
+                .GreaterThanOrEqualTo(0).When(x => x.Filter!.AnilistId.HasValue)
+                .WithMessage("AnilistId must be greater than or equal to 0.");
         });
 
         RuleForEach(x => x.Sorts)

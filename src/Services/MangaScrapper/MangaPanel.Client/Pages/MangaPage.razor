@@ -88,6 +88,16 @@
                     </select>
                 </div>
 
+                <!-- Anilist Metadata Filter -->
+                <div class="space-y-1.5">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Anilist Metadata</label>
+                    <select @bind="selectedMetadataStatus" class="w-full px-3 py-2 bg-bg-app border border-border-main rounded-lg text-xs sm:text-sm outline-none focus:border-primary transition-all text-text-main">
+                        <option value="">All Metadata</option>
+                        <option value="unlinked">Missing / Unlinked Anilist</option>
+                        <option value="linked">Linked Anilist</option>
+                    </select>
+                </div>
+
                 <!-- Rating Range -->
                 <div class="space-y-1.5">
                     <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Min Rating (0 - 10)</label>
@@ -271,6 +281,12 @@
 }
 
 @code {
+    [SupplyParameterFromQuery(Name = "unlinkedAnilist")]
+    public bool? QueryUnlinkedAnilist { get; set; }
+
+    [SupplyParameterFromQuery(Name = "anilistId")]
+    public int? QueryAnilistId { get; set; }
+
     private MangaListResponse? response;
     private List<string> availableGenres = new();
     private List<string> availableTypes = new();
@@ -284,6 +300,7 @@
     private string selectedStatus = "";
     private string authorFilter = "";
     private string selectedNsfw = "false";
+    private string selectedMetadataStatus = "";
     private double? minRating;
     private double? maxRating;
     private int? minChapters;
@@ -308,6 +325,7 @@
             if (!string.IsNullOrWhiteSpace(selectedStatus)) count++;
             if (!string.IsNullOrWhiteSpace(authorFilter)) count++;
             if (selectedNsfw != "false") count++;
+            if (!string.IsNullOrWhiteSpace(selectedMetadataStatus)) count++;
             if (minRating.HasValue) count++;
             if (maxRating.HasValue) count++;
             if (minChapters.HasValue) count++;
@@ -319,6 +337,17 @@
 
     protected override async Task OnInitializedAsync()
     {
+        if (QueryUnlinkedAnilist == true || QueryAnilistId == 0)
+        {
+            selectedMetadataStatus = "unlinked";
+            showFilters = true;
+        }
+        else if (QueryUnlinkedAnilist == false || (QueryAnilistId.HasValue && QueryAnilistId > 0))
+        {
+            selectedMetadataStatus = "linked";
+            showFilters = true;
+        }
+
         await Task.WhenAll(LoadMetadata(), LoadManga());
         isLoading = false;
     }
@@ -348,6 +377,13 @@
                 ? null
                 : bool.TryParse(selectedNsfw, out var parsedNsfw) ? parsedNsfw : null;
 
+            bool? unlinkedAnilistFilter = selectedMetadataStatus switch
+            {
+                "unlinked" => true,
+                "linked" => false,
+                _ => null
+            };
+
             var request = new QueryPagedMangaRequest
             {
                 Page = currentPage,
@@ -363,6 +399,7 @@
                     Statuses = string.IsNullOrWhiteSpace(selectedStatus) ? null : new List<string> { selectedStatus },
                     Author = string.IsNullOrWhiteSpace(authorFilter) ? null : authorFilter.Trim(),
                     Nsfw = nsfwValue,
+                    UnlinkedAnilist = unlinkedAnilistFilter,
                     MinRating = minRating,
                     MaxRating = maxRating,
                     MinChapters = minChapters,
@@ -397,6 +434,7 @@
         selectedStatus = "";
         authorFilter = "";
         selectedNsfw = "false";
+        selectedMetadataStatus = "";
         minRating = null;
         maxRating = null;
         minChapters = null;

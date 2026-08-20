@@ -20,6 +20,8 @@ public class MangaAdvancedFilter
     public DateTime? StartReleaseDate { get; set; }
     public DateTime? EndReleaseDate { get; set; }
     public bool? Nsfw { get; set; }
+    public int? AnilistId { get; set; }
+    public bool? UnlinkedAnilist { get; set; }
 }
 
 public class MangaSortOption

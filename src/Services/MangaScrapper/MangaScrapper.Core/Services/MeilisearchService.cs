@@ -62,7 +62,10 @@ public class MeilisearchService
             "totalChapters",
             "latestChapterNumber",
             "createdAtTimestamp",
-            "updatedAtTimestamp"
+            "updatedAtTimestamp",
+            "anilistId",
+            "malId",
+            "mangaUpdateId"
         }, ct);
 
         await index.UpdateSortableAttributesAsync(new[]
@@ -383,6 +386,20 @@ public class MeilisearchService
             if (filter.Nsfw.HasValue)
             {
                 filters.Add($"nsfw = {filter.Nsfw.Value.ToString().ToLowerInvariant()}");
+            }
+
+            // Anilist / Unlinked Metadata
+            if (filter.UnlinkedAnilist == true || (filter.AnilistId.HasValue && filter.AnilistId.Value == 0))
+            {
+                filters.Add("(anilistId IS NULL OR anilistId = 0 OR anilistId NOT EXISTS)");
+            }
+            else if (filter.UnlinkedAnilist == false)
+            {
+                filters.Add("(anilistId IS NOT NULL AND anilistId > 0)");
+            }
+            else if (filter.AnilistId.HasValue && filter.AnilistId.Value > 0)
+            {
+                filters.Add($"anilistId = {filter.AnilistId.Value}");
             }
         }
 

@@ -167,7 +167,7 @@ public class MongoMangaRepository(MangaMongoDbContext dbContext) : IMangaReposit
             .Count()
             .FirstOrDefaultAsync(ct);
 
-        var totalUnlinkedMetadataTask = dbContext.Mangas.CountDocumentsAsync(m => m.MalId == 0, cancellationToken: ct);
+        var totalUnlinkedMetadataTask = dbContext.Mangas.CountDocumentsAsync(m => m.AnilistId == 0 || m.AnilistId==null, cancellationToken: ct);
 
         var totalUnavailableMangaChapterTask = dbContext.Mangas
             .Find(m => m.Chapters.Any(c => c.Pages == null || c.Pages.Count == 0))

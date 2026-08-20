@@ -157,4 +157,21 @@ public class QueryPagedMangaTests
 
         result.IsValid.Should().BeTrue();
     }
+
+    [Theory]
+    [InlineData(0, true)]
+    [InlineData(12345, true)]
+    [InlineData(-1, false)]
+    public void Validator_AnilistId_ShouldValidateCorrectly(int anilistId, bool isValid)
+    {
+        var filter = new MangaAdvancedFilter
+        {
+            AnilistId = anilistId
+        };
+
+        var query = new QueryPagedMangaQuery(Filter: filter);
+        var result = _validator.Validate(query);
+
+        result.IsValid.Should().Be(isValid);
+    }
 }
