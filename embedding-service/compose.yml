@@ -1,4 +1,4 @@
-﻿version: '3.9'
+version: '3.9'
 services:
   embedding-service:
     build:
@@ -6,4 +6,6 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8222:8222"
+    environment:
+      - TZ=Asia/Jakarta
     restart: unless-stopped

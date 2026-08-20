@@ -157,6 +157,8 @@ services:
     container_name: embedding-service
     ports:
       - "8222:8222"
+    environment:
+      - TZ=Asia/Jakarta
     restart: unless-stopped
 
 volumes:
