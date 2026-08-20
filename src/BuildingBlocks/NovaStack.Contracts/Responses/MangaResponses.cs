@@ -6,6 +6,7 @@ public record MangaSummaryResponse(
     int? AnilistId,
     long? MangaUpdateId,
     string Title,
+    List<string>? Synonyms,
     string Author,
     string Type,
     List<string>? Genres,

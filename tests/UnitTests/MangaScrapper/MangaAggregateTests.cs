@@ -46,6 +46,7 @@ public class MangaAggregateTests
             malId: 20,
             anilistId:30,
             mangaUpdateId:23,
+            synonyms: new List<string> { "Alternative Naruto" },
             genres: new List<string> { "Action", "Ninja" },
             categories:new List<string>{"Isekai"},
             description: "A ninja's journey",
@@ -68,6 +69,21 @@ public class MangaAggregateTests
         manga.Should().NotBeNull();
         manga.Id.Should().Be(id);
         manga.Title.Should().Be(title);
+        manga.Synonyms.Should().ContainSingle().Which.Should().Be("Alternative Naruto");
         manga.DomainEvents.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void UpdateFromAnilist_ShouldMergeSynonyms()
+    {
+        // Arrange
+        var manga = Manga.Create("Attack on Titan", "Hajime Isayama", "Manga", "Komiku", synonyms: new List<string> { "AoT" });
+        var other = Manga.Create("Shingeki no Kyojin", "Hajime Isayama", "Manga", "Anilist", synonyms: new List<string> { "SNK", "AoT" });
+
+        // Act
+        manga.UpdateFromAnilist(other);
+
+        // Assert
+        manga.Synonyms.Should().BeEquivalentTo(new List<string> { "AoT", "SNK" });
     }
 }

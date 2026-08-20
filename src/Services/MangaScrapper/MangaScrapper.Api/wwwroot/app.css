@@ -24,11 +24,9 @@
     --color-amber-600: oklch(66.6% 0.179 58.318);
     --color-amber-950: oklch(27.9% 0.077 45.635);
     --color-yellow-400: oklch(85.2% 0.199 91.936);
-    --color-green-50: oklch(98.2% 0.018 155.826);
     --color-green-400: oklch(79.2% 0.209 151.711);
     --color-green-500: oklch(72.3% 0.219 149.579);
     --color-green-600: oklch(62.7% 0.194 149.214);
-    --color-green-950: oklch(26.6% 0.065 152.934);
     --color-emerald-50: oklch(97.9% 0.021 166.113);
     --color-emerald-200: oklch(90.5% 0.093 164.15);
     --color-emerald-300: oklch(84.5% 0.143 164.978);
@@ -41,6 +39,7 @@
     --color-teal-50: oklch(98.4% 0.014 180.72);
     --color-teal-500: oklch(70.4% 0.14 182.503);
     --color-teal-600: oklch(60% 0.118 184.704);
+    --color-teal-700: oklch(51.1% 0.096 186.391);
     --color-teal-950: oklch(27.7% 0.046 192.524);
     --color-cyan-50: oklch(98.4% 0.019 200.873);
     --color-cyan-400: oklch(78.9% 0.154 211.53);
@@ -1475,6 +1474,9 @@
       background-color: color-mix(in oklab, var(--color-teal-500) 10%, transparent);
     }
   }
+  .bg-teal-600 {
+    background-color: var(--color-teal-600);
+  }
   .bg-transparent {
     background-color: transparent;
   }
@@ -2448,6 +2450,9 @@
         background-color: color-mix(in oklab, var(--color-teal-500) 20%, transparent);
       }
     }
+    .hover\:bg-teal-700:hover {
+      background-color: var(--color-teal-700);
+    }
     .hover\:text-primary:hover {
       color: var(--color-primary);
     }
@@ -3286,6 +3291,9 @@
     }
     .dark\:text-slate-400 {
       color: var(--color-slate-400);
+    }
+    .dark\:text-slate-500 {
+      color: var(--color-slate-500);
     }
     .dark\:text-slate-600 {
       color: var(--color-slate-600);

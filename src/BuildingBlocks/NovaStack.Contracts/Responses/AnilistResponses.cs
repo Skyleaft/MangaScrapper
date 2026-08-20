@@ -31,6 +31,7 @@ public record AnilistMedia(
     [property: JsonPropertyName("coverImage")] AnilistCoverImage? CoverImage,
     [property: JsonPropertyName("averageScore")] int? AverageScore,
     [property: JsonPropertyName("popularity")] int? Popularity,
+    [property: JsonPropertyName("favorites")] int? Favorites,
     [property: JsonPropertyName("genres")] List<string>? Genres,
     [property: JsonPropertyName("synonyms")] List<string>? Synonyms,
     [property: JsonPropertyName("tags")] List<AnilistTag>? Tags,

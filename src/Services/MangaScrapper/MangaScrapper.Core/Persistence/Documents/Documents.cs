@@ -15,6 +15,8 @@ public class MangaDocument
     [BsonIgnoreIfNull]
     public long? MangaUpdateId { get; set; }
     public string Title { get; set; } = string.Empty;
+    [BsonIgnoreIfNull]
+    public List<string>? Synonyms { get; set; }
     public string Author { get; set; } = string.Empty;
     public string Type { get; set; } = string.Empty;
     public double? Rating { get; set; }

@@ -83,6 +83,7 @@ public sealed class ExternalMetadataService : IExternalMetadataService
                                 coverImage { extraLarge large medium }
                                 averageScore
                                 popularity
+                                favorites
                                 genres
                                 synonyms
                                 tags { name }
@@ -118,6 +119,7 @@ public sealed class ExternalMetadataService : IExternalMetadataService
                                 coverImage { extraLarge large medium }
                                 averageScore
                                 popularity
+                                favorites
                                 genres
                                 synonyms
                                 tags { name }
@@ -163,6 +165,10 @@ public sealed class ExternalMetadataService : IExternalMetadataService
                     }
                 }
 
+                var mangaEnglishTitleAlternative = item.ComicType == ComicType.Manga ? item.Title.English:"";
+                if(string.IsNullOrEmpty(mangaEnglishTitleAlternative))
+                    item.Synonyms.Add(mangaEnglishTitleAlternative);
+
                 var manga = Manga.Create(
                     title: titleToUse,
                     author: author,
@@ -170,6 +176,7 @@ public sealed class ExternalMetadataService : IExternalMetadataService
                     source: "Anilist",
                     malId: item.IdMal ?? 0,
                     anilistId: item.Id,
+                    synonyms: item.Synonyms,
                     genres: item.Genres ?? [],
                     categories: item.Tags?.Select(t => t.Name).Where(n => !string.IsNullOrEmpty(n)).Cast<string>().ToList() ?? [],
                     description: item.Description,

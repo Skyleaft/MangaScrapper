@@ -35,6 +35,7 @@ public class MeiliMangaDocument
     public int? AnilistId { get; set; }
     public long? MangaUpdateId { get; set; }
     public string Title { get; set; } = string.Empty;
+    public List<string> Synonyms { get; set; } = new();
     public string Author { get; set; } = string.Empty;
     public string Type { get; set; } = string.Empty;
     public double? Rating { get; set; }

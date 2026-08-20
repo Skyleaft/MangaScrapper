@@ -116,6 +116,16 @@ public class MongoMangaRepository(MangaMongoDbContext dbContext) : IMangaReposit
         return docs.Select(MapToDomain).ToList();
     }
 
+    public async Task<List<Manga>> GetWithAnilistAsync(CancellationToken ct = default)
+    {
+        var filter = Builders<MangaDocument>.Filter.And(
+            Builders<MangaDocument>.Filter.Ne(m => m.AnilistId, null),
+            Builders<MangaDocument>.Filter.Gt(m => m.AnilistId, 0)
+        );
+        var docs = await dbContext.Mangas.Find(filter).ToListAsync(ct);
+        return docs.Select(MapToDomain).ToList();
+    }
+
     public async Task UpdateChapterPagesAsync(Guid mangaId, Guid chapterId, List<Page> pages, CancellationToken ct = default)
     {
         var manga = await GetByIdAsync(MangaId.From(mangaId), ct);

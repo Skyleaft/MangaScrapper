@@ -76,6 +76,7 @@ public class Manga : Entity<MangaId>
     public int? AnilistId { get; private set; }
     public long? MangaUpdateId { get; private set; }
     public string Title { get; private set; }
+    public List<string> Synonyms { get; private set; } = [];
     public string Author { get; private set; }
     public string Type { get; private set; }
     public double? Rating { get; private set; }
@@ -105,6 +106,7 @@ public class Manga : Entity<MangaId>
         int malId = 0,
         int? anilistId = null,
         long? mangaUpdateId = null,
+        List<string>? synonyms = null,
         List<string>? genres = null,
         List<string>? categories = null,
         string? description = null,
@@ -129,6 +131,7 @@ public class Manga : Entity<MangaId>
         MalId = malId;
         AnilistId = anilistId;
         MangaUpdateId = mangaUpdateId;
+        Synonyms = synonyms ?? [];
         Genres = genres ?? [];
         Categories = categories ?? [];
         Description = description;
@@ -156,6 +159,7 @@ public class Manga : Entity<MangaId>
         int malId = 0,
         int? anilistId = null,
         long? mangaUpdateId = null,
+        List<string>? synonyms = null,
         List<string>? genres = null,
         List<string>? categories = null,
         string? description = null,
@@ -168,7 +172,7 @@ public class Manga : Entity<MangaId>
         var id = MangaId.New();
         var manga = new Manga(
             id, title, author, type, source,
-            malId: malId, anilistId: anilistId, mangaUpdateId: mangaUpdateId, genres: genres, categories: categories, description: description, imageUrl: imageUrl, url: url,
+            malId: malId, anilistId: anilistId, mangaUpdateId: mangaUpdateId, synonyms: synonyms, genres: genres, categories: categories, description: description, imageUrl: imageUrl, url: url,
             rating: rating, status: status, releaseDate: releaseDate);
 
         manga.RaiseDomainEvent(new MangaCreatedDomainEvent(id, title, source));
@@ -183,6 +187,7 @@ public class Manga : Entity<MangaId>
         int malId,
         int? anilistId,
         long? mangaUpdateId,
+        List<string>? synonyms,
         List<string>? genres,
         List<string>? categories,
         string? description,
@@ -203,7 +208,7 @@ public class Manga : Entity<MangaId>
     {
         return new Manga(
             id, title, author, type, "Unknown",
-            malId, anilistId, mangaUpdateId, genres, categories, description, imageUrl, localImageUrl, thumbnailSize,
+            malId, anilistId, mangaUpdateId, synonyms, genres, categories, description, imageUrl, localImageUrl, thumbnailSize,
             rating, popularity, members, nsfw, status, releaseDate, totalView,
             createdAt, updatedAt, url, chapters);
     }
@@ -214,6 +219,7 @@ public class Manga : Entity<MangaId>
         long? mangaUpdateId,
         string author,
         string type,
+        List<string>? synonyms,
         List<string> genres,
         List<string>? categories,
         string? description,
@@ -230,6 +236,7 @@ public class Manga : Entity<MangaId>
         MangaUpdateId = mangaUpdateId;
         Author = author;
         Type = type;
+        Synonyms = synonyms ?? [];
         Genres = genres ?? [];
         Categories = categories ?? [];
         Description = description ?? Description;
@@ -269,6 +276,7 @@ public class Manga : Entity<MangaId>
         Description = string.IsNullOrEmpty(Description) ? anilistInfo.Description : Description;
         Rating = Rating ?? (anilistInfo.AverageScore.HasValue ? anilistInfo.AverageScore.Value / 10.0 : null);
         Popularity = anilistInfo.Popularity ?? Popularity;
+        Members = anilistInfo.Favorites?? Members;
 
         Status = anilistInfo.Status switch
         {
@@ -293,6 +301,11 @@ public class Manga : Entity<MangaId>
             Genres = Genres.Union(anilistInfo.Genres).ToList();
         }
 
+        if (anilistInfo.Synonyms != null && anilistInfo.Synonyms.Any())
+        {
+            Synonyms = Synonyms.Union(anilistInfo.Synonyms, StringComparer.OrdinalIgnoreCase).ToList();
+        }
+
         UpdatedAt = DateTime.UtcNow;
     }
 
@@ -303,8 +316,8 @@ public class Manga : Entity<MangaId>
         if (string.IsNullOrWhiteSpace(Description) && !string.IsNullOrWhiteSpace(other.Description)) Description = other.Description;
         if (other.Rating.HasValue && !Rating.HasValue) Rating = other.Rating;
         if (other.Popularity > 0 && Popularity == 0) Popularity = other.Popularity;
-        if (!string.IsNullOrWhiteSpace(other.Status) && (string.IsNullOrWhiteSpace(Status) || Status == "Unknown")) Status = other.Status;
-        if (other.ReleaseDate.HasValue && !ReleaseDate.HasValue) ReleaseDate = other.ReleaseDate;
+        if (!string.IsNullOrWhiteSpace(other.Status)) Status = other.Status;
+        if (other.ReleaseDate.HasValue) ReleaseDate = other.ReleaseDate;
         if (!string.IsNullOrWhiteSpace(other.Author) && other.Author != "Unknown" && (string.IsNullOrWhiteSpace(Author) || Author == "Unknown")) Author = other.Author;
         if (other.Genres != null && other.Genres.Any())
         {
@@ -313,6 +326,10 @@ public class Manga : Entity<MangaId>
         if (other.Categories != null && other.Categories.Any())
         {
             Categories = Categories.Union(other.Categories, StringComparer.OrdinalIgnoreCase).ToList();
+        }
+        if (other.Synonyms != null && other.Synonyms.Any())
+        {
+            Synonyms = Synonyms.Union(other.Synonyms, StringComparer.OrdinalIgnoreCase).ToList();
         }
         UpdatedAt = DateTime.UtcNow;
     }

@@ -203,7 +203,7 @@ else
             </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <!-- Sync Meilisearch -->
             <div class="p-4 rounded-xl bg-bg-app border border-border-main flex flex-col justify-between space-y-3">
                 <div>
@@ -269,6 +269,29 @@ else
                     {
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" /></svg>
                         <span>Sync Storage</span>
+                    }
+                </button>
+            </div>
+
+            <!-- Sync AniList Metadata -->
+            <div class="p-4 rounded-xl bg-bg-app border border-border-main flex flex-col justify-between space-y-3">
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xs sm:text-sm font-bold text-text-main">AniList Metadata</span>
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-teal-500/10 text-teal-500">External</span>
+                    </div>
+                    <p class="text-[11px] sm:text-xs text-slate-400">Enriches titles, synonyms, status, ratings, and tags from AniList.</p>
+                </div>
+                <button @onclick="TriggerSyncAnilist" disabled="@isSyncingAnilist" class="w-full flex items-center justify-center gap-2 px-3 py-2 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white text-xs font-semibold rounded-xl transition-all shadow-sm cursor-pointer">
+                    @if (isSyncingAnilist)
+                    {
+                        <div class="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <span>Syncing...</span>
+                    }
+                    else
+                    {
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                        <span>Sync AniList</span>
                     }
                 </button>
             </div>
@@ -381,6 +404,7 @@ else
     private bool isSyncingMeilisearch = false;
     private bool isSyncingQdrant = false;
     private bool isSyncingStorage = false;
+    private bool isSyncingAnilist = false;
 
     private string? statusMessage;
     private bool isStatusError;
@@ -520,7 +544,7 @@ else
             }
             else
             {
-                statusMessage = $"Failed to trigger storage sync (HTTP {response.StatusCode}).";
+                statusMessage = $"Failed to trigger Storage sync (HTTP {response.StatusCode}).";
                 isStatusError = true;
             }
         }
@@ -532,6 +556,35 @@ else
         finally
         {
             isSyncingStorage = false;
+        }
+    }
+
+    private async Task TriggerSyncAnilist()
+    {
+        isSyncingAnilist = true;
+        statusMessage = null;
+        try
+        {
+            var response = await Http.PostAsync("/api/v1/dashboard/sync-anilist", null);
+            if (response.IsSuccessStatusCode)
+            {
+                statusMessage = "AniList metadata background sync queued successfully.";
+                isStatusError = false;
+            }
+            else
+            {
+                statusMessage = $"Failed to trigger AniList sync (HTTP {response.StatusCode}).";
+                isStatusError = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            statusMessage = $"Error syncing AniList: {ex.Message}";
+            isStatusError = true;
+        }
+        finally
+        {
+            isSyncingAnilist = false;
         }
     }
 

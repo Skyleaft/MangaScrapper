@@ -41,6 +41,7 @@ public class MeilisearchService
         await index.UpdateSearchableAttributesAsync(new[]
         {
             "title",
+            "synonyms",
             "author",
             "description",
             "genres"

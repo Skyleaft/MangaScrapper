@@ -38,3 +38,16 @@ public sealed record SyncMeilisearchIntegrationEvent : IIntegrationEvent
 
     public SyncMeilisearchIntegrationEvent() { }
 }
+
+/// <summary>
+/// Integration event published to trigger AniList metadata synchronization.
+/// Consumed by the Scrapper.Worker via RabbitMQ.
+/// </summary>
+public sealed record SyncAnilistIntegrationEvent : IIntegrationEvent
+{
+    public Guid EventId { get; init; } = Guid.CreateVersion7();
+    public DateTime OccurredOn { get; init; } = DateTime.UtcNow;
+    public string EventType { get; init; } = nameof(SyncAnilistIntegrationEvent);
+
+    public SyncAnilistIntegrationEvent() { }
+}

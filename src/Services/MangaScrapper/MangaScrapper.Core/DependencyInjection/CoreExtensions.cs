@@ -267,6 +267,7 @@ public static class CoreExtensions
         services.AddScoped<SyncStorageHandler>();
         services.AddScoped<SyncQdrantHandler>();
         services.AddScoped<SyncMeilisearchHandler>();
+        services.AddScoped<SyncAnilistHandler>();
         services.AddScoped<ChapterPagesScrapedSignalRHandler>();
         services.AddScoped<ChapterScrapingProgressSignalRHandler>();
 
@@ -289,6 +290,9 @@ public static class CoreExtensions
                 
             services.AddRabbitMqConsumer<SyncMeilisearchIntegrationEvent, SyncMeilisearchHandler>(
                 "sync-meilisearch");
+
+            services.AddRabbitMqConsumer<SyncAnilistIntegrationEvent, SyncAnilistHandler>(
+                "sync-anilist");
         }
 
         if (includeSignalRConsumer)

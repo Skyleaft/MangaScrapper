@@ -248,6 +248,22 @@
                                     </div>
 
                                     <div class="space-y-1 sm:space-y-1.5">
+                                        <label class="text-[11px] sm:text-xs font-bold text-slate-600 dark:text-slate-400 ml-1">Alternative Titles / Synonyms</label>
+                                        <div class="relative">
+                                            <input type="text" value="@SynonymsString" @onchange="OnSynonymsChanged" class="w-full px-3.5 sm:px-4 py-2 sm:py-2.5 bg-bg-app border border-border-main rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-400 text-xs sm:text-sm text-text-main" placeholder="Alternative titles separated by comma" />
+                                            <div class="mt-2 flex flex-wrap gap-1 sm:gap-1.5">
+                                                @if (EditModel.Synonyms != null)
+                                                {
+                                                    @foreach (var synonym in EditModel.Synonyms)
+                                                    {
+                                                        <span class="px-2 py-0.5 bg-bg-app border border-border-main text-slate-600 dark:text-slate-400 text-[9px] sm:text-[10px] font-bold rounded">@synonym</span>
+                                                    }
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="space-y-1 sm:space-y-1.5">
                                         <label class="text-[11px] sm:text-xs font-bold text-slate-600 dark:text-slate-400 ml-1">Genres</label>
                                         <div class="relative">
                                             <input type="text" value="@GenresString" @onchange="OnGenresChanged" class="w-full px-3.5 sm:px-4 py-2 sm:py-2.5 bg-bg-app border border-border-main rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-400 text-xs sm:text-sm text-text-main" placeholder="Action, Adventure, etc." />
@@ -950,6 +966,7 @@
                     MangaUpdateId = Manga.MangaUpdateId,
                     Author = Manga.Author,
                     Type = Manga.Type,
+                    Synonyms = Manga.Synonyms ?? new List<string>(),
                     Genres = Manga.Genres ?? new List<string>(),
                     Categories = Manga.Categories ?? new List<string>(),
                     Description = Manga.Description,
@@ -970,6 +987,21 @@
         finally
         {
             IsLoading = false;
+        }
+    }
+
+    private string SynonymsString => EditModel?.Synonyms != null ? string.Join(", ", EditModel.Synonyms) : "";
+
+    private void OnSynonymsChanged(ChangeEventArgs e)
+    {
+        var val = e.Value?.ToString();
+        if (!string.IsNullOrEmpty(val))
+        {
+            EditModel.Synonyms = val.Split(',').Select(x => x.Trim()).Where(x => !string.IsNullOrEmpty(x)).ToList();
+        }
+        else
+        {
+            EditModel.Synonyms = new List<string>();
         }
     }
 
@@ -1255,6 +1287,12 @@
             EditModel.Genres = merged;
         }
 
+        if (item.Synonyms != null && item.Synonyms.Any())
+        {
+            var merged = (EditModel.Synonyms ?? new List<string>()).Union(item.Synonyms, StringComparer.OrdinalIgnoreCase).ToList();
+            EditModel.Synonyms = merged;
+        }
+
         if (string.IsNullOrEmpty(EditModel.Description) && !string.IsNullOrEmpty(item.Description))
         {
             EditModel.Description = item.Description;
@@ -1364,6 +1402,7 @@
         public long? MangaUpdateId { get; set; }
         public string Author { get; set; } = string.Empty;
         public string Type { get; set; } = string.Empty;
+        public List<string>? Synonyms { get; set; }
         public List<string>? Genres { get; set; }
         public List<string>? Categories { get; set; }
         public string? Description { get; set; }
