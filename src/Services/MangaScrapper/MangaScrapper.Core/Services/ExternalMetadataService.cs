@@ -294,7 +294,7 @@ public sealed class ExternalMetadataService : IExternalMetadataService
 
                 var author = details?.Authors?.FirstOrDefault(a => a.Type == "Author")?.Name ?? "Unknown";
                 var categories = new List<string>();
-                if (details.Categories.Count > 10)
+                if (details.Categories.Count > 15 && details.Categories.Max(x=>x.Votes)>5)
                 {
                     categories= details?.Categories?
                         .Where(x=>x.Votes>1)
