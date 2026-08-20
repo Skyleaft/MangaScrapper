@@ -22,7 +22,7 @@ internal sealed class SearchAnilistQueryHandler(
 
         try
         {
-            var mangas = await externalMetadataService.SearchAnilistAsync(query.Title, ct);
+            var mangas = await externalMetadataService.SearchAnilistAsync(query.Title,null, ct);
             return mangas.Adapt<List<MangaSummaryResponse>>();
         }
         catch (Exception ex)

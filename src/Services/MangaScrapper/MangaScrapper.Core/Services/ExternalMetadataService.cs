@@ -61,15 +61,15 @@ public sealed class ExternalMetadataService : IExternalMetadataService
         }
     }
 
-    public async Task<List<Manga>> SearchAnilistAsync(string title, CancellationToken ct = default)
+    public async Task<List<Manga>> SearchAnilistAsync(string title, int? anilistId = null, CancellationToken ct = default)
     {
         var url = "https://graphql.anilist.co";
         var query = new
         {
             query = @"
-                query ($search: String) {
+                query ($id: Int, $search: String) {
                     Page (page: 1, perPage: 10) {
-                        media (search: $search, type: MANGA) {
+                        media (id: $id, search: $search, type: MANGA) {
                             id
                             idMal
                             title { romaji english native }
@@ -96,7 +96,9 @@ public sealed class ExternalMetadataService : IExternalMetadataService
                         }
                     }
                 }",
-            variables = new { search = title }
+            variables = anilistId.HasValue
+                ? new { id = (int?)anilistId.Value, search = (string?)null }
+                : new { id = (int?)null, search = (string?)title }
         };
 
         try
@@ -140,7 +142,7 @@ public sealed class ExternalMetadataService : IExternalMetadataService
                     rating: item.AverageScore.HasValue ? item.AverageScore.Value / 10.0 : null,
                     status: item.Status
                 );
-                manga.UpdateFromAnilist(item);
+                manga.ReconstituteFromAnilist(item);
                 mangaList.Add(manga);
             }
             return mangaList;
@@ -181,10 +183,53 @@ public sealed class ExternalMetadataService : IExternalMetadataService
         }
     }
 
-    public async Task<List<Manga>> SearchMangaUpdatesAsync(string title, CancellationToken ct = default)
+    public async Task<List<Manga>> SearchMangaUpdatesAsync(string title, int? mangaUpdateId = null, CancellationToken ct = default)
     {
         try
         {
+            if (mangaUpdateId != null)
+            {
+                try
+                {
+                    var details = await _httpClient.GetFromJsonAsync<MangaUpdatesSeriesResponse>($"https://api.mangaupdates.com/v1/series/{mangaUpdateId}", ct);
+                    if (details != null)
+                    {
+                        var author = details.Authors?.FirstOrDefault(a => a.Type == "Author")?.Name ?? details.Authors?.FirstOrDefault()?.Name ?? "Unknown";
+                        var categories = details.Categories?.OrderByDescending(x => x.Votes).Select(c => c.Category).Where(c => !string.IsNullOrEmpty(c)).Cast<string>().ToList();
+                        var genres = details.Genres?.Select(g => g.Genre).Where(g => !string.IsNullOrEmpty(g)).Cast<string>().ToList() ?? new List<string>();
+
+                        DateTime? releaseDate = null;
+                        if (!string.IsNullOrEmpty(details.Year) && int.TryParse(details.Year, out int year))
+                        {
+                            releaseDate = new DateTime(year, 1, 1);
+                        }
+
+                        var manga = Manga.Create(
+                            title: details.Title ?? title,
+                            author: author,
+                            type: details.Type ?? "Unknown",
+                            source: "MangaUpdates",
+                            malId: 0,
+                            anilistId: null,
+                            mangaUpdateId: details.SeriesId ?? mangaUpdateId,
+                            genres: genres,
+                            categories: categories,
+                            description: details.Description,
+                            imageUrl: details.Image?.Url?.Original ?? details.Image?.Url?.Thumb,
+                            rating: details.BayesianRating,
+                            status: details.Completed ? "Completed" : "Ongoing",
+                            releaseDate: releaseDate
+                        );
+
+                        return [manga];
+                    }
+                }
+                catch
+                {
+                    // Fallback to title search if direct id lookup fails
+                }
+            }
+
             var query = new { search = title, perpage = 10 };
             var response = await _httpClient.PostAsJsonAsync("https://api.mangaupdates.com/v1/series/search", query, ct);
             response.EnsureSuccessStatusCode();
@@ -228,7 +273,7 @@ public sealed class ExternalMetadataService : IExternalMetadataService
                     description: record.Description,
                     imageUrl: record.Image?.Url?.Original ?? record.Image?.Url?.Thumb,
                     rating: record.BayesianRating,
-                    status: details.Completed?"Completed":"Ongoing",
+                    status: details?.Completed == true ? "Completed" : "Ongoing",
                     releaseDate: releaseDate
                 );
             });

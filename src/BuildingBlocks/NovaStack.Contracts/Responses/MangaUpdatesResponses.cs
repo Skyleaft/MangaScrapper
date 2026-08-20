@@ -30,6 +30,13 @@ public record MangaUpdatesGenre(
 
 public record MangaUpdatesSeriesResponse(
     [property: JsonPropertyName("series_id")] long? SeriesId,
+    [property: JsonPropertyName("title")] string? Title,
+    [property: JsonPropertyName("description")] string? Description,
+    [property: JsonPropertyName("image")] MangaUpdatesImage? Image,
+    [property: JsonPropertyName("type")] string? Type,
+    [property: JsonPropertyName("year")] string? Year,
+    [property: JsonPropertyName("bayesian_rating")] double? BayesianRating,
+    [property: JsonPropertyName("genres")] List<MangaUpdatesGenre>? Genres,
     [property: JsonPropertyName("completed")] bool Completed,
     [property: JsonPropertyName("authors")] List<MangaUpdatesAuthor>? Authors,
     [property: JsonPropertyName("categories")] List<MangaUpdatesCategory>? Categories);

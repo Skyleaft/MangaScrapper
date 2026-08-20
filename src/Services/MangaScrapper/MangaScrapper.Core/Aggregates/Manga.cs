@@ -262,7 +262,7 @@ public class Manga : Entity<MangaId>
         UpdatedAt = DateTime.UtcNow;
     }
 
-    public void UpdateFromAnilist(AnilistMedia anilistInfo)
+    public void ReconstituteFromAnilist(AnilistMedia anilistInfo)
     {
         AnilistId = anilistInfo.Id;
         MalId = anilistInfo.IdMal ?? MalId;
@@ -293,6 +293,27 @@ public class Manga : Entity<MangaId>
             Genres = Genres.Union(anilistInfo.Genres).ToList();
         }
 
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void UpdateFromAnilist(Manga other)
+    {
+        if (other.AnilistId.HasValue) AnilistId = other.AnilistId;
+        if (other.MalId != 0 && MalId == 0) MalId = other.MalId;
+        if (string.IsNullOrWhiteSpace(Description) && !string.IsNullOrWhiteSpace(other.Description)) Description = other.Description;
+        if (other.Rating.HasValue && !Rating.HasValue) Rating = other.Rating;
+        if (other.Popularity > 0 && Popularity == 0) Popularity = other.Popularity;
+        if (!string.IsNullOrWhiteSpace(other.Status) && (string.IsNullOrWhiteSpace(Status) || Status == "Unknown")) Status = other.Status;
+        if (other.ReleaseDate.HasValue && !ReleaseDate.HasValue) ReleaseDate = other.ReleaseDate;
+        if (!string.IsNullOrWhiteSpace(other.Author) && other.Author != "Unknown" && (string.IsNullOrWhiteSpace(Author) || Author == "Unknown")) Author = other.Author;
+        if (other.Genres != null && other.Genres.Any())
+        {
+            Genres = Genres.Union(other.Genres, StringComparer.OrdinalIgnoreCase).ToList();
+        }
+        if (other.Categories != null && other.Categories.Any())
+        {
+            Categories = Categories.Union(other.Categories, StringComparer.OrdinalIgnoreCase).ToList();
+        }
         UpdatedAt = DateTime.UtcNow;
     }
 

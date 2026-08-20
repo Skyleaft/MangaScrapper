@@ -21,7 +21,7 @@ internal sealed class SearchMangaUpdatesQueryHandler(IExternalMetadataService ex
 
         try
         {
-            var mangas = await externalMetadataService.SearchMangaUpdatesAsync(query.Title, ct);
+            var mangas = await externalMetadataService.SearchMangaUpdatesAsync(query.Title,null, ct);
             return mangas.Adapt<List<MangaSummaryResponse>>();
         }
         catch (Exception ex)

@@ -339,40 +339,35 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
 
     public async Task<Manga> UpdateMangaMetaData(Manga manga, CancellationToken ct = default)
     {
-        var externalService = ScopeFactory.CreateScope().ServiceProvider.GetRequiredService<IExternalMetadataService>();
-        JikanMangaItem? mangaInfo = manga.MalId != 0
-            ? await externalService.GetJikanMangaInfoByIdAsync(manga.MalId, ct)
-            : await externalService.GetJikanMangaInfoAsync(manga.Title, manga.Type, ct);
+        using var scope = ScopeFactory.CreateScope();
+        var externalService = scope.ServiceProvider.GetRequiredService<IExternalMetadataService>();
 
-        if (mangaInfo?.TitleSynonyms != null)
+        try
         {
-            var combinedSynonyms = string.Join(" ", mangaInfo.TitleSynonyms);
-            if (StringHelper.IsSimilar(mangaInfo.Title, manga.Title) ||
-                StringHelper.IsSimilar(mangaInfo.TitleEnglish ?? "", manga.Title) ||
-                StringHelper.IsSimilar(combinedSynonyms, manga.Title) ||
-                StringHelper.IsSimilar(mangaInfo.TitleJapanese ?? "", manga.Title) ||
-                mangaInfo.MalId == manga.MalId)
+            var anilistList = await externalService.SearchAnilistAsync(manga.Title,manga.AnilistId, ct);
+            if (anilistList.Count > 0 && manga.AnilistId != null)
             {
-                var status = mangaInfo.Status switch
-                {
-                    "Complete" or "Finished" => "Completed",
-                    "Publishing" => "Ongoing",
-                    "Hiatus" => "On Hiatus",
-                    "Discontinued" => "Discontinued",
-                    "Upcoming" => "Upcoming",
-                    _ => "Unknown"
-                };
+                manga.UpdateFromAnilist(anilistList.First());
+            }
+            else if (anilistList.Count > 0)
+            {
+                var matched = anilistList.FirstOrDefault(a =>
+                    (manga.MalId != 0 && a.MalId == manga.MalId) ||
+                    (manga.AnilistId.HasValue && a.AnilistId == manga.AnilistId) ||
+                    StringHelper.IsSimilar(a.Title, manga.Title) ||
+                    StringHelper.CalculateSimilarity(a.Title, manga.Title) >= 0.8);
 
-                manga.UpdateFromScrapper(
-                    mangaInfo.MalId,
-                    mangaInfo.Score,
-                    mangaInfo.Popularity,
-                    mangaInfo.Members,
-                    mangaInfo.Published?.From,
-                    status,
-                    mangaInfo.Authors.FirstOrDefault()?.Name);
+                if (matched != null)
+                {
+                    manga.UpdateFromAnilist(matched);
+                }
             }
         }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Failed to fetch AniList metadata for {MangaTitle}", manga.Title);
+        }
+
         return manga;
     }
 
@@ -402,7 +397,7 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
         var mangaData = ExtractMangaMetadata(url);
         mangaData.SetUrl(url);
 
-        if (string.IsNullOrEmpty(mangaData.Title))
+        if (string.IsNullOrWhiteSpace(mangaData.Title))
             throw new ArgumentException("Missing Manga Title!");
 
         Manga? existingManga = null;
@@ -410,11 +405,29 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
         {
             existingManga = await _mangaRepo.GetByIdAsync(MangaId.From(parsedGuid), ct);
         }
-        else
+
+        if (existingManga == null)
         {
-            var searchManga = await MeilisearchService.SearchTitleAsync(mangaData.Title, ct);
-            if (searchManga is not null && StringHelper.CalculateSimilarity(searchManga.Title, mangaData.Title) >= 0.8)
-                existingManga = await _mangaRepo.GetByIdAsync(MangaId.From(Guid.Parse(searchManga.Id)), ct);
+            existingManga = await _mangaRepo.GetByTitleAsync(mangaData.Title, ct);
+        }
+
+        if (existingManga == null)
+        {
+            try
+            {
+                var searchManga = await MeilisearchService.SearchTitleAsync(mangaData.Title, ct);
+                if (searchManga is not null && StringHelper.CalculateSimilarity(searchManga.Title, mangaData.Title) >= 0.8)
+                {
+                    if (Guid.TryParse(searchManga.Id, out var searchGuid))
+                    {
+                        existingManga = await _mangaRepo.GetByIdAsync(MangaId.From(searchGuid), ct);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Failed to perform Meilisearch title lookup for {MangaTitle}", mangaData.Title);
+            }
         }
 
         var chapters = await ExtractChaptersMetadata(ct);
@@ -430,56 +443,111 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
                 existingManga.AddChapters(newChapters);
 
                 if (scrapChapters)
-                    foreach (var chapter in newChapters)
-                        await QueueChapterScraping(existingManga.Id.Value, existingManga.Title, chapter, ct);
-
-                using var scope = ScopeFactory.CreateScope();
-                var webhookService = scope.ServiceProvider.GetService<DiscordWebhookService>();
-                if (webhookService != null)
-                    await webhookService.SendNewChaptersNotificationAsync(existingManga, newChapters, ct);
-
-                var fcmService = scope.ServiceProvider.GetService<FcmNotificationService>();
-                if (fcmService != null)
                 {
                     foreach (var chapter in newChapters)
                     {
-                        await fcmService.SendNewChapterNotificationToUserLibraryAsync(
-                            existingManga.Id.Value,
-                            existingManga.Title,
-                            chapter.Number,
-                            existingManga.ImageUrl,
-                            ct);
+                        try
+                        {
+                            await QueueChapterScraping(existingManga.Id.Value, existingManga.Title, chapter, ct);
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.LogError(ex, "Failed to queue scraping for chapter {ChapterNumber} of {MangaTitle}", chapter.Number, existingManga.Title);
+                        }
                     }
+                }
+
+                try
+                {
+                    using var scope = ScopeFactory.CreateScope();
+                    var webhookService = scope.ServiceProvider.GetService<DiscordWebhookService>();
+                    if (webhookService != null)
+                        await webhookService.SendNewChaptersNotificationAsync(existingManga, newChapters, ct);
+
+                    var fcmService = scope.ServiceProvider.GetService<FcmNotificationService>();
+                    if (fcmService != null)
+                    {
+                        foreach (var chapter in newChapters)
+                        {
+                            await fcmService.SendNewChapterNotificationToUserLibraryAsync(
+                                existingManga.Id.Value,
+                                existingManga.Title,
+                                chapter.Number,
+                                existingManga.ImageUrl,
+                                ct);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogWarning(ex, "Failed to send notifications for new chapters of {MangaTitle}", existingManga.Title);
                 }
             }
 
             existingManga = await UpdateMangaMetaData(existingManga, ct);
             UpdateChapterViews(existingManga, chapters);
             await _mangaRepo.UpdateAsync(existingManga, ct);
-            await MeilisearchService.IndexMangaAsync(existingManga, ct);
-            await QdrantService.UpsertMangaAsync(existingManga, ct);
+
+            try
+            {
+                await MeilisearchService.IndexMangaAsync(existingManga, ct);
+                await QdrantService.UpsertMangaAsync(existingManga, ct);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Failed to sync search indexes for {MangaTitle}", existingManga.Title);
+            }
+
             return existingManga;
         }
 
         mangaData = await UpdateThumbnail(mangaData, mangaData.ImageUrl, ct);
         mangaData.AddChapters(chapters);
-        var createdAt = chapters.OrderBy(x => x.UploadDate).FirstOrDefault()?.UploadDate ?? DateTime.MinValue;
-        mangaData.SetDates(createdAt, DateTime.UtcNow);
+        var createdAt = chapters.OrderBy(x => x.UploadDate).FirstOrDefault()?.UploadDate;
+        if (createdAt == null || createdAt == DateTime.MinValue)
+            createdAt = DateTime.UtcNow;
+        mangaData.SetDates(createdAt.Value, DateTime.UtcNow);
         if (mangaData.Type.Contains('-')) mangaData.SetType("Manga");
 
         var manga = await UpdateMangaMetaData(mangaData, ct);
         await _mangaRepo.AddAsync(manga, ct);
-        await MeilisearchService.IndexMangaAsync(manga, ct);
-        await QdrantService.UpsertMangaAsync(manga, ct);
+
+        try
+        {
+            await MeilisearchService.IndexMangaAsync(manga, ct);
+            await QdrantService.UpsertMangaAsync(manga, ct);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Failed to sync search indexes for new manga {MangaTitle}", manga.Title);
+        }
 
         if (scrapChapters)
+        {
             foreach (var chapter in chapters)
-                await QueueChapterScraping(manga.Id.Value, manga.Title, chapter, ct);
+            {
+                try
+                {
+                    await QueueChapterScraping(manga.Id.Value, manga.Title, chapter, ct);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex, "Failed to queue scraping for chapter {ChapterNumber} of {MangaTitle}", chapter.Number, manga.Title);
+                }
+            }
+        }
 
-        using var webhookScope = ScopeFactory.CreateScope();
-        var discord = webhookScope.ServiceProvider.GetService<DiscordWebhookService>();
-        if (discord != null)
-            await discord.SendNewMangaNotificationAsync(manga, chapters, ct);
+        try
+        {
+            using var webhookScope = ScopeFactory.CreateScope();
+            var discord = webhookScope.ServiceProvider.GetService<DiscordWebhookService>();
+            if (discord != null)
+                await discord.SendNewMangaNotificationAsync(manga, chapters, ct);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Failed to send new manga notification for {MangaTitle}", manga.Title);
+        }
 
         return manga;
     }
