@@ -142,45 +142,42 @@ public class MongoMangaRepository(MangaMongoDbContext dbContext) : IMangaReposit
 
     public async Task<DashboardStatistic> GetStatisticsAsync(CancellationToken ct)
     {
-        var totalManga = await dbContext.Mangas.CountDocumentsAsync(_ => true, cancellationToken: ct);
-
-        // Get unique providers
-        var providers = await dbContext.Mangas.Distinct<string>("Chapters.ChapterProvider", FilterDefinition<MangaDocument>.Empty).ToListAsync(ct);
-        var totalSourceProvider = providers.Count;
-
         var today = DateTime.UtcNow.Date;
         var lastMonth = DateTime.UtcNow.Date.AddDays(-30);
 
-        // ScrappedToday (Count chapters uploaded today)
-        var scrappedToday = await dbContext.Mangas.Aggregate()
+        // Define all aggregation and count tasks for concurrent execution
+        var totalMangaTask = dbContext.Mangas.CountDocumentsAsync(_ => true, cancellationToken: ct);
+
+        var totalChaptersTask = dbContext.Mangas.Aggregate()
+            .Project(m => new { count = m.Chapters.Count })
+            .Group(new BsonDocument { { "_id", BsonNull.Value }, { "total", new BsonDocument("$sum", "$count") } })
+            .FirstOrDefaultAsync(ct);
+
+        var providersTask = dbContext.Mangas.Distinct<string>("Chapters.ChapterProvider", FilterDefinition<MangaDocument>.Empty).ToListAsync(ct);
+
+        var scrappedTodayTask = dbContext.Mangas.Aggregate()
             .Unwind<MangaDocument, ChapterDocumentUnwound>(m => m.Chapters)
             .Match(c => c.Chapters.UploadDate >= today)
             .Count()
-            .FirstOrDefaultAsync(ct)
-            .ContinueWith(t => t.Result?.Count ?? 0);
+            .FirstOrDefaultAsync(ct);
 
-        // ScrappedThisMonth
-        var scrappedThisMonth = await dbContext.Mangas.Aggregate()
+        var scrappedThisMonthTask = dbContext.Mangas.Aggregate()
             .Unwind<MangaDocument, ChapterDocumentUnwound>(m => m.Chapters)
             .Match(c => c.Chapters.UploadDate >= lastMonth)
             .Count()
-            .FirstOrDefaultAsync(ct)
-            .ContinueWith(t => t.Result?.Count ?? 0);
+            .FirstOrDefaultAsync(ct);
 
-        var totalUnlinkedMetadata = await dbContext.Mangas.CountDocumentsAsync(m => m.MalId == 0, cancellationToken: ct);
+        var totalUnlinkedMetadataTask = dbContext.Mangas.CountDocumentsAsync(m => m.MalId == 0, cancellationToken: ct);
 
-        // Chapters with null or empty Link
-        var totalUnavailableMangaChapter = await dbContext.Mangas
+        var totalUnavailableMangaChapterTask = dbContext.Mangas
             .Find(m => m.Chapters.Any(c => c.Pages == null || c.Pages.Count == 0))
             .CountDocumentsAsync(ct);
 
-        // Calculate TotalStorageUsed
-        var thumbnailResult = await dbContext.Mangas.Aggregate()
+        var thumbnailTask = dbContext.Mangas.Aggregate()
             .Group(new BsonDocument { { "_id", BsonNull.Value }, { "total", new BsonDocument("$sum", "$thumbnailSize") } })
             .FirstOrDefaultAsync(ct);
-        var totalThumbnailSize = thumbnailResult != null && thumbnailResult.Contains("total") ? thumbnailResult["total"].ToInt64() : 0;
 
-        var pagesResult = await dbContext.Mangas.Aggregate()
+        var pagesTask = dbContext.Mangas.Aggregate()
             .Project(m => new
             {
                 totalSize = m.Chapters.Sum(c => c.Pages.Sum(p => p.Size))
@@ -191,18 +188,74 @@ public class MongoMangaRepository(MangaMongoDbContext dbContext) : IMangaReposit
                 { "total", new BsonDocument("$sum", "$totalSize") }
             })
             .FirstOrDefaultAsync(ct);
-        var totalPagesSize = pagesResult != null && pagesResult.Contains("total") ? pagesResult["total"].ToInt64() : 0;
 
-        var totalStorageUsed = totalThumbnailSize + totalPagesSize;
-
-        // Calculate MonthlyScrap
-        var monthlyScrapRaw = await dbContext.Mangas.Aggregate()
+        var monthlyScrapTask = dbContext.Mangas.Aggregate()
             .Unwind<MangaDocument, ChapterDocumentUnwound>(m => m.Chapters)
             .Match(c => c.Chapters.UploadDate >= lastMonth)
             .Group(c => new { Date = c.Chapters.UploadDate.Date }, g => new { Date = g.Key.Date, Count = g.Count() })
             .SortBy(x => x.Date)
             .ToListAsync(ct);
 
+        var totalUsersTask = dbContext.Users.CountDocumentsAsync(_ => true, cancellationToken: ct);
+        var activeUsersTodayTask = dbContext.Users.CountDocumentsAsync(u => u.LastActiveAt >= today, cancellationToken: ct);
+        var activeUsersThisMonthTask = dbContext.Users.CountDocumentsAsync(u => u.LastActiveAt >= lastMonth, cancellationToken: ct);
+
+        var typeBreakdownTask = dbContext.Mangas.Aggregate()
+            .Group(m => m.Type, g => new { Type = g.Key, Count = g.Count() })
+            .ToListAsync(ct);
+
+        var statusBreakdownTask = dbContext.Mangas.Aggregate()
+            .Group(m => m.Status, g => new { Status = g.Key, Count = g.Count() })
+            .ToListAsync(ct);
+
+        var providerBreakdownTask = dbContext.Mangas.Aggregate()
+            .Unwind<MangaDocument, ChapterDocumentUnwound>(m => m.Chapters)
+            .Group(c => c.Chapters.ChapterProvider, g => new { Provider = g.Key, Count = g.Count() })
+            .ToListAsync(ct);
+
+        await Task.WhenAll(
+            totalMangaTask,
+            totalChaptersTask,
+            providersTask,
+            scrappedTodayTask,
+            scrappedThisMonthTask,
+            totalUnlinkedMetadataTask,
+            totalUnavailableMangaChapterTask,
+            thumbnailTask,
+            pagesTask,
+            monthlyScrapTask,
+            totalUsersTask,
+            activeUsersTodayTask,
+            activeUsersThisMonthTask,
+            typeBreakdownTask,
+            statusBreakdownTask,
+            providerBreakdownTask
+        );
+
+        var totalManga = await totalMangaTask;
+        var chaptersResult = await totalChaptersTask;
+        var totalChapters = chaptersResult != null && chaptersResult.Contains("total") ? chaptersResult["total"].ToInt64() : 0;
+
+        var providers = await providersTask;
+        var totalSourceProvider = providers.Count;
+
+        var scrappedTodayResult = await scrappedTodayTask;
+        var scrappedToday = scrappedTodayResult?.Count ?? 0;
+
+        var scrappedThisMonthResult = await scrappedThisMonthTask;
+        var scrappedThisMonth = scrappedThisMonthResult?.Count ?? 0;
+
+        var totalUnlinkedMetadata = await totalUnlinkedMetadataTask;
+        var totalUnavailableMangaChapter = await totalUnavailableMangaChapterTask;
+
+        var thumbnailResult = await thumbnailTask;
+        var totalThumbnailSize = thumbnailResult != null && thumbnailResult.Contains("total") ? thumbnailResult["total"].ToInt64() : 0;
+
+        var pagesResult = await pagesTask;
+        var totalPagesSize = pagesResult != null && pagesResult.Contains("total") ? pagesResult["total"].ToInt64() : 0;
+        var totalStorageUsed = totalThumbnailSize + totalPagesSize;
+
+        var monthlyScrapRaw = await monthlyScrapTask;
         var monthlyScrap = new List<ScrapStats>();
         for (int i = 0; i <= 30; i++)
         {
@@ -215,16 +268,42 @@ public class MongoMangaRepository(MangaMongoDbContext dbContext) : IMangaReposit
             });
         }
 
+        var totalUsers = await totalUsersTask;
+        var activeUsersToday = await activeUsersTodayTask;
+        var activeUsersThisMonth = await activeUsersThisMonthTask;
+
+        var rawTypeBreakdown = await typeBreakdownTask;
+        var mangaTypeBreakdown = rawTypeBreakdown
+            .Where(x => !string.IsNullOrWhiteSpace(x.Type))
+            .ToDictionary(x => x.Type!, x => (long)x.Count);
+
+        var rawStatusBreakdown = await statusBreakdownTask;
+        var mangaStatusBreakdown = rawStatusBreakdown
+            .Where(x => !string.IsNullOrWhiteSpace(x.Status))
+            .ToDictionary(x => x.Status!, x => (long)x.Count);
+
+        var rawProviderBreakdown = await providerBreakdownTask;
+        var providerChapterBreakdown = rawProviderBreakdown
+            .Where(x => !string.IsNullOrWhiteSpace(x.Provider))
+            .ToDictionary(x => x.Provider!, x => (long)x.Count);
+
         return new DashboardStatistic
         {
             TotalManga = totalManga,
+            TotalChapters = totalChapters,
             TotalSourceProvider = totalSourceProvider,
             ScrappedToday = scrappedToday,
             ScrappedThisMonth = scrappedThisMonth,
             TotalUnlinkedMetadata = totalUnlinkedMetadata,
             TotalUnavailableMangaChapter = totalUnavailableMangaChapter,
             TotalStorageUsed = totalStorageUsed,
-            MonthlyScrap = monthlyScrap
+            MonthlyScrap = monthlyScrap,
+            TotalUsers = totalUsers,
+            ActiveUsersToday = activeUsersToday,
+            ActiveUsersThisMonth = activeUsersThisMonth,
+            MangaTypeBreakdown = mangaTypeBreakdown,
+            MangaStatusBreakdown = mangaStatusBreakdown,
+            ProviderChapterBreakdown = providerChapterBreakdown
         };
     }
 
