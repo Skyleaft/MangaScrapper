@@ -42,6 +42,8 @@ public sealed class MangaMappingConfig : IRegister
             .Map(dest => dest.CreatedAtTimestamp, src => ((DateTimeOffset)src.CreatedAt.ToUniversalTime()).ToUnixTimeSeconds())
             .Map(dest => dest.UpdatedAtTimestamp, src => ((DateTimeOffset)src.UpdatedAt.ToUniversalTime()).ToUnixTimeSeconds())
             .Map(dest => dest.TotalView, src => src.Chapters.Sum(x => x.TotalView))
+            .Map(dest => dest.TotalChapters, src => src.Chapters.Count)
+            .Map(dest => dest.LatestChapterNumber, src => src.Chapters.Count > 0 ? src.Chapters.Max(c => c.Number) : 0)
             .Map(dest => dest.LatestChapter, src => src.Chapters.OrderByDescending(c => c.Number).FirstOrDefault().Adapt<MeiliChapterDocument>());
 
         config.NewConfig<MeiliMangaDocument, Manga>()
