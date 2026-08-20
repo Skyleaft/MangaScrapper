@@ -83,10 +83,10 @@ public sealed class ExternalMetadataService : IExternalMetadataService
                                 coverImage { extraLarge large medium }
                                 averageScore
                                 popularity
-                                favorites
+                                favourites
                                 genres
                                 synonyms
-                                tags { name }
+                                tags { name rank }
                                 startDate { year month day }
                                 staff {
                                     edges {
@@ -119,10 +119,10 @@ public sealed class ExternalMetadataService : IExternalMetadataService
                                 coverImage { extraLarge large medium }
                                 averageScore
                                 popularity
-                                favorites
+                                favourites
                                 genres
                                 synonyms
-                                tags { name }
+                                tags { name rank }
                                 startDate { year month day }
                                 staff {
                                     edges {
@@ -293,7 +293,27 @@ public sealed class ExternalMetadataService : IExternalMetadataService
                 }
 
                 var author = details?.Authors?.FirstOrDefault(a => a.Type == "Author")?.Name ?? "Unknown";
-                var categories = details?.Categories?.OrderByDescending(x=>x.Votes).Select(c => c.Category).Where(c => !string.IsNullOrEmpty(c)).Cast<string>().ToList();
+                var categories = new List<string>();
+                if (details.Categories.Count > 10)
+                {
+                    categories= details?.Categories?
+                        .Where(x=>x.Votes>1)
+                        .OrderByDescending(x=>x.Votes)
+                        .Select(c => c.Category)
+                        .Where(c => !string.IsNullOrEmpty(c))
+                        .Cast<string>()
+                        .ToList();
+                }
+                else
+                {
+                    categories= details?.Categories?
+                        .OrderByDescending(x=>x.Votes)
+                        .Select(c => c.Category)
+                        .Where(c => !string.IsNullOrEmpty(c))
+                        .Cast<string>()
+                        .ToList();
+                }
+                 
                 var genres = record.Genres?.Select(g => g.Genre).Where(g => !string.IsNullOrEmpty(g)).Cast<string>().ToList() ?? new List<string>();
 
                 DateTime? releaseDate = null;

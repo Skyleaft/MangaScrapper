@@ -31,7 +31,7 @@ public record AnilistMedia(
     [property: JsonPropertyName("coverImage")] AnilistCoverImage? CoverImage,
     [property: JsonPropertyName("averageScore")] int? AverageScore,
     [property: JsonPropertyName("popularity")] int? Popularity,
-    [property: JsonPropertyName("favorites")] int? Favorites,
+    [property: JsonPropertyName("favourites")] int? Favorites,
     [property: JsonPropertyName("genres")] List<string>? Genres,
     [property: JsonPropertyName("synonyms")] List<string>? Synonyms,
     [property: JsonPropertyName("tags")] List<AnilistTag>? Tags,
@@ -81,4 +81,5 @@ public record AnilistStaffName(
     [property: JsonPropertyName("full")] string? Full);
 
 public record AnilistTag(
-    [property: JsonPropertyName("name")] string? Name);
+    [property: JsonPropertyName("name")] string? Name,
+    [property: JsonPropertyName("rank")] int? Rank);
