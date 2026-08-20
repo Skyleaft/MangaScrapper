@@ -1,6 +1,7 @@
 using MangaScrapper.Core.Common.Abstractions;
 using MangaScrapper.Core.Repositories;
 using MangaScrapper.Core.ValueObjects;
+using Mapster;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -12,7 +13,7 @@ namespace MangaScrapper.Core.Features.UserProgression.GetMangaProgression;
 
 public record GetMangaProgressionQuery(string UserId, Guid MangaId) : IQuery<UserProgressionResponse>;
 
-internal sealed class GetMangaProgressionQueryHandler(IUserProgressionRepository progressionRepository)
+internal sealed class GetMangaProgressionQueryHandler(IUserProgressionRepository progressionRepository,IMangaRepository mangaRepository)
     : IQueryHandler<GetMangaProgressionQuery, UserProgressionResponse>
 {
     public async Task<Result<UserProgressionResponse>> Handle(GetMangaProgressionQuery query, CancellationToken ct)
@@ -20,6 +21,8 @@ internal sealed class GetMangaProgressionQueryHandler(IUserProgressionRepository
         var p = await progressionRepository.GetByUserIdAndMangaIdAsync(query.UserId, MangaId.From(query.MangaId), ct);
         if (p is null)
             return Error.NotFound("UserProgression.NotFound", "No progression recorded for this manga.");
+        
+        var mangas = await mangaRepository.GetByIdsAsync(new(){p.MangaId.Value}, ct);
 
         return new UserProgressionResponse(
             p.Id, 
@@ -27,7 +30,8 @@ internal sealed class GetMangaProgressionQueryHandler(IUserProgressionRepository
             p.MangaId.Value, 
             p.LastReadAt,
             p.TotalReadingTime,
-            p.ChapterLogs.OrderByDescending(o=>o.LastReadAt).Select(cl => new ChapterLogsResponse(cl.Id, cl.ChapterId, cl.ChapterNumber, cl.LastReadPage, cl.TotalPages, cl.IsCompleted, cl.ReadingTimeSeconds, cl.LastReadAt)).ToList()
+            p.ChapterLogs.OrderByDescending(o=>o.LastReadAt).Select(cl => new ChapterLogsResponse(cl.Id, cl.ChapterId, cl.ChapterNumber, cl.LastReadPage, cl.TotalPages, cl.IsCompleted, cl.ReadingTimeSeconds, cl.LastReadAt)).ToList(),
+            mangas.FirstOrDefault().Adapt<MangaSummaryResponse>()
         );
     }
 }
