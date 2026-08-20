@@ -1,6 +1,3 @@
-A Bash script (.sh) streamlines stopping, rebuilding, and restarting your Docker Compose services in one command.
-
-Step 1: Create deploy.sh
 
 Bash
 #!/bin/bash
