@@ -124,7 +124,7 @@ public class QdrantService
                 var manga = doc.Adapt<Manga>();
                 batch.Add(await MapToPointStructAsync(manga, ct));
 
-                if (batch.Count >= 500)
+                if (batch.Count >= 200)
                 {
                     await _client.UpsertAsync(CollectionName, batch, cancellationToken: ct);
                     processed += batch.Count;
