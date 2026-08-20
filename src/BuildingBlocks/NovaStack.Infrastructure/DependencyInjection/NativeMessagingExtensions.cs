@@ -31,6 +31,7 @@ public static class NativeMessagingExtensions
         where TEvent : class, IIntegrationEvent
         where THandler : class, IIntegrationEventHandler<TEvent>
     {
+        services.AddScoped<THandler>();
         services.AddHostedService(sp => 
         {
             var options = sp.GetRequiredService<IOptions<MessagingOptions>>().Value.RabbitMQ;
@@ -47,6 +48,7 @@ public static class NativeMessagingExtensions
         where TEvent : class, IIntegrationEvent
         where THandler : class, IIntegrationEventHandler<TEvent>
     {
+        services.AddScoped<THandler>();
         services.AddHostedService(sp => 
         {
             var options = sp.GetRequiredService<IOptions<MessagingOptions>>().Value.Kafka;

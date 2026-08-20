@@ -266,6 +266,7 @@ public static class CoreExtensions
         
         services.AddScoped<SyncStorageHandler>();
         services.AddScoped<SyncQdrantHandler>();
+        services.AddScoped<SyncMeilisearchHandler>();
         services.AddScoped<ChapterPagesScrapedSignalRHandler>();
         services.AddScoped<ChapterScrapingProgressSignalRHandler>();
 
