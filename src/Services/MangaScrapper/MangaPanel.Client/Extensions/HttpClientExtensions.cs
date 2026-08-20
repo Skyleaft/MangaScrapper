@@ -31,6 +31,24 @@ public static class HttpClientExtensions
         }
     }
 
+    public static async Task<TResponse?> QueryApiDataAsync<TRequest, TResponse>(this HttpClient client, string requestUri, TRequest value, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var request = new HttpRequestMessage(HttpMethod.Query, requestUri)
+            {
+                Content = JsonContent.Create(value)
+            };
+            var httpResponse = await client.SendAsync(request, cancellationToken);
+            var response = await httpResponse.Content.ReadFromJsonAsync<ApiResponse<TResponse>>(cancellationToken: cancellationToken);
+            return response != null && response.Success ? response.Data : default;
+        }
+        catch
+        {
+            return default;
+        }
+    }
+
     public static async Task<T?> ReadApiDataAsync<T>(this HttpResponseMessage httpResponse, CancellationToken cancellationToken = default)
     {
         try

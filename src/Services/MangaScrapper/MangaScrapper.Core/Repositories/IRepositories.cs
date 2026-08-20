@@ -1,5 +1,7 @@
 using MangaScrapper.Core.Aggregates;
+using MangaScrapper.Core.Configuration;
 using MangaScrapper.Core.ValueObjects;
+using NovaStack.Contracts.Requests;
 using NovaStack.SharedKernel.Common;
 
 namespace MangaScrapper.Core.Repositories;
@@ -50,6 +52,13 @@ public interface IMangaExternalRepository
         int page,
         int pageSize,
         bool? nsfw = null,
+        CancellationToken ct = default);
+
+    Task<PagedList<Manga>> QueryAdvancedAsync(
+        MangaAdvancedFilter? filter,
+        List<MangaSortOption>? sorts,
+        int page,
+        int pageSize,
         CancellationToken ct = default);
 
     Task<List<Manga>> GetRecomendationAsync(List<Guid>readingHistoryIds,int limit,  CancellationToken ct = default);

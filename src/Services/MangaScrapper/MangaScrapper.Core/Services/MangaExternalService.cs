@@ -3,6 +3,7 @@ using MangaScrapper.Core.Configuration;
 using MangaScrapper.Core.Repositories;
 using MangaScrapper.Core.ValueObjects;
 using Mapster;
+using NovaStack.Contracts.Requests;
 using NovaStack.SharedKernel.Common;
 
 namespace MangaScrapper.Core.Services;
@@ -18,6 +19,18 @@ public class MangaExternalService(ILogger<MangaExternalService> logger,
     {
         var data = await meilisearchService.SearchAsync(search, genres, status, type, sortBy, orderBy, page, pageSize, nsfw, ct);
         var items = data.Items.Select(c=>c.Adapt<Manga>()).ToList();
+        return new PagedList<Manga>(items, page, pageSize, data.TotalCount);
+    }
+
+    public async Task<PagedList<Manga>> QueryAdvancedAsync(
+        MangaAdvancedFilter? filter,
+        List<MangaSortOption>? sorts,
+        int page,
+        int pageSize,
+        CancellationToken ct = default)
+    {
+        var data = await meilisearchService.AdvancedSearchAsync(filter, sorts, page, pageSize, ct);
+        var items = data.Items.Select(c => c.Adapt<Manga>()).ToList();
         return new PagedList<Manga>(items, page, pageSize, data.TotalCount);
     }
 

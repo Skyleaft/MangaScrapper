@@ -5,6 +5,7 @@ using MangaScrapper.Core.Persistence.Documents;
 using Mapster;
 using Meilisearch;
 using MongoDB.Driver;
+using NovaStack.Contracts.Requests;
 
 namespace MangaScrapper.Core.Services;
 
@@ -50,11 +51,18 @@ public class MeilisearchService
             "type",
             "status",
             "genres",
+            "categories",
             "rating",
             "popularity",
+            "members",
             "totalView",
             "releaseDate",
-            "nsfw"
+            "nsfw",
+            "author",
+            "totalChapters",
+            "latestChapterNumber",
+            "createdAtTimestamp",
+            "updatedAtTimestamp"
         }, ct);
 
         await index.UpdateSortableAttributesAsync(new[]
@@ -62,8 +70,11 @@ public class MeilisearchService
             "title",
             "rating",
             "popularity",
+            "members",
             "totalView",
             "releaseDate",
+            "totalChapters",
+            "latestChapterNumber",
             "createdAtTimestamp",
             "updatedAtTimestamp"
         }, ct);
@@ -210,17 +221,7 @@ public class MeilisearchService
         }
 
         // Map sortBy to Meilisearch sort field
-        var meiliSortField = sortBy.ToLowerInvariant() switch
-        {
-            "title" => "title",
-            "createdat" => "createdAtTimestamp",
-            "totalview" => "totalView",
-            "popularity" => "popularity",
-            "rating" => "rating",
-            "releasedate" => "releaseDate",
-            _ => "updatedAtTimestamp" // default: updatedAt
-        };
-
+        var meiliSortField = MapSortField(sortBy);
         var sortDirection = orderBy?.ToLowerInvariant() == "asc" ? "asc" : "desc";
 
         var searchQuery = new SearchQuery
@@ -238,4 +239,199 @@ public class MeilisearchService
 
         return (result.Hits.ToList(), totalHits);
     }
+
+    /// <summary>
+    /// Searches the Meilisearch index with advanced filters, multi-field sorting, and pagination.
+    /// </summary>
+    public async Task<(List<MeiliMangaDocument> Items, int TotalCount)> AdvancedSearchAsync(
+        MangaAdvancedFilter? filter,
+        List<MangaSortOption>? sorts,
+        int page,
+        int pageSize,
+        CancellationToken ct = default)
+    {
+        var index = _client.Index(IndexName);
+
+        var filters = new List<string>();
+
+        if (filter != null)
+        {
+            // Included genres
+            if (filter.IncludedGenres is { Count: > 0 })
+            {
+                var cleanGenres = filter.IncludedGenres.Where(g => !string.IsNullOrWhiteSpace(g)).ToList();
+                if (cleanGenres.Count > 0)
+                {
+                    var isOrMode = string.Equals(filter.GenreMatchMode, "Or", StringComparison.OrdinalIgnoreCase);
+                    var genreClauses = cleanGenres.Select(g => $"genres = \"{EscapeMeiliString(g)}\"");
+                    if (isOrMode)
+                    {
+                        filters.Add($"({string.Join(" OR ", genreClauses)})");
+                    }
+                    else
+                    {
+                        foreach (var clause in genreClauses)
+                        {
+                            filters.Add(clause);
+                        }
+                    }
+                }
+            }
+
+            // Excluded genres
+            if (filter.ExcludedGenres is { Count: > 0 })
+            {
+                foreach (var g in filter.ExcludedGenres.Where(g => !string.IsNullOrWhiteSpace(g)))
+                {
+                    filters.Add($"genres != \"{EscapeMeiliString(g)}\"");
+                }
+            }
+
+            // Statuses
+            if (filter.Statuses is { Count: > 0 })
+            {
+                var cleanStatuses = filter.Statuses.Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
+                if (cleanStatuses.Count == 1)
+                {
+                    filters.Add($"status = \"{EscapeMeiliString(cleanStatuses[0])}\"");
+                }
+                else if (cleanStatuses.Count > 1)
+                {
+                    var statusClauses = cleanStatuses.Select(s => $"status = \"{EscapeMeiliString(s)}\"");
+                    filters.Add($"({string.Join(" OR ", statusClauses)})");
+                }
+            }
+
+            // Types
+            if (filter.Types is { Count: > 0 })
+            {
+                var cleanTypes = filter.Types.Where(t => !string.IsNullOrWhiteSpace(t)).ToList();
+                if (cleanTypes.Count == 1)
+                {
+                    filters.Add($"type = \"{EscapeMeiliString(cleanTypes[0])}\"");
+                }
+                else if (cleanTypes.Count > 1)
+                {
+                    var typeClauses = cleanTypes.Select(t => $"type = \"{EscapeMeiliString(t)}\"");
+                    filters.Add($"({string.Join(" OR ", typeClauses)})");
+                }
+            }
+
+            // Author
+            if (!string.IsNullOrWhiteSpace(filter.Author))
+            {
+                filters.Add($"author = \"{EscapeMeiliString(filter.Author)}\"");
+            }
+
+            // Rating
+            if (filter.MinRating.HasValue && filter.MaxRating.HasValue)
+            {
+                filters.Add($"rating >= {filter.MinRating.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)} AND rating <= {filter.MaxRating.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)}");
+            }
+            else if (filter.MinRating.HasValue)
+            {
+                filters.Add($"rating >= {filter.MinRating.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)}");
+            }
+            else if (filter.MaxRating.HasValue)
+            {
+                filters.Add($"rating <= {filter.MaxRating.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)}");
+            }
+
+            // Popularity
+            if (filter.MinPopularity.HasValue)
+            {
+                filters.Add($"popularity >= {filter.MinPopularity.Value}");
+            }
+            if (filter.MaxPopularity.HasValue)
+            {
+                filters.Add($"popularity <= {filter.MaxPopularity.Value}");
+            }
+
+            // TotalView
+            if (filter.MinTotalView.HasValue)
+            {
+                filters.Add($"totalView >= {filter.MinTotalView.Value}");
+            }
+            if (filter.MaxTotalView.HasValue)
+            {
+                filters.Add($"totalView <= {filter.MaxTotalView.Value}");
+            }
+
+            // TotalChapters
+            if (filter.MinChapters.HasValue)
+            {
+                filters.Add($"totalChapters >= {filter.MinChapters.Value}");
+            }
+            if (filter.MaxChapters.HasValue)
+            {
+                filters.Add($"totalChapters <= {filter.MaxChapters.Value}");
+            }
+
+            // ReleaseDate Range
+            if (filter.StartReleaseDate.HasValue)
+            {
+                var startSec = ((DateTimeOffset)filter.StartReleaseDate.Value.ToUniversalTime()).ToUnixTimeSeconds();
+                filters.Add($"releaseDate >= {startSec}");
+            }
+            if (filter.EndReleaseDate.HasValue)
+            {
+                var endSec = ((DateTimeOffset)filter.EndReleaseDate.Value.ToUniversalTime()).ToUnixTimeSeconds();
+                filters.Add($"releaseDate <= {endSec}");
+            }
+
+            // NSFW
+            if (filter.Nsfw.HasValue)
+            {
+                filters.Add($"nsfw = {filter.Nsfw.Value.ToString().ToLowerInvariant()}");
+            }
+        }
+
+        // Sorting
+        var sortExpressions = new List<string>();
+        if (sorts is { Count: > 0 })
+        {
+            foreach (var sort in sorts.Where(s => !string.IsNullOrWhiteSpace(s.Field)))
+            {
+                var field = MapSortField(sort.Field);
+                var dir = string.Equals(sort.Direction, "asc", StringComparison.OrdinalIgnoreCase) ? "asc" : "desc";
+                sortExpressions.Add($"{field}:{dir}");
+            }
+        }
+
+        if (sortExpressions.Count == 0)
+        {
+            sortExpressions.Add("updatedAtTimestamp:desc");
+        }
+
+        var searchQuery = new SearchQuery
+        {
+            Filter = filters.Count > 0 ? string.Join(" AND ", filters) : null,
+            Sort = sortExpressions,
+            HitsPerPage = pageSize > 0 ? pageSize : 10,
+            Page = page > 0 ? page : 1
+        };
+
+        var result = await index.SearchAsync<MeiliMangaDocument>(filter?.Search ?? "", searchQuery, ct);
+
+        var paginated = result as PaginatedSearchResult<MeiliMangaDocument>;
+        var totalHits = paginated?.TotalHits ?? 0;
+
+        return (result.Hits.ToList(), totalHits);
+    }
+
+    private static string EscapeMeiliString(string value) => value.Replace("\"", "\\\"");
+
+    private static string MapSortField(string sortBy) => sortBy.ToLowerInvariant() switch
+    {
+        "title" => "title",
+        "rating" => "rating",
+        "popularity" => "popularity",
+        "members" => "members",
+        "totalview" or "views" or "view" => "totalView",
+        "releasedate" or "release_date" or "year" => "releaseDate",
+        "totalchapters" or "chapters" => "totalChapters",
+        "latestchapternumber" or "latestchapter" or "chapter" => "latestChapterNumber",
+        "createdat" or "created_at" or "createdattimestamp" => "createdAtTimestamp",
+        _ => "updatedAtTimestamp" // default: updatedAt
+    };
 }
