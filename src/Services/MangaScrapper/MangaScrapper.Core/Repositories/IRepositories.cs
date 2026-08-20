@@ -49,6 +49,7 @@ public interface IMangaExternalRepository
         string orderBy,
         int page,
         int pageSize,
+        bool? nsfw = null,
         CancellationToken ct = default);
 
     Task<List<Manga>> GetRecomendationAsync(List<Guid>readingHistoryIds,int limit,  CancellationToken ct = default);

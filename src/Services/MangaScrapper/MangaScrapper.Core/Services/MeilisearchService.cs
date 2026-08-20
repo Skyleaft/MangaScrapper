@@ -53,7 +53,8 @@ public class MeilisearchService
             "rating",
             "popularity",
             "totalView",
-            "releaseDate"
+            "releaseDate",
+            "nsfw"
         }, ct);
 
         await index.UpdateSortableAttributesAsync(new[]
@@ -177,6 +178,7 @@ public class MeilisearchService
         string orderBy,
         int page,
         int pageSize,
+        bool? nsfw = null,
         CancellationToken ct = default)
     {
         var index = _client.Index(IndexName);
@@ -200,6 +202,11 @@ public class MeilisearchService
         if (!string.IsNullOrWhiteSpace(type))
         {
             filters.Add($"type = \"{type}\"");
+        }
+
+        if (nsfw.HasValue)
+        {
+            filters.Add($"nsfw = {nsfw.Value.ToString().ToLowerInvariant()}");
         }
 
         // Map sortBy to Meilisearch sort field

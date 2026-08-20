@@ -19,7 +19,8 @@ public record GetPagedMangaQuery(
     int Page = 1,
     int PageSize = 10,
     string? SortBy = "updatedAt",
-    string? OrderBy = "desc") : IQuery<PagedResponse<MangaSummaryResponse>>;
+    string? OrderBy = "desc",
+    bool? Nsfw = false) : IQuery<PagedResponse<MangaSummaryResponse>>;
 
 public sealed class GetPagedMangaQueryHandler(
     IMangaRepository mangaRepository,
@@ -39,6 +40,7 @@ public sealed class GetPagedMangaQueryHandler(
             query.OrderBy,
             query.Page,
             query.PageSize,
+            query.Nsfw,
             ct);
         
 
@@ -71,10 +73,11 @@ public sealed class GetPagedMangaEndpoint : IEndpointDefinition
         int page = 1,
         int pageSize = 10,
         string? sortBy = "updatedAt",
-        string? orderBy = "desc")
+        string? orderBy = "desc",
+        bool? nsfw = false)
     {
         var genresList = genres?.ToList();
-        var query = new GetPagedMangaQuery(search, genresList, status, type, page, pageSize, sortBy, orderBy);
+        var query = new GetPagedMangaQuery(search, genresList, status, type, page, pageSize, sortBy, orderBy, nsfw);
         var result = await sender.Send(query, ct);
 
         return result.IsSuccess
