@@ -85,13 +85,24 @@ impl EmbeddingEngine {
         })
     }
 
-    pub fn encode(&self, text: &str) -> Result<Vec<f32>, Box<dyn std::error::Error + Send + Sync>> {
+    pub fn encode(&self, text: &str, mode: &str) -> Result<Vec<f32>, Box<dyn std::error::Error + Send + Sync>> {
         let start_time = Instant::now();
+
+        let effective_text = match mode {
+            "query" | "search_query" => {
+                if text.starts_with("Instruct:") || text.starts_with("query:") {
+                    text.to_string()
+                } else {
+                    format!("Instruct: Given a web search query, retrieve relevant passages that answer the query\nQuery: {}", text)
+                }
+            }
+            _ => text.to_string(),
+        };
 
         // 1. Tokenize Input
         let encoding = self
             .tokenizer
-            .encode(text, true)
+            .encode(effective_text.as_str(), true)
             .map_err(|e| format!("Tokenizer encode error: {}", e))?;
 
         let mut token_ids: Vec<i64> = encoding.get_ids().iter().map(|&id| id as i64).collect();
@@ -236,7 +247,7 @@ impl EmbeddingService for GrpcEmbeddingService {
             return Err(Status::invalid_argument("Text cannot be empty"));
         }
 
-        match self.engine.encode(&req.text) {
+        match self.engine.encode(&req.text, mode) {
             Ok(dense) => {
                 let duration = start_time.elapsed();
                 info!(

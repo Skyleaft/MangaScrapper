@@ -305,21 +305,42 @@ public class QdrantService
     }
 
     /// <summary>
-    /// Multilingual semantic text search returning IDs and relevance scores using dense vector embeddings.
+    /// Multilingual hybrid semantic search using dense vector embeddings + BM25 sparse vectors with RRF fusion.
     /// </summary>
     public async Task<List<ScoredMangaResult>> SemanticSearchAsync(string queryText, int limit = 10, CancellationToken ct = default)
     {
-        var embedding = await _embeddingService.GenerateEmbeddingAsync(queryText, ct);
+        var embedding = await _embeddingService.GenerateEmbeddingAsync(queryText, mode: "query", ct);
         if (embedding == null || embedding.Length == 0)
         {
             _logger.LogWarning("Failed to get embedding for semantic search query.");
             return new List<ScoredMangaResult>();
         }
 
+        var prefetchList = new List<PrefetchQuery>
+        {
+            new()
+            {
+                Query = new Query { Nearest = new VectorInput(embedding) },
+                Using = DenseVectorName,
+                Limit = (ulong)(limit * 3)
+            }
+        };
+
+        var querySparse = ComputeSparseVector(queryText);
+        if (querySparse.Indices.Count > 0)
+        {
+            prefetchList.Add(new PrefetchQuery
+            {
+                Query = new Query { Nearest = new VectorInput { Sparse = querySparse } },
+                Using = SparseVectorName,
+                Limit = (ulong)(limit * 3)
+            });
+        }
+
         var searchResult = await _client.QueryAsync(
             CollectionName,
-            query: new Query { Nearest = new VectorInput(embedding) },
-            usingVector: DenseVectorName,
+            prefetch: prefetchList,
+            query: new Query { Fusion = Fusion.Rrf },
             limit: (ulong)limit,
             cancellationToken: ct);
 
@@ -590,11 +611,17 @@ public class QdrantService
         if (!string.IsNullOrWhiteSpace(title))
             textParts.Add($"Title: {title}");
 
-        if (distinctSynonyms.Count > 0)
-            textParts.Add($"Alternative Titles: {string.Join(", ", distinctSynonyms)}");
+        if (distinctGenres.Count > 0)
+            textParts.Add($"Genres: {string.Join(", ", distinctGenres)}");
+
+        if (distinctCategories.Count > 0)
+            textParts.Add($"Themes: {string.Join(", ", distinctCategories)}");
 
         if (!string.IsNullOrWhiteSpace(manga.Type) && !string.Equals(manga.Type, "Unknown", StringComparison.OrdinalIgnoreCase))
             textParts.Add($"Type: {manga.Type.Trim()}");
+
+        if (distinctSynonyms.Count > 0)
+            textParts.Add($"Alternative Titles: {string.Join(", ", distinctSynonyms.Take(5))}");
 
         if (!string.IsNullOrWhiteSpace(manga.Status) && !string.Equals(manga.Status, "Unknown", StringComparison.OrdinalIgnoreCase))
             textParts.Add($"Status: {manga.Status.Trim()}");
@@ -602,20 +629,14 @@ public class QdrantService
         if (!string.IsNullOrWhiteSpace(manga.Author) && !string.Equals(manga.Author, "Unknown", StringComparison.OrdinalIgnoreCase))
             textParts.Add($"Author: {manga.Author.Trim()}");
 
-        if (distinctGenres.Count > 0)
-            textParts.Add($"Genres: {string.Join(", ", distinctGenres)}");
-
-        if (distinctCategories.Count > 0)
-            textParts.Add($"Themes: {string.Join(", ", distinctCategories)}");
-
-        if (!string.IsNullOrWhiteSpace(manga.Description))
+        var cleanSynopsis = CleanSynopsis(manga.Description);
+        if (!string.IsNullOrWhiteSpace(cleanSynopsis))
         {
-            var cleanDescription = System.Text.RegularExpressions.Regex.Replace(manga.Description, @"\s+", " ").Trim();
-            textParts.Add($"Synopsis: {cleanDescription}");
+            textParts.Add($"Synopsis: {cleanSynopsis}");
         }
 
         var text = string.Join(". ", textParts);
-        var embedding = await _embeddingService.GenerateEmbeddingAsync(text, ct);
+        var embedding = await _embeddingService.GenerateEmbeddingAsync(text, mode: "passage", ct);
 
         var namedVectors = new NamedVectors();
         if (embedding != null && embedding.Length == (int)_vectorSize)
@@ -630,6 +651,12 @@ public class QdrantService
             var zeroVec = new Vector();
             zeroVec.Data.AddRange(new float[_vectorSize]);
             namedVectors.Vectors[DenseVectorName] = zeroVec;
+        }
+
+        var sparseVec = ComputeSparseVector(text);
+        if (sparseVec.Indices.Count > 0)
+        {
+            namedVectors.Vectors[SparseVectorName] = new Vector { Sparse = sparseVec };
         }
 
         return new PointStruct
@@ -648,6 +675,74 @@ public class QdrantService
                 ["categories"] = distinctCategories.ToArray()
             }
         };
+    }
+
+    private static SparseVector ComputeSparseVector(string text)
+    {
+        var sparse = new SparseVector();
+        if (string.IsNullOrWhiteSpace(text)) return sparse;
+
+        var termCounts = new Dictionary<uint, float>();
+        var words = text.ToLowerInvariant()
+            .Split(new[] { ' ', '.', ',', ':', ';', '!', '?', '-', '_', '/', '(', ')', '[', ']', '"', '\'', '\n', '\r', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+
+        foreach (var word in words)
+        {
+            if (word.Length <= 1) continue;
+            // FNV-1a hash to 32-bit uint in range 1..1,000,000
+            uint hash = 2166136261;
+            foreach (byte b in System.Text.Encoding.UTF8.GetBytes(word))
+            {
+                hash = (hash ^ b) * 16777619;
+            }
+            uint index = (hash % 999999) + 1;
+
+            if (termCounts.TryGetValue(index, out float count))
+                termCounts[index] = count + 1.0f;
+            else
+                termCounts[index] = 1.0f;
+        }
+
+        // Apply sublinear term frequency weight: 1.0 + ln(tf)
+        foreach (var kvp in termCounts.OrderBy(k => k.Key))
+        {
+            sparse.Indices.Add(kvp.Key);
+            sparse.Values.Add((float)(1.0 + Math.Log(kvp.Value)));
+        }
+
+        return sparse;
+    }
+
+    private static string CleanSynopsis(string? rawDescription)
+    {
+        if (string.IsNullOrWhiteSpace(rawDescription)) return string.Empty;
+
+        // 1. Decode HTML entities (e.g. &amp;, &quot;, &#039;, &nbsp;)
+        var text = System.Net.WebUtility.HtmlDecode(rawDescription);
+
+        // 2. Remove HTML tags
+        text = System.Text.RegularExpressions.Regex.Replace(text, @"<[^>]+>", " ");
+
+        // 3. Remove BBCode tags (e.g. [b], [/b], [url=...])
+        text = System.Text.RegularExpressions.Regex.Replace(text, @"\[/?[a-zA-Z0-9_-]+(?:=[^\]]+)?\]", " ");
+
+        // 4. Remove scraper prefixes and promo headers
+        text = System.Text.RegularExpressions.Regex.Replace(text, @"^(?:sinopsis|synopsis|deskripsi|summary)\s*:\s*", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        // 5. Remove scraper promotional boilerplate lines (e.g. "Baca komik ... bahasa indonesia di ...")
+        text = System.Text.RegularExpressions.Regex.Replace(text, @"baca\s+(?:manga|manhwa|manhua|komik)[^.\n]*?(?:bahasa\s+indonesia|terlengkap|gratis)[^.\n]*[.]?", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        // 6. Normalize multiple whitespaces into a single space
+        text = System.Text.RegularExpressions.Regex.Replace(text, @"\s+", " ").Trim();
+
+        // 7. Cap synopsis length to ~1000 characters without splitting words
+        if (text.Length > 1000)
+        {
+            int lastSpace = text.LastIndexOf(' ', 1000);
+            text = lastSpace > 200 ? text.Substring(0, lastSpace) + "..." : text.Substring(0, 1000) + "...";
+        }
+
+        return text;
     }
 }
 

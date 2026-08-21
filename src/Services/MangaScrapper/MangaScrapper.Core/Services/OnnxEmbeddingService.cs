@@ -39,7 +39,7 @@ public sealed class OnnxEmbeddingService : IEmbeddingService, IDisposable
         _httpClientFactory = httpClientFactory;
     }
 
-    public async Task<float[]?> GenerateEmbeddingAsync(string text, CancellationToken ct = default)
+    public async Task<float[]?> GenerateEmbeddingAsync(string text, string mode = "passage", CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(text))
         {
@@ -49,7 +49,7 @@ public sealed class OnnxEmbeddingService : IEmbeddingService, IDisposable
         // 1. Primary: Use high-performance gRPC embedding microservice if Host is configured
         if (!string.IsNullOrWhiteSpace(_config.Host))
         {
-            var grpcResult = await GenerateGrpcEmbeddingAsync(text, ct);
+            var grpcResult = await GenerateGrpcEmbeddingAsync(text, mode, ct);
             if (grpcResult != null && grpcResult.Length > 0)
             {
                 return grpcResult;
@@ -63,7 +63,10 @@ public sealed class OnnxEmbeddingService : IEmbeddingService, IDisposable
         {
             try
             {
-                return ComputeOnnxEmbedding(text);
+                var formattedText = mode == "query" && !text.StartsWith("Instruct:")
+                    ? $"Instruct: Given a web search query, retrieve relevant passages that answer the query\nQuery: {text}"
+                    : text;
+                return ComputeOnnxEmbedding(formattedText);
             }
             catch (Exception ex)
             {
@@ -369,7 +372,7 @@ public sealed class OnnxEmbeddingService : IEmbeddingService, IDisposable
         }
     }
 
-    private async Task<float[]?> GenerateGrpcEmbeddingAsync(string text, CancellationToken ct)
+    private async Task<float[]?> GenerateGrpcEmbeddingAsync(string text, string mode, CancellationToken ct)
     {
         try
         {
@@ -395,7 +398,7 @@ public sealed class OnnxEmbeddingService : IEmbeddingService, IDisposable
             var request = new EmbedRequest
             {
                 Text = text,
-                Mode = "passage"
+                Mode = mode
             };
 
             var response = await _grpcClient.GenerateEmbeddingAsync(request, cancellationToken: ct);
