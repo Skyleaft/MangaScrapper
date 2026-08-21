@@ -113,5 +113,56 @@ public class MangaAggregateTests
         manga.Genres.Should().Contain(new[] { "Action", "Supernatural" });
         manga.Categories.Should().Contain("Shounen");
     }
+
+    [Fact]
+    public void UpdateFromAnilist_ShouldExcludeEmptyOrWhitespaceSynonyms()
+    {
+        // Arrange
+        var manga = Manga.Create("Naruto", "Masashi Kishimoto", "Manga", "Komiku", synonyms: new List<string> { "Naruto Shippuden" });
+        var other = Manga.Create("Naruto", "Masashi Kishimoto", "Manga", "Anilist", synonyms: new List<string> { "", "   ", "Naruto: Shippuden", null! });
+
+        // Act
+        manga.UpdateFromAnilist(other);
+
+        // Assert
+        manga.Synonyms.Should().BeEquivalentTo(new List<string> { "Naruto Shippuden", "Naruto: Shippuden" });
+        manga.Synonyms.Should().NotContain("");
+        manga.Synonyms.Should().NotContain("   ");
+    }
+
+    [Fact]
+    public void ReconstituteFromAnilist_ShouldExcludeEmptyOrWhitespaceSynonyms()
+    {
+        // Arrange
+        var manga = Manga.Create("Naruto", "Masashi Kishimoto", "Manga", "Komiku", synonyms: new List<string> { "Naruto Shippuden" });
+        var anilistMedia = new NovaStack.Contracts.Responses.AnilistMedia(
+            Id: 123,
+            IdMal: 456,
+            Title: new NovaStack.Contracts.Responses.AnilistTitle("Naruto", "Naruto English", "ナルト"),
+            Description: "A ninja story",
+            CountryOfOrigin: "JP",
+            Format: "MANGA",
+            Status: "FINISHED",
+            Chapters: 700,
+            Volumes: 72,
+            CoverImage: null,
+            AverageScore: 80,
+            Popularity: 1000,
+            Favorites: 500,
+            Genres: new List<string> { "Action" },
+            Synonyms: new List<string> { "", "  ", "Naruto: Shippuden" },
+            Tags: null,
+            StartDate: null,
+            Staff: null
+        );
+
+        // Act
+        manga.ReconstituteFromAnilist(anilistMedia);
+
+        // Assert
+        manga.Synonyms.Should().BeEquivalentTo(new List<string> { "Naruto Shippuden", "Naruto: Shippuden" });
+        manga.Synonyms.Should().NotContain("");
+        manga.Synonyms.Should().NotContain("  ");
+    }
 }
 

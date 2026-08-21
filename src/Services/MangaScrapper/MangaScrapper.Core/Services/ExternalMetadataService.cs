@@ -148,7 +148,9 @@ public sealed class ExternalMetadataService : IExternalMetadataService
             var mangaList = new List<Manga>();
             foreach (var item in items)
             {
-                var titleToUse = item.ComicType==ComicType.Manga?item.Title?.Romaji:item.Title?.English??item.Title?.Romaji??item.Title?.Native;
+                var titleToUse = (item.ComicType == ComicType.Manga
+                    ? item.Title?.Romaji
+                    : item.Title?.English ?? item.Title?.Romaji ?? item.Title?.Native) ?? "Unknown";
                 
                 var author = "Unknown";
                 var staffEdges = item.Staff?.Edges;
@@ -165,9 +167,18 @@ public sealed class ExternalMetadataService : IExternalMetadataService
                     }
                 }
 
-                var mangaEnglishTitleAlternative = item.ComicType == ComicType.Manga ? item.Title.English:"";
-                if(string.IsNullOrEmpty(mangaEnglishTitleAlternative))
-                    item.Synonyms.Add(mangaEnglishTitleAlternative);
+                var synonyms = (item.Synonyms ?? [])
+                    .Where(s => !string.IsNullOrWhiteSpace(s))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                var mangaEnglishTitleAlternative = item.ComicType == ComicType.Manga ? item.Title?.English : null;
+                if (!string.IsNullOrWhiteSpace(mangaEnglishTitleAlternative) && !synonyms.Contains(mangaEnglishTitleAlternative, StringComparer.OrdinalIgnoreCase))
+                {
+                    synonyms.Add(mangaEnglishTitleAlternative);
+                }
+
+                var mediaWithCleanedSynonyms = item with { Synonyms = synonyms };
 
                 var manga = Manga.Create(
                     title: titleToUse,
@@ -176,7 +187,7 @@ public sealed class ExternalMetadataService : IExternalMetadataService
                     source: "Anilist",
                     malId: item.IdMal ?? 0,
                     anilistId: item.Id,
-                    synonyms: item.Synonyms,
+                    synonyms: synonyms,
                     genres: item.Genres ?? [],
                     categories: item.Tags?.Select(t => t.Name).Where(n => !string.IsNullOrEmpty(n)).Cast<string>().ToList() ?? [],
                     description: item.Description,
@@ -184,7 +195,7 @@ public sealed class ExternalMetadataService : IExternalMetadataService
                     rating: item.AverageScore.HasValue ? item.AverageScore.Value / 10.0 : null,
                     status: item.Status
                 );
-                manga.ReconstituteFromAnilist(item);
+                manga.ReconstituteFromAnilist(mediaWithCleanedSynonyms);
                 mangaList.Add(manga);
             }
             return mangaList;

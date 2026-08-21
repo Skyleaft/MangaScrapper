@@ -1267,11 +1267,14 @@
         EditModel.AnilistId = item.AnilistId ?? EditModel.AnilistId;
         EditModel.MalId = item.MalId > 0 ? item.MalId : EditModel.MalId;
 
-        if (item.Rating.HasValue)
+        if (item.Rating.HasValue && item.Rating>EditModel.Rating)
             EditModel.Rating = item.Rating;
 
-        if (item.Popularity > 0)
+        if (item.Popularity > 0 && item.Popularity>EditModel.Popularity)
             EditModel.Popularity = item.Popularity;
+
+        if(item.Members>0 && item.Members>EditModel.Members)
+            EditModel.Members = item.Members;
 
         if (!string.IsNullOrEmpty(item.Status))
             EditModel.Status = item.Status;
@@ -1311,7 +1314,7 @@
     {
         EditModel.MangaUpdateId = item.MangaUpdateId ?? EditModel.MangaUpdateId;
 
-        if (item.Rating.HasValue)
+        if (item.Rating.HasValue && item.Rating>EditModel.Rating)
             EditModel.Rating = item.Rating;
 
         if (!string.IsNullOrEmpty(item.Status))

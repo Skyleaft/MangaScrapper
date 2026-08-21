@@ -303,7 +303,7 @@ public class Manga : Entity<MangaId>
 
         if (anilistInfo.Synonyms != null && anilistInfo.Synonyms.Any())
         {
-            Synonyms = (Synonyms ?? []).Union(anilistInfo.Synonyms, StringComparer.OrdinalIgnoreCase).ToList();
+            Synonyms = (Synonyms ?? []).Union(anilistInfo.Synonyms.Where(s => !string.IsNullOrWhiteSpace(s)), StringComparer.OrdinalIgnoreCase).ToList();
         }
 
         UpdatedAt = DateTime.UtcNow;
@@ -329,7 +329,7 @@ public class Manga : Entity<MangaId>
         }
         if (other.Synonyms != null && other.Synonyms.Any())
         {
-            Synonyms = (Synonyms ?? []).Union(other.Synonyms, StringComparer.OrdinalIgnoreCase).ToList();
+            Synonyms = (Synonyms ?? []).Union(other.Synonyms.Where(s => !string.IsNullOrWhiteSpace(s)), StringComparer.OrdinalIgnoreCase).ToList();
         }
         UpdatedAt = DateTime.UtcNow;
     }
