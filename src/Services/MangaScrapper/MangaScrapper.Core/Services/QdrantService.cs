@@ -12,6 +12,11 @@ using System.Net.Http.Json;
 
 namespace MangaScrapper.Core.Services;
 
+/// <summary>
+/// Result item containing the Manga ID and its similarity/relevance score from Qdrant.
+/// </summary>
+public record ScoredMangaResult(Guid Id, float Score);
+
 public class QdrantService
 {
     private const string CollectionName = "mangas";
@@ -160,12 +165,12 @@ public class QdrantService
 
     /// <summary>
     /// History-based recommendation: computes centroid of reading history dense vectors and
-    /// returns nearest neighbors, excluding already-read manga.
+    /// returns nearest neighbors with scores, excluding already-read manga.
     /// </summary>
-    public async Task<List<Guid>> RecommendAsync(List<Guid> readingHistoryIds, int limit = 10, CancellationToken ct = default)
+    public async Task<List<ScoredMangaResult>> RecommendAsync(List<Guid> readingHistoryIds, int limit = 10, CancellationToken ct = default)
     {
         if (readingHistoryIds == null || !readingHistoryIds.Any())
-            return new List<Guid>();
+            return new List<ScoredMangaResult>();
 
         var points = await _client.RetrieveAsync(
             CollectionName,
@@ -176,7 +181,7 @@ public class QdrantService
         if (points.Count == 0)
         {
             _logger.LogWarning("None of the provided reading history IDs were found in Qdrant.");
-            return new List<Guid>();
+            return new List<ScoredMangaResult>();
         }
 
         var denseVectors = points
@@ -188,7 +193,7 @@ public class QdrantService
         if (!denseVectors.Any())
         {
             _logger.LogWarning("No valid dense vectors found for provided IDs.");
-            return new List<Guid>();
+            return new List<ScoredMangaResult>();
         }
 
         // Compute centroid (Mean Vector)
@@ -220,13 +225,15 @@ public class QdrantService
             limit: (ulong)limit,
             cancellationToken: ct);
 
-        return searchResult.Select(r => Guid.Parse(r.Id.Uuid)).ToList();
+        return searchResult
+            .Select(r => new ScoredMangaResult(Guid.Parse(r.Id.Uuid), r.Score))
+            .ToList();
     }
 
     /// <summary>
-    /// Hybrid similarity search seeded from a single manga (Dense + Sparse vectors with RRF fusion).
+    /// Hybrid similarity search seeded from a single manga returning IDs and similarity scores (Dense + Sparse vectors with RRF fusion).
     /// </summary>
-    public async Task<List<Guid>> SearchSimilarAsync(Guid mangaId, int limit = 10, CancellationToken ct = default)
+    public async Task<List<ScoredMangaResult>> SearchSimilarAsync(Guid mangaId, int limit = 10, CancellationToken ct = default)
     {
         var points = await _client.RetrieveAsync(
             CollectionName,
@@ -237,7 +244,7 @@ public class QdrantService
         if (points.Count == 0)
         {
             _logger.LogWarning("Manga (ID: {Id}) not found in Qdrant. Cannot compute similar mangas.", mangaId);
-            return new List<Guid>();
+            return new List<ScoredMangaResult>();
         }
 
         var targetPoint = points[0];
@@ -247,7 +254,7 @@ public class QdrantService
         if (denseData == null || denseData.Length == 0)
         {
             _logger.LogWarning("No dense vector found for manga (ID: {Id}) in Qdrant.", mangaId);
-            return new List<Guid>();
+            return new List<ScoredMangaResult>();
         }
 
         var filter = new Filter();
@@ -292,19 +299,21 @@ public class QdrantService
             limit: (ulong)limit,
             cancellationToken: ct);
 
-        return searchResult.Select(r => Guid.Parse(r.Id.Uuid)).ToList();
+        return searchResult
+            .Select(r => new ScoredMangaResult(Guid.Parse(r.Id.Uuid), r.Score))
+            .ToList();
     }
 
     /// <summary>
-    /// Multilingual semantic text search using in-process dense vector embeddings.
+    /// Multilingual semantic text search returning IDs and relevance scores using dense vector embeddings.
     /// </summary>
-    public async Task<List<Guid>> SemanticSearchAsync(string queryText, int limit = 10, CancellationToken ct = default)
+    public async Task<List<ScoredMangaResult>> SemanticSearchAsync(string queryText, int limit = 10, CancellationToken ct = default)
     {
         var embedding = await _embeddingService.GenerateEmbeddingAsync(queryText, ct);
         if (embedding == null || embedding.Length == 0)
         {
             _logger.LogWarning("Failed to get embedding for semantic search query.");
-            return new List<Guid>();
+            return new List<ScoredMangaResult>();
         }
 
         var searchResult = await _client.QueryAsync(
@@ -314,14 +323,16 @@ public class QdrantService
             limit: (ulong)limit,
             cancellationToken: ct);
 
-        return searchResult.Select(r => Guid.Parse(r.Id.Uuid)).ToList();
+        return searchResult
+            .Select(r => new ScoredMangaResult(Guid.Parse(r.Id.Uuid), r.Score))
+            .ToList();
     }
 
     /// <summary>
-    /// Filtered hybrid vector similarity search seeded from a single manga.
+    /// Filtered hybrid vector similarity search seeded from a single manga returning IDs and similarity scores.
     /// Applies Qdrant payload filters (status, type, genres) with RRF fusion.
     /// </summary>
-    public async Task<List<Guid>> SearchSimilarFilteredAsync(
+    public async Task<List<ScoredMangaResult>> SearchSimilarFilteredAsync(
         Guid mangaId,
         string? status,
         string? type,
@@ -338,7 +349,7 @@ public class QdrantService
         if (points.Count == 0)
         {
             _logger.LogWarning("Manga (ID: {Id}) not found in Qdrant for filtered similarity.", mangaId);
-            return new List<Guid>();
+            return new List<ScoredMangaResult>();
         }
 
         var targetPoint = points[0];
@@ -348,7 +359,7 @@ public class QdrantService
         if (denseData == null || denseData.Length == 0)
         {
             _logger.LogWarning("No dense vector found for manga (ID: {Id}) in Qdrant.", mangaId);
-            return new List<Guid>();
+            return new List<ScoredMangaResult>();
         }
 
         var filter = new Filter();
@@ -435,20 +446,22 @@ public class QdrantService
             limit: (ulong)limit,
             cancellationToken: ct);
 
-        return searchResult.Select(r => Guid.Parse(r.Id.Uuid)).ToList();
+        return searchResult
+            .Select(r => new ScoredMangaResult(Guid.Parse(r.Id.Uuid), r.Score))
+            .ToList();
     }
 
     /// <summary>
-    /// Advanced recommendation using Qdrant's native positive/negative example API on dense vectors.
+    /// Advanced recommendation using Qdrant's native positive/negative example API returning IDs and scores.
     /// </summary>
-    public async Task<List<Guid>> RecommendAdvancedAsync(
+    public async Task<List<ScoredMangaResult>> RecommendAdvancedAsync(
         List<Guid> likedIds,
         List<Guid> dislikedIds,
         int limit = 10,
         CancellationToken ct = default)
     {
         if (!likedIds.Any())
-            return new List<Guid>();
+            return new List<ScoredMangaResult>();
 
         var positives = likedIds.Select(id => (PointId)id).ToList();
         var negatives = dislikedIds.Select(id => (PointId)id).ToList();
@@ -473,7 +486,9 @@ public class QdrantService
             limit: (ulong)limit,
             cancellationToken: ct);
 
-        return result.Select(r => Guid.Parse(r.Id.Uuid)).ToList();
+        return result
+            .Select(r => new ScoredMangaResult(Guid.Parse(r.Id.Uuid), r.Score))
+            .ToList();
     }
 
     // ── Private helpers ────────────────────────────────────────────────────────

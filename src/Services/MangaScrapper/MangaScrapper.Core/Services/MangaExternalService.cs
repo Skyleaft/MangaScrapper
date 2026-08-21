@@ -40,24 +40,29 @@ public class MangaExternalService(
 
     public async Task<List<Manga>> GetRecomendationAsync(List<Guid> readingHistoryIds, int limit, CancellationToken ct = default)
     {
-        var recList = await qdrantService.RecommendAsync(readingHistoryIds, limit, ct);
-        var mangas = await mangaRepository.GetByIdsAsync(recList, ct);
-        return mangas;
+        var scoredList = await qdrantService.RecommendAsync(readingHistoryIds, limit, ct);
+        if (scoredList.Count == 0) return new List<Manga>();
+        var ids = scoredList.Select(x => x.Id).ToList();
+        var mangas = await mangaRepository.GetByIdsAsync(ids, ct);
+        return OrderMangasByScoredList(mangas, ids);
     }
 
     public async Task<List<Manga>> GetSimilarAsync(Guid mangaId, int limit, CancellationToken ct = default)
     {
-        var similarIds = await qdrantService.SearchSimilarAsync(mangaId, limit, ct);
-        if (similarIds.Count == 0) return new List<Manga>();
-        var mangas = await mangaRepository.GetByIdsAsync(similarIds, ct);
-        return mangas;
+        var scoredList = await qdrantService.SearchSimilarAsync(mangaId, limit, ct);
+        if (scoredList.Count == 0) return new List<Manga>();
+        var ids = scoredList.Select(x => x.Id).ToList();
+        var mangas = await mangaRepository.GetByIdsAsync(ids, ct);
+        return OrderMangasByScoredList(mangas, ids);
     }
 
     public async Task<List<Manga>> SemanticSearchAsync(string query, int limit, CancellationToken ct = default)
     {
-        var ids = await qdrantService.SemanticSearchAsync(query, limit, ct);
-        if (ids.Count == 0) return new List<Manga>();
-        return await mangaRepository.GetByIdsAsync(ids, ct);
+        var scoredList = await qdrantService.SemanticSearchAsync(query, limit, ct);
+        if (scoredList.Count == 0) return new List<Manga>();
+        var ids = scoredList.Select(x => x.Id).ToList();
+        var mangas = await mangaRepository.GetByIdsAsync(ids, ct);
+        return OrderMangasByScoredList(mangas, ids);
     }
 
     public async Task<List<Manga>> GetSimilarFilteredAsync(
@@ -68,9 +73,11 @@ public class MangaExternalService(
         int limit,
         CancellationToken ct = default)
     {
-        var ids = await qdrantService.SearchSimilarFilteredAsync(mangaId, status, type, genres, limit, ct);
-        if (ids.Count == 0) return new List<Manga>();
-        return await mangaRepository.GetByIdsAsync(ids, ct);
+        var scoredList = await qdrantService.SearchSimilarFilteredAsync(mangaId, status, type, genres, limit, ct);
+        if (scoredList.Count == 0) return new List<Manga>();
+        var ids = scoredList.Select(x => x.Id).ToList();
+        var mangas = await mangaRepository.GetByIdsAsync(ids, ct);
+        return OrderMangasByScoredList(mangas, ids);
     }
 
     public async Task<List<Manga>> GetAdvancedRecommendationAsync(
@@ -79,9 +86,25 @@ public class MangaExternalService(
         int limit,
         CancellationToken ct = default)
     {
-        var ids = await qdrantService.RecommendAdvancedAsync(likedIds, dislikedIds, limit, ct);
-        if (ids.Count == 0) return new List<Manga>();
-        return await mangaRepository.GetByIdsAsync(ids, ct);
+        var scoredList = await qdrantService.RecommendAdvancedAsync(likedIds, dislikedIds, limit, ct);
+        if (scoredList.Count == 0) return new List<Manga>();
+        var ids = scoredList.Select(x => x.Id).ToList();
+        var mangas = await mangaRepository.GetByIdsAsync(ids, ct);
+        return OrderMangasByScoredList(mangas, ids);
+    }
+
+    private static List<Manga> OrderMangasByScoredList(List<Manga> mangas, List<Guid> orderedIds)
+    {
+        var dict = mangas.ToDictionary(m => m.Id.Value);
+        var result = new List<Manga>(orderedIds.Count);
+        foreach (var id in orderedIds)
+        {
+            if (dict.TryGetValue(id, out var manga))
+            {
+                result.Add(manga);
+            }
+        }
+        return result;
     }
     
 
