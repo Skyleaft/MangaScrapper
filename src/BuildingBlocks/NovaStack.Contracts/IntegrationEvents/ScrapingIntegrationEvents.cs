@@ -158,4 +158,48 @@ public sealed record ChapterScrapingProgressIntegrationEvent : IIntegrationEvent
     }
 }
 
+/// <summary>
+/// Integration event published when a manga needs its embeddings generated and upserted to Qdrant.
+/// Consumed exclusively by Scrapper.Worker via RabbitMQ.
+/// </summary>
+public sealed record UpsertMangaQdrantIntegrationEvent : IIntegrationEvent
+{
+    public Guid EventId { get; init; } = Guid.CreateVersion7();
+    public DateTime OccurredOn { get; init; } = DateTime.UtcNow;
+    public string EventType { get; init; } = nameof(UpsertMangaQdrantIntegrationEvent);
 
+    public Guid MangaId { get; init; }
+
+    public UpsertMangaQdrantIntegrationEvent() { }
+
+    public UpsertMangaQdrantIntegrationEvent(Guid mangaId)
+    {
+        MangaId = mangaId;
+    }
+}
+
+/// <summary>
+/// Integration event published when an entire manga needs to be scraped from a provider.
+/// Consumed by the Scrapper.Worker via RabbitMQ.
+/// </summary>
+public sealed record ScrapMangaIntegrationEvent : IIntegrationEvent
+{
+    public Guid EventId { get; init; } = Guid.CreateVersion7();
+    public DateTime OccurredOn { get; init; } = DateTime.UtcNow;
+    public string EventType { get; init; } = nameof(ScrapMangaIntegrationEvent);
+
+    public string Provider { get; init; } = string.Empty;
+    public string MangaUrl { get; init; } = string.Empty;
+    public bool ScrapChapterPages { get; init; } = true;
+    public string? LinkId { get; init; }
+
+    public ScrapMangaIntegrationEvent() { }
+
+    public ScrapMangaIntegrationEvent(string provider, string mangaUrl, bool scrapChapterPages = true, string? linkId = null)
+    {
+        Provider = provider;
+        MangaUrl = mangaUrl;
+        ScrapChapterPages = scrapChapterPages;
+        LinkId = linkId;
+    }
+}

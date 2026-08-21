@@ -12,15 +12,13 @@ public record ScrapKiryuuMangaCommand(string MangaUrl, bool ScrapChapterPages = 
 public record GetKiryuuDetailQuery(string MangaUrl) : IQuery<ScrapperMangaDocumentResponse>;
 public record SearchKiryuuQuery(ScrapperSearchRequest Request) : IQuery<List<SearchItemResponse>>;
 
-internal sealed class ScrapKiryuuMangaCommandHandler([FromKeyedServices("kiryuu")] IProviderScrapperService scrapperService)
+internal sealed class ScrapKiryuuMangaCommandHandler(IMangaMessagePublisher messagePublisher)
     : ICommandHandler<ScrapKiryuuMangaCommand, ScrapperMangaDocumentResponse>
 {
     public async Task<Result<ScrapperMangaDocumentResponse>> Handle(ScrapKiryuuMangaCommand command, CancellationToken ct)
     {
-        var manga = await scrapperService.ExtractManga(command.MangaUrl, ct, command.ScrapChapterPages, command.LinkId);
-        return manga is null
-            ? Error.NotFound("Scrapper.NotFound", "Manga not found")
-            : manga;
+        await messagePublisher.PublishScrapMangaAsync("kiryuu", command.MangaUrl, command.ScrapChapterPages, command.LinkId, ct);
+        return new ScrapperMangaDocumentResponse { Url = command.MangaUrl };
     }
 }
 

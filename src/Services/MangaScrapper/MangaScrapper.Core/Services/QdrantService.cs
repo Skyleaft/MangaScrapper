@@ -21,15 +21,15 @@ public class QdrantService
     private readonly QdrantClient _client;
     private readonly MangaMongoDbContext _dbContext;
     private readonly ILogger<QdrantService> _logger;
-    private readonly IHttpClientFactory _httpClientFactory;
-    private readonly EmbeddingConfig _embeddingConfig;
-    private const ulong VectorSize = 1024; // BAAI/bge-m3 produces 1024-dim dense vectors
+    private readonly IEmbeddingService _embeddingService;
+    private readonly ulong _vectorSize;
+    public const ulong DefaultVectorSize = 1024;
 
     public QdrantService(
         IOptions<QdrantConfig> config,
         MangaMongoDbContext dbContext,
         ILogger<QdrantService> logger,
-        IHttpClientFactory httpClientFactory,
+        IEmbeddingService embeddingService,
         IOptions<EmbeddingConfig> embeddingConfig)
     {
         var host = config.Value.Host;
@@ -55,8 +55,8 @@ public class QdrantService
         _client = new QdrantClient(host, port: port, https: isHttps, apiKey: config.Value.ApiKey);
         _dbContext = dbContext;
         _logger = logger;
-        _httpClientFactory = httpClientFactory;
-        _embeddingConfig = embeddingConfig.Value;
+        _embeddingService = embeddingService;
+        _vectorSize = embeddingConfig.Value.VectorSize > 0 ? embeddingConfig.Value.VectorSize : DefaultVectorSize;
     }
 
     public async Task InitializeAsync(CancellationToken ct = default)
@@ -74,7 +74,7 @@ public class QdrantService
                     {
                         [DenseVectorName] = new VectorParams
                         {
-                            Size = VectorSize,
+                            Size = _vectorSize,
                             Distance = Distance.Cosine
                         }
                     }
@@ -181,7 +181,7 @@ public class QdrantService
 
         var denseVectors = points
             .Select(ExtractDenseVector)
-            .Where(v => v != null && v.Length == (int)VectorSize)
+            .Where(v => v != null && v.Length == (int)_vectorSize)
             .Select(v => v!)
             .ToList();
 
@@ -192,16 +192,16 @@ public class QdrantService
         }
 
         // Compute centroid (Mean Vector)
-        var centroid = new float[VectorSize];
+        var centroid = new float[_vectorSize];
         foreach (var vector in denseVectors)
         {
-            for (int i = 0; i < (int)VectorSize; i++)
+            for (int i = 0; i < (int)_vectorSize; i++)
             {
                 centroid[i] += vector[i];
             }
         }
 
-        for (int i = 0; i < (int)VectorSize; i++)
+        for (int i = 0; i < (int)_vectorSize; i++)
         {
             centroid[i] /= denseVectors.Count;
         }
@@ -296,48 +296,21 @@ public class QdrantService
     }
 
     /// <summary>
-    /// Hybrid multilingual semantic text search (Dense semantic + Sparse lexical matching with RRF fusion).
+    /// Multilingual semantic text search using in-process dense vector embeddings.
     /// </summary>
     public async Task<List<Guid>> SemanticSearchAsync(string queryText, int limit = 10, CancellationToken ct = default)
     {
-        var embeddingResult = await GetEmbeddingAsync(queryText, mode: "query", ct);
-        if (embeddingResult == null)
+        var embedding = await _embeddingService.GenerateEmbeddingAsync(queryText, ct);
+        if (embedding == null || embedding.Length == 0)
         {
             _logger.LogWarning("Failed to get embedding for semantic search query.");
             return new List<Guid>();
         }
 
-        var prefetchList = new List<PrefetchQuery>
-        {
-            new()
-            {
-                Query = new Query { Nearest = new VectorInput(embeddingResult.Dense) },
-                Using = DenseVectorName,
-                Limit = (ulong)(limit * 2)
-            }
-        };
-
-        if (embeddingResult.Sparse != null && embeddingResult.Sparse.Indices.Any())
-        {
-            var sparseVector = new SparseVector();
-            sparseVector.Indices.AddRange(embeddingResult.Sparse.Indices.Select(i => (uint)i));
-            sparseVector.Values.AddRange(embeddingResult.Sparse.Values);
-
-            prefetchList.Add(new PrefetchQuery
-            {
-                Query = new Query
-                {
-                    Nearest = new VectorInput { Sparse = sparseVector }
-                },
-                Using = SparseVectorName,
-                Limit = (ulong)(limit * 2)
-            });
-        }
-
         var searchResult = await _client.QueryAsync(
             CollectionName,
-            prefetch: prefetchList,
-            query: new Query { Fusion = Fusion.Rrf },
+            query: new Query { Nearest = new VectorInput(embedding) },
+            usingVector: DenseVectorName,
             limit: (ulong)limit,
             cancellationToken: ct);
 
@@ -559,59 +532,89 @@ public class QdrantService
 
     // ── Private helpers ────────────────────────────────────────────────────────
 
+    public async Task UpsertMangaDirectAsync(Manga manga, CancellationToken ct = default)
+    {
+        await UpsertMangaAsync(manga, ct);
+    }
+
+    // ── Private helpers ────────────────────────────────────────────────────────
+
     private async Task<PointStruct> MapToPointStructAsync(Manga manga, CancellationToken ct = default)
     {
+        var title = manga.Title?.Trim() ?? string.Empty;
+
+        // 1. Deduplicate synonyms against each other and against Title (case-insensitive)
+        var distinctSynonyms = (manga.Synonyms ?? new List<string>())
+            .Where(s => !string.IsNullOrWhiteSpace(s))
+            .Select(s => s!.Trim())
+            .Where(s => !string.Equals(s, title, StringComparison.OrdinalIgnoreCase))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(10)
+            .ToList();
+
+        // 2. Extract distinct genres
         var distinctGenres = (manga.Genres ?? new List<string>())
             .Where(g => !string.IsNullOrWhiteSpace(g))
-            .Distinct(StringComparer.OrdinalIgnoreCase);
+            .Select(g => g!.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
 
+        var genreSet = new HashSet<string>(distinctGenres, StringComparer.OrdinalIgnoreCase);
+
+        // 3. Deduplicate categories against each other and exclude any already in genres
         var distinctCategories = (manga.Categories ?? new List<string>())
             .Where(c => !string.IsNullOrWhiteSpace(c))
+            .Select(c => c!.Trim())
+            .Where(c => !genreSet.Contains(c))
             .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Take(15);
+            .Take(15)
+            .ToList();
 
         var textParts = new List<string>();
-        if (!string.IsNullOrWhiteSpace(manga.Title))
-            textParts.Add($"Title: {manga.Title}");
-        if (!string.IsNullOrWhiteSpace(manga.Author) && manga.Author != "Unknown")
-            textParts.Add($"Author: {manga.Author}");
-        
-        var genresStr = string.Join(", ", distinctGenres);
-        if (!string.IsNullOrWhiteSpace(genresStr))
-            textParts.Add($"Genres: {genresStr}");
 
-        var categoriesStr = string.Join(", ", distinctCategories);
-        if (!string.IsNullOrWhiteSpace(categoriesStr))
-            textParts.Add($"Themes: {categoriesStr}");
+        if (!string.IsNullOrWhiteSpace(title))
+            textParts.Add($"Title: {title}");
+
+        if (distinctSynonyms.Count > 0)
+            textParts.Add($"Alternative Titles: {string.Join(", ", distinctSynonyms)}");
+
+        if (!string.IsNullOrWhiteSpace(manga.Type) && !string.Equals(manga.Type, "Unknown", StringComparison.OrdinalIgnoreCase))
+            textParts.Add($"Type: {manga.Type.Trim()}");
+
+        if (!string.IsNullOrWhiteSpace(manga.Status) && !string.Equals(manga.Status, "Unknown", StringComparison.OrdinalIgnoreCase))
+            textParts.Add($"Status: {manga.Status.Trim()}");
+
+        if (!string.IsNullOrWhiteSpace(manga.Author) && !string.Equals(manga.Author, "Unknown", StringComparison.OrdinalIgnoreCase))
+            textParts.Add($"Author: {manga.Author.Trim()}");
+
+        if (distinctGenres.Count > 0)
+            textParts.Add($"Genres: {string.Join(", ", distinctGenres)}");
+
+        if (distinctCategories.Count > 0)
+            textParts.Add($"Themes: {string.Join(", ", distinctCategories)}");
 
         if (!string.IsNullOrWhiteSpace(manga.Description))
-            textParts.Add($"Synopsis: {manga.Description}");
+        {
+            var cleanDescription = System.Text.RegularExpressions.Regex.Replace(manga.Description, @"\s+", " ").Trim();
+            textParts.Add($"Synopsis: {cleanDescription}");
+        }
 
         var text = string.Join(". ", textParts);
-        var embedding = await GetEmbeddingAsync(text, mode: "passage", ct);
+        var embedding = await _embeddingService.GenerateEmbeddingAsync(text, ct);
 
         var namedVectors = new NamedVectors();
-        if (embedding?.Dense != null && embedding.Dense.Length == (int)VectorSize)
+        if (embedding != null && embedding.Length == (int)_vectorSize)
         {
             var denseVec = new Vector();
-            denseVec.Data.AddRange(embedding.Dense);
+            denseVec.Data.AddRange(embedding);
             namedVectors.Vectors[DenseVectorName] = denseVec;
         }
         else
         {
             _logger.LogWarning("Using zero dense vector for manga {Id} due to embedding failure.", manga.Id.Value);
             var zeroVec = new Vector();
-            zeroVec.Data.AddRange(new float[VectorSize]);
+            zeroVec.Data.AddRange(new float[_vectorSize]);
             namedVectors.Vectors[DenseVectorName] = zeroVec;
-        }
-
-        if (embedding?.Sparse != null && embedding.Sparse.Indices.Any())
-        {
-            var sparseVec = new SparseVector();
-            sparseVec.Indices.AddRange(embedding.Sparse.Indices.Select(i => (uint)i));
-            sparseVec.Values.AddRange(embedding.Sparse.Values);
-
-            namedVectors.Vectors[SparseVectorName] = new Vector { Sparse = sparseVec };
         }
 
         return new PointStruct
@@ -621,6 +624,7 @@ public class QdrantService
             Payload =
             {
                 ["title"] = manga.Title,
+                ["synonyms"] = manga.Synonyms != null ? manga.Synonyms.ToArray() : Array.Empty<string>(),
                 ["description"] = manga.Description ?? string.Empty,
                 ["author"] = manga.Author ?? "Unknown",
                 ["status"] = manga.Status ?? "Unknown",
@@ -630,75 +634,5 @@ public class QdrantService
             }
         };
     }
-
-    /// <summary>
-    /// Calls the embedding microservice to get both dense and sparse representations.
-    /// </summary>
-    private async Task<EmbeddingResult?> GetEmbeddingAsync(string text, string mode, CancellationToken ct)
-    {
-        try
-        {
-            var httpClient = _httpClientFactory.CreateClient();
-            var requestBody = new EmbedRequest { Text = text, Mode = mode };
-            var response = await httpClient.PostAsJsonAsync($"{_embeddingConfig.Host}/embed", requestBody, cancellationToken: ct);
-
-            if (!response.IsSuccessStatusCode)
-            {
-                _logger.LogError("Embedding service returned {StatusCode} for mode={Mode}.", response.StatusCode, mode);
-                return null;
-            }
-
-            var result = await response.Content.ReadFromJsonAsync<EmbedResponse>(cancellationToken: ct);
-            if (result?.Dense != null && result.Dense.Count == (int)VectorSize)
-            {
-                return new EmbeddingResult
-                {
-                    Dense = result.Dense.ToArray(),
-                    Sparse = result.Sparse
-                };
-            }
-
-            _logger.LogWarning("Embedding response null or wrong size (expected {Expected}, got {Got}).",
-                VectorSize, result?.Dense?.Count ?? 0);
-            return null;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error calling embedding service (mode={Mode}).", mode);
-            return null;
-        }
-    }
-
-    private sealed class EmbeddingResult
-    {
-        public float[] Dense { get; set; } = Array.Empty<float>();
-        public SparseVectorResponse? Sparse { get; set; }
-    }
-
-    private sealed class EmbedRequest
-    {
-        [System.Text.Json.Serialization.JsonPropertyName("text")]
-        public string Text { get; set; } = string.Empty;
-
-        [System.Text.Json.Serialization.JsonPropertyName("mode")]
-        public string Mode { get; set; } = "passage";
-    }
-
-    private sealed class SparseVectorResponse
-    {
-        [System.Text.Json.Serialization.JsonPropertyName("indices")]
-        public List<int> Indices { get; set; } = new();
-
-        [System.Text.Json.Serialization.JsonPropertyName("values")]
-        public List<float> Values { get; set; } = new();
-    }
-
-    private sealed class EmbedResponse
-    {
-        [System.Text.Json.Serialization.JsonPropertyName("dense")]
-        public List<float> Dense { get; set; } = new();
-
-        [System.Text.Json.Serialization.JsonPropertyName("sparse")]
-        public SparseVectorResponse? Sparse { get; set; }
-    }
 }
+

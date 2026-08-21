@@ -35,6 +35,10 @@ public class QdrantConfig
 public class EmbeddingConfig
 {
     public string Host { get; set; } = string.Empty;
+    public string ModelPath { get; set; } = "models/qwen3-embedding-0.6b/model.onnx";
+    public string TokenizerPath { get; set; } = "models/qwen3-embedding-0.6b/tokenizer.json";
+    public ulong VectorSize { get; set; } = 1024;
+    public string ExecutionProvider { get; set; } = "CPU";
 }
 
 public class DiscordWebhookSettings

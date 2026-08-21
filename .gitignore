@@ -132,3 +132,5 @@ src/Services/Identity.Api/keys/
 
 src/Services/MangaScrapper/MangaScrapper.Api/appsettings.Development.json
 appsettings.Development.json
+embedding-service/models
+embedding-service/target

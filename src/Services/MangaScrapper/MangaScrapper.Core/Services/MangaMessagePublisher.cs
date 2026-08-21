@@ -21,4 +21,20 @@ public sealed class MangaMessagePublisher(IEventBus eventBus) : IMangaMessagePub
             "delete-chapter",
             ct);
     }
+
+    public async Task PublishUpsertMangaQdrantAsync(Guid mangaId, CancellationToken ct = default)
+    {
+        await eventBus.PublishAsync(
+            new UpsertMangaQdrantIntegrationEvent(mangaId),
+            "upsert-manga-qdrant",
+            ct);
+    }
+
+    public async Task PublishScrapMangaAsync(string provider, string mangaUrl, bool scrapChapterPages = true, string? linkId = null, CancellationToken ct = default)
+    {
+        await eventBus.PublishAsync(
+            new ScrapMangaIntegrationEvent(provider, mangaUrl, scrapChapterPages, linkId),
+            "scrape-manga",
+            ct);
+    }
 }

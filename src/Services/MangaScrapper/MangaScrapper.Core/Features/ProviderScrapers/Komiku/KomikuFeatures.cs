@@ -12,15 +12,13 @@ public record ScrapKomikuMangaCommand(string MangaUrl, bool ScrapChapterPages = 
 public record GetKomikuDetailQuery(string MangaUrl) : IQuery<ScrapperMangaDocumentResponse>;
 public record SearchKomikuQuery(ScrapperSearchRequest Request) : IQuery<List<SearchItemResponse>>;
 
-internal sealed class ScrapKomikuMangaCommandHandler([FromKeyedServices("komiku")] IProviderScrapperService scrapperService)
+internal sealed class ScrapKomikuMangaCommandHandler(IMangaMessagePublisher messagePublisher)
     : ICommandHandler<ScrapKomikuMangaCommand, ScrapperMangaDocumentResponse>
 {
     public async Task<Result<ScrapperMangaDocumentResponse>> Handle(ScrapKomikuMangaCommand command, CancellationToken ct)
     {
-        var manga = await scrapperService.ExtractManga(command.MangaUrl, ct, command.ScrapChapterPages, command.LinkId);
-        return manga is null
-            ? Error.NotFound("Scrapper.NotFound", "Manga not found")
-            : manga;
+        await messagePublisher.PublishScrapMangaAsync("komiku", command.MangaUrl, command.ScrapChapterPages, command.LinkId, ct);
+        return new ScrapperMangaDocumentResponse { Url = command.MangaUrl };
     }
 }
 

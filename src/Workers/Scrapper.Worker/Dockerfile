@@ -1,6 +1,8 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine AS build
 WORKDIR /src
 
+RUN apk add --no-cache gcompat libc6-compat
+
 # Copy solution and project files for caching restore
 COPY ["MangaScrapperStack.sln", "./"]
 COPY ["src/BuildingBlocks/NovaStack.SharedKernel/NovaStack.SharedKernel.csproj", "src/BuildingBlocks/NovaStack.SharedKernel/"]

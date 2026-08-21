@@ -6,12 +6,16 @@ using Mapster;
 using NovaStack.Contracts.Requests;
 using NovaStack.SharedKernel.Common;
 
+using MangaScrapper.Core.Common.Abstractions;
+
 namespace MangaScrapper.Core.Services;
 
-public class MangaExternalService(ILogger<MangaExternalService> logger, 
+public class MangaExternalService(
+    ILogger<MangaExternalService> logger, 
     MeilisearchService meilisearchService,
     QdrantService qdrantService,
-    IMangaRepository mangaRepository)
+    IMangaRepository mangaRepository,
+    IMangaMessagePublisher messagePublisher)
     : IMangaExternalRepository
 {
     public async Task<PagedList<Manga>> SearchAsync(string? search, List<string>? genres, string? status, string? type, string sortBy, string orderBy, int page,
@@ -88,6 +92,6 @@ public class MangaExternalService(ILogger<MangaExternalService> logger,
 
     public async Task UpsertMangaAsync(Manga manga, CancellationToken ct = default)
     {
-        await qdrantService.UpsertMangaAsync(manga, ct);
+        await messagePublisher.PublishUpsertMangaQdrantAsync(manga.Id.Value, ct);
     }
 }

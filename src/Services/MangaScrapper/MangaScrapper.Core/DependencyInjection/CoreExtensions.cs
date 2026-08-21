@@ -147,6 +147,7 @@ public static class CoreExtensions
         services.Configure<ScrapperSettings>(configuration.GetSection("Scrapper"));
         services.Configure<FlareSolverrSettings>(configuration.GetSection("FlareSolverr"));
 
+        services.AddSingleton<IEmbeddingService, OnnxEmbeddingService>();
         services.AddScoped<MeilisearchService>();
         services.AddScoped<QdrantService>();
         services.AddScoped<StorageSyncService>();
@@ -268,11 +269,16 @@ public static class CoreExtensions
         services.AddScoped<SyncQdrantHandler>();
         services.AddScoped<SyncMeilisearchHandler>();
         services.AddScoped<SyncAnilistHandler>();
+        services.AddScoped<UpsertMangaQdrantHandler>();
+        services.AddScoped<ScrapMangaHandler>();
         services.AddScoped<ChapterPagesScrapedSignalRHandler>();
         services.AddScoped<ChapterScrapingProgressSignalRHandler>();
 
         if (includeWorkerConsumer)
         {
+            services.AddRabbitMqConsumer<ScrapMangaIntegrationEvent, ScrapMangaHandler>(
+                "scrape-manga");
+
             services.AddRabbitMqConsumer<ScrapChapterPagesIntegrationEvent, ScrapChapterPagesHandler>(
                 "scrape-chapter-pages");
                 
@@ -293,6 +299,9 @@ public static class CoreExtensions
 
             services.AddRabbitMqConsumer<SyncAnilistIntegrationEvent, SyncAnilistHandler>(
                 "sync-anilist");
+
+            services.AddRabbitMqConsumer<UpsertMangaQdrantIntegrationEvent, UpsertMangaQdrantHandler>(
+                "upsert-manga-qdrant");
         }
 
         if (includeSignalRConsumer)

@@ -51,10 +51,6 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    deploy:
-      resources:
-        limits:
-          memory: 768M
     environment:
       - DOTNET_ENVIRONMENT=Production
       - MongoDB__ConnectionString=mongodb://mongodb:27017
@@ -159,6 +155,10 @@ services:
       - "8222:8222"
     environment:
       - TZ=Asia/Jakarta
+      - MODEL_PATH=/app/models/model.onnx
+      - TOKENIZER_PATH=/app/models/tokenizer.json
+    volumes:
+      - ./embedding-service/models:/app/models
     restart: unless-stopped
 
 volumes:

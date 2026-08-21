@@ -10,7 +10,7 @@ This document provides a token-efficient, high-density architectural and coding 
 - **Architectural Style**: Vertical Slice Architecture (VSA) — Unified Two-Tier Structure (`MangaScrapper.Core` + Thin Host Executables)
 - **CQRS & Mediator**: MediatR 14 (with logging and validation pipeline behaviors)
 - **APIs & Real-Time**: ASP.NET Core Minimal APIs with automatic endpoint discovery (`IEndpointDefinition`) & **SignalR** Hubs (`MangaHub`)
-- **Database & Persistence**: MongoDB 8 via `MongoDB.Driver` 3.x, Meilisearch 0.17 (full-text search), Qdrant 1.13 (vector search & embeddings)
+- **Database & Persistence**: MongoDB 8 via `MongoDB.Driver` 3.x, Meilisearch 0.17 (full-text search), Qdrant 1.13 (vector search & ONNX in-process embeddings via `onnx-community/Qwen3-Embedding-0.6B-ONNX`)
 - **Object Mapping**: Mapster 10.x (centralized in `MangaInfrastructureMapping.cs` & `MangaMappingConfig.cs`)
 - **Validation**: FluentValidation 12
 - **Error Handling**: Railway-oriented `Result<T>` and `Error` types (avoid domain exceptions for control flow)
@@ -48,10 +48,10 @@ This document provides a token-efficient, high-density architectural and coding 
 │   │   │   ├── Scrapers/                  # Scraper Provider Implementations (Komiku, Kiryuu, Komikcast, MangaDex)
 │   │   │   ├── Persistence/               # Mongo DbContext, BSON Document schemas (MangaDocument, UserDocument, etc.)
 │   │   │   ├── Repositories/              # MongoMangaRepository, MongoUserRepository, MongoUserLibraryRepository
-│   │   │   ├── Services/                  # MeilisearchService, QdrantService, DiscordWebhookService, StorageSyncService, FcmNotificationService
+│   │   │   ├── Services/                  # MeilisearchService, QdrantService, OnnxEmbeddingService (Qwen3-Embedding-0.6B-ONNX), DiscordWebhookService, StorageSyncService, FcmNotificationService
 │   │   │   ├── Hubs/                      # SignalR Hubs (MangaHub)
 │   │   │   ├── BackgroundJobs/            # Hangfire background jobs (MeiliSyncJob, DeleteMangaJob, LatestChapterScrapingJob)
-│   │   │   ├── Messaging/                 # RabbitMQ handlers (ScrapChapterPagesHandler, ChapterPagesScrapedSignalRHandler, ChapterScrapingProgressSignalRHandler)
+│   │   │   ├── Messaging/                 # RabbitMQ handlers (ScrapChapterPagesHandler, ChapterPagesScrapedSignalRHandler, ChapterScrapingProgressSignalRHandler, UpsertMangaQdrantHandler, DeleteMangaHandler)
 │   │   │   ├── Security/                  # Custom Auth validation & JwtAuthTokenService
 │   │   │   └── DependencyInjection/       # CoreExtensions (AddMangaScrapperCore & MapMangaScrapperEndpoints)
 │   │   │

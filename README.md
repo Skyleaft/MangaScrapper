@@ -21,7 +21,7 @@ For the mobile-first reading experience, check out the [Open Manga Reader](https
 - **Playwright Automation**: Browser-based scraping with **Microsoft Playwright** for JavaScript-rendered pages.
 - **Image Proxy**: Server-side image proxy that spoofs browser User-Agent headers to bypass hotlink protection.
 - **Smart Search**: Typo-tolerant, lightning-fast full-text search powered by **Meilisearch**.
-- **AI Vector Search & Recommendations**: Advanced vector operations powered by **Qdrant** and a **Multilingual Embedding Service (`intfloat/multilingual-e5-base`)**:
+- **AI Vector Search & Recommendations**: Advanced vector operations powered by **Qdrant** and in-process ONNX embeddings (`onnx-community/Qwen3-Embedding-0.6B-ONNX`):
   - **Multilingual Semantic Search**: Search manga using natural language across 100+ languages (e.g., Bahasa Indonesia queries like *"reinkarnasi ke dunia lain punya banyak istri"*).
   - **Vector Similarity Search**: Find semantically similar manga based on content embeddings with support for status, type, and genre payload filters.
   - **Preference Recommendations**: Centroid-based history recommendations and advanced multi-item recommendations using native positive (liked) and negative (disliked) example vector arithmetic.
@@ -160,7 +160,10 @@ Main configuration is defined in `appsettings.json` within `MangaScrapper.Api` a
     "Port": 6334
   },
   "Embedding": {
-    "Host": "http://localhost:8222"
+    "ModelPath": "models/qwen3-embedding-0.6b/model.onnx",
+    "TokenizerPath": "models/qwen3-embedding-0.6b/tokenizer.json",
+    "VectorSize": 1024,
+    "ExecutionProvider": "CPU"
   },
   "FlareSolverr": {
     "Host": "http://localhost:8191"
