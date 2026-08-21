@@ -597,13 +597,13 @@ public class QdrantService
 
         var genreSet = new HashSet<string>(distinctGenres, StringComparer.OrdinalIgnoreCase);
 
-        // 3. Deduplicate categories against each other and exclude any already in genres
+        // 3. Deduplicate and clean categories against each other and exclude any already in genres
         var distinctCategories = (manga.Categories ?? new List<string>())
             .Where(c => !string.IsNullOrWhiteSpace(c))
-            .Select(c => c!.Trim())
-            .Where(c => !genreSet.Contains(c))
+            .Select(CleanCategory)
+            .Where(c => !string.IsNullOrWhiteSpace(c) && !genreSet.Contains(c))
             .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Take(15)
+            .Take(25)
             .ToList();
 
         var textParts = new List<string>();
@@ -615,7 +615,7 @@ public class QdrantService
             textParts.Add($"Genres: {string.Join(", ", distinctGenres)}");
 
         if (distinctCategories.Count > 0)
-            textParts.Add($"Themes: {string.Join(", ", distinctCategories)}");
+            textParts.Add($"Tropes & Themes: {string.Join(", ", distinctCategories)}");
 
         if (!string.IsNullOrWhiteSpace(manga.Type) && !string.Equals(manga.Type, "Unknown", StringComparison.OrdinalIgnoreCase))
             textParts.Add($"Type: {manga.Type.Trim()}");
@@ -653,7 +653,7 @@ public class QdrantService
             namedVectors.Vectors[DenseVectorName] = zeroVec;
         }
 
-        var sparseVec = ComputeSparseVector(text);
+        var sparseVec = ComputeSparseVector(text, distinctCategories.Concat(distinctGenres));
         if (sparseVec.Indices.Count > 0)
         {
             namedVectors.Vectors[SparseVectorName] = new Vector { Sparse = sparseVec };
@@ -677,30 +677,57 @@ public class QdrantService
         };
     }
 
-    private static SparseVector ComputeSparseVector(string text)
+    private static SparseVector ComputeSparseVector(string text, IEnumerable<string>? bonusPhrases = null)
     {
         var sparse = new SparseVector();
         if (string.IsNullOrWhiteSpace(text)) return sparse;
 
         var termCounts = new Dictionary<uint, float>();
-        var words = text.ToLowerInvariant()
-            .Split(new[] { ' ', '.', ',', ':', ';', '!', '?', '-', '_', '/', '(', ')', '[', ']', '"', '\'', '\n', '\r', '\t' }, StringSplitOptions.RemoveEmptyEntries);
 
-        foreach (var word in words)
+        void AddTerm(string term, float weight = 1.0f)
         {
-            if (word.Length <= 1) continue;
-            // FNV-1a hash to 32-bit uint in range 1..1,000,000
+            if (term.Length <= 1) return;
             uint hash = 2166136261;
-            foreach (byte b in System.Text.Encoding.UTF8.GetBytes(word))
+            foreach (byte b in System.Text.Encoding.UTF8.GetBytes(term))
             {
                 hash = (hash ^ b) * 16777619;
             }
             uint index = (hash % 999999) + 1;
 
             if (termCounts.TryGetValue(index, out float count))
-                termCounts[index] = count + 1.0f;
+                termCounts[index] = count + weight;
             else
-                termCounts[index] = 1.0f;
+                termCounts[index] = weight;
+        }
+
+        // 1. Index high-salience bonus phrases (categories, tropes, genres)
+        if (bonusPhrases != null)
+        {
+            foreach (var phrase in bonusPhrases)
+            {
+                var clean = CleanCategory(phrase).ToLowerInvariant();
+                if (!string.IsNullOrWhiteSpace(clean) && clean.Length > 2)
+                {
+                    AddTerm(clean, 2.5f);
+                }
+            }
+        }
+
+        // 2. Tokenize text into words
+        var words = text.ToLowerInvariant()
+            .Split(new[] { ' ', '.', ',', ':', ';', '!', '?', '-', '_', '/', '(', ')', '[', ']', '"', '\'', '\n', '\r', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+
+        // 3. Index unigrams & bigrams
+        for (int i = 0; i < words.Length; i++)
+        {
+            var w = words[i];
+            AddTerm(w, 1.0f);
+
+            if (i < words.Length - 1)
+            {
+                var bigram = w + " " + words[i + 1];
+                AddTerm(bigram, 1.5f);
+            }
         }
 
         // Apply sublinear term frequency weight: 1.0 + ln(tf)
@@ -711,6 +738,16 @@ public class QdrantService
         }
 
         return sparse;
+    }
+
+    private static string CleanCategory(string category)
+    {
+        if (string.IsNullOrWhiteSpace(category)) return string.Empty;
+        // Normalize "/s" or "/es" e.g. "Misunderstanding/s" -> "Misunderstandings"
+        return category.Replace("/s", "s", StringComparison.OrdinalIgnoreCase)
+                       .Replace("/es", "es", StringComparison.OrdinalIgnoreCase)
+                       .Replace("/", " ")
+                       .Trim();
     }
 
     private static string CleanSynopsis(string? rawDescription)
