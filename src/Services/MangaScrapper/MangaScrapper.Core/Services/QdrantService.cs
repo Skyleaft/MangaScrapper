@@ -623,14 +623,14 @@ public class QdrantService
             Vectors = new Vectors { Vectors_ = namedVectors },
             Payload =
             {
-                ["title"] = manga.Title,
-                ["synonyms"] = manga.Synonyms != null ? manga.Synonyms.ToArray() : Array.Empty<string>(),
+                ["title"] = title,
+                ["synonyms"] = distinctSynonyms.ToArray(),
                 ["description"] = manga.Description ?? string.Empty,
-                ["author"] = manga.Author ?? "Unknown",
-                ["status"] = manga.Status ?? "Unknown",
-                ["type"] = manga.Type ?? "Unknown",
-                ["genres"] = manga.Genres != null ? manga.Genres.ToArray() : Array.Empty<string>(),
-                ["categories"] = manga.Categories != null ? manga.Categories.ToArray() : Array.Empty<string>()
+                ["author"] = !string.IsNullOrWhiteSpace(manga.Author) ? manga.Author : "Unknown",
+                ["status"] = !string.IsNullOrWhiteSpace(manga.Status) ? manga.Status : "Unknown",
+                ["type"] = !string.IsNullOrWhiteSpace(manga.Type) ? manga.Type : "Unknown",
+                ["genres"] = distinctGenres.ToArray(),
+                ["categories"] = distinctCategories.ToArray()
             }
         };
     }
