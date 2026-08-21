@@ -345,7 +345,7 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
         try
         {
             var anilistList = await externalService.SearchAnilistAsync(manga.Title,manga.AnilistId, ct);
-            if (anilistList.Count > 0 && manga.AnilistId != null)
+            if (anilistList.Count > 0 && manga.AnilistId != null && manga.AnilistId!=0)
             {
                 manga.UpdateFromAnilist(anilistList.First());
             }

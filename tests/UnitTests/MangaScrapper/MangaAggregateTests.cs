@@ -86,4 +86,32 @@ public class MangaAggregateTests
         // Assert
         manga.Synonyms.Should().BeEquivalentTo(new List<string> { "AoT", "SNK" });
     }
+
+    [Fact]
+    public void UpdateFromAnilist_WhenCollectionsAreNull_ShouldMergeWithoutException()
+    {
+        // Arrange
+        var manga = Manga.Reconstitute(
+            MangaId.New(), "Bleach", "Tite Kubo", "Manga", 0, null, null,
+            synonyms: null, genres: null, categories: null,
+            description: null, imageUrl: null, localImageUrl: null,
+            thumbnailSize: 0, rating: null, popularity: 0, members: 0,
+            nsfw: false, status: null, releaseDate: null, totalView: 0,
+            createdAt: DateTime.UtcNow, updatedAt: DateTime.UtcNow, url: null, chapters: null);
+
+        var other = Manga.Create("Bleach", "Tite Kubo", "Manga", "Anilist",
+            synonyms: new List<string> { "Bleach TYBW" },
+            genres: new List<string> { "Action", "Supernatural" },
+            categories: new List<string> { "Shounen" });
+
+        // Act
+        var act = () => manga.UpdateFromAnilist(other);
+
+        // Assert
+        act.Should().NotThrow();
+        manga.Synonyms.Should().Contain("Bleach TYBW");
+        manga.Genres.Should().Contain(new[] { "Action", "Supernatural" });
+        manga.Categories.Should().Contain("Shounen");
+    }
 }
+

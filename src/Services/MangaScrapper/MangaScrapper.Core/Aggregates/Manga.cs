@@ -82,8 +82,8 @@ public class Manga : Entity<MangaId>
     public double? Rating { get; private set; }
     public int Popularity { get; private set; }
     public int Members { get; private set; }
-    public List<string> Genres { get; private set; }
-    public List<string> Categories { get; private set; }
+    public List<string> Genres { get; private set; } = [];
+    public List<string> Categories { get; private set; } = [];
     public string? Description { get; private set; }
     public string? ImageUrl { get; private set; }
     public string? LocalImageUrl { get; private set; }
@@ -95,7 +95,7 @@ public class Manga : Entity<MangaId>
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
     public string? Url { get; private set; }
-    public List<Chapter> Chapters { get; private set; }
+    public List<Chapter> Chapters { get; private set; } = [];
 
     private Manga(
         MangaId id,
@@ -298,12 +298,12 @@ public class Manga : Entity<MangaId>
 
         if (anilistInfo.Genres != null && anilistInfo.Genres.Any())
         {
-            Genres = Genres.Union(anilistInfo.Genres).ToList();
+            Genres = (Genres ?? []).Union(anilistInfo.Genres, StringComparer.OrdinalIgnoreCase).ToList();
         }
 
         if (anilistInfo.Synonyms != null && anilistInfo.Synonyms.Any())
         {
-            Synonyms = Synonyms.Union(anilistInfo.Synonyms, StringComparer.OrdinalIgnoreCase).ToList();
+            Synonyms = (Synonyms ?? []).Union(anilistInfo.Synonyms, StringComparer.OrdinalIgnoreCase).ToList();
         }
 
         UpdatedAt = DateTime.UtcNow;
@@ -321,15 +321,15 @@ public class Manga : Entity<MangaId>
         if (!string.IsNullOrWhiteSpace(other.Author) && other.Author != "Unknown" && (string.IsNullOrWhiteSpace(Author) || Author == "Unknown")) Author = other.Author;
         if (other.Genres != null && other.Genres.Any())
         {
-            Genres = Genres.Union(other.Genres, StringComparer.OrdinalIgnoreCase).ToList();
+            Genres = (Genres ?? []).Union(other.Genres, StringComparer.OrdinalIgnoreCase).ToList();
         }
         if (other.Categories != null && other.Categories.Any())
         {
-            Categories = Categories.Union(other.Categories, StringComparer.OrdinalIgnoreCase).ToList();
+            Categories = (Categories ?? []).Union(other.Categories, StringComparer.OrdinalIgnoreCase).ToList();
         }
         if (other.Synonyms != null && other.Synonyms.Any())
         {
-            Synonyms = Synonyms.Union(other.Synonyms, StringComparer.OrdinalIgnoreCase).ToList();
+            Synonyms = (Synonyms ?? []).Union(other.Synonyms, StringComparer.OrdinalIgnoreCase).ToList();
         }
         UpdatedAt = DateTime.UtcNow;
     }
