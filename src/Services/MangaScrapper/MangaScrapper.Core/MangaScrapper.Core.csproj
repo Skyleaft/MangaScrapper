@@ -27,7 +27,7 @@
     <PackageReference Include="FirebaseAdmin" Version="3.6.0" />
     <PackageReference Include="Google.Apis.Auth" Version="1.75.0" />
     <PackageReference Include="Isopoh.Cryptography.Argon2" Version="2.0.0" />
-    <PackageReference Include="Mapster" Version="10.0.11" />
+    <PackageReference Include="Mapster" Version="10.0.12" />
     <PackageReference Include="MediatR" Version="14.2.0" />
     <PackageReference Include="FluentValidation" Version="12.1.1" />
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
