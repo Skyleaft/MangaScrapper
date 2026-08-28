@@ -165,11 +165,37 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
 
             var response = await HttpClient.GetAsync(url, token);
             response.EnsureSuccessStatusCode();
-            var str = await response.Content.ReadAsStringAsync(token);
+            var str = await DecompressResponseAsync(response, token);
             var doc2 = new HtmlDocument();
             doc2.LoadHtml(str);
             return doc2;
         }, ct);
+    }
+
+    /// <summary>
+    /// Reads the HTTP response body and decompresses it when the server sends
+    /// <c>Content-Encoding: gzip</c>, <c>deflate</c>, or <c>br</c> (Brotli).
+    /// Falls back to <see cref="HttpContent.ReadAsStringAsync"/> when no compression is detected.
+    /// </summary>
+    private static async Task<string> DecompressResponseAsync(HttpResponseMessage response, CancellationToken ct)
+    {
+        var encoding = response.Content.Headers.ContentEncoding.FirstOrDefault()?.ToLowerInvariant();
+
+        await using var rawStream = await response.Content.ReadAsStreamAsync(ct);
+
+        Stream decompressedStream = encoding switch
+        {
+            "gzip"    => new System.IO.Compression.GZipStream(rawStream, System.IO.Compression.CompressionMode.Decompress),
+            "deflate" => new System.IO.Compression.DeflateStream(rawStream, System.IO.Compression.CompressionMode.Decompress),
+            "br"      => new System.IO.Compression.BrotliStream(rawStream, System.IO.Compression.CompressionMode.Decompress),
+            _         => rawStream
+        };
+
+        await using (decompressedStream)
+        using (var reader = new StreamReader(decompressedStream, System.Text.Encoding.UTF8))
+        {
+            return await reader.ReadToEndAsync(ct);
+        }
     }
 
     protected async Task<T?> GetFromJsonAsync<T>(string url, CancellationToken cancellationToken = default)

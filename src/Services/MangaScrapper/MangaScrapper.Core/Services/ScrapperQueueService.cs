@@ -32,6 +32,7 @@ public sealed class ScrapperQueueService : IScrapperQueueService
             "kiryuu"    => "kiryuu",
             "komikcast" => "komikcast",
             "mangadex"  => "mangadex",
+            "komiktap"  => "komiktap",
             _           => null
         };
 

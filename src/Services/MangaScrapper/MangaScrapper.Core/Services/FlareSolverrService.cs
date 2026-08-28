@@ -96,7 +96,20 @@ public class FlareSolverrService
                         using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
                         if (response.IsSuccessStatusCode)
                         {
-                            return await response.Content.ReadAsStringAsync(ct);
+                            var encoding = response.Content.Headers.ContentEncoding.FirstOrDefault()?.ToLowerInvariant();
+                            await using var rawStream = await response.Content.ReadAsStreamAsync(ct);
+                            Stream decompressedStream = encoding switch
+                            {
+                                "gzip"    => new System.IO.Compression.GZipStream(rawStream, System.IO.Compression.CompressionMode.Decompress),
+                                "deflate" => new System.IO.Compression.DeflateStream(rawStream, System.IO.Compression.CompressionMode.Decompress),
+                                "br"      => new System.IO.Compression.BrotliStream(rawStream, System.IO.Compression.CompressionMode.Decompress),
+                                _         => rawStream
+                            };
+                            await using (decompressedStream)
+                            using (var reader = new StreamReader(decompressedStream, System.Text.Encoding.UTF8))
+                            {
+                                return await reader.ReadToEndAsync(ct);
+                            }
                         }
                     }
                     catch
