@@ -280,9 +280,14 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
         return await ExecuteWithRetryAsync(async token =>
         {
             Stream? imageStream = null;
+            const string defaultUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
+
             try
             {
                 using var request = new HttpRequestMessage(HttpMethod.Get, imageUrl);
+                request.Headers.TryAddWithoutValidation("User-Agent", defaultUserAgent);
+                request.Headers.TryAddWithoutValidation("Accept", "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8");
+
                 if (_provider != null)
                 {
                     if (_provider.ProviderName == "MangaDex")
@@ -304,7 +309,8 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
                 {
                     using var req2 = new HttpRequestMessage(HttpMethod.Get, imageUrl);
                     if (_provider != null) req2.Headers.Referrer = new Uri(_provider.BaseUrl);
-                    if (!string.IsNullOrEmpty(userAgent)) { req2.Headers.UserAgent.Clear(); req2.Headers.TryAddWithoutValidation("User-Agent", userAgent); }
+                    req2.Headers.TryAddWithoutValidation("User-Agent", !string.IsNullOrEmpty(userAgent) ? userAgent : defaultUserAgent);
+                    req2.Headers.TryAddWithoutValidation("Accept", "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8");
                     if (!string.IsNullOrEmpty(cookieHeader)) req2.Headers.TryAddWithoutValidation("Cookie", cookieHeader);
                     var response2 = await HttpClient.SendAsync(req2, HttpCompletionOption.ResponseHeadersRead, token);
                     response2.EnsureSuccessStatusCode();
@@ -360,21 +366,49 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
 
                 try
                 {
+                    memStream.Position = 0;
                     using var imageData = SKData.Create(memStream);
-                    using var skImage = SKImage.FromEncodedData(imageData)
-                        ?? throw new InvalidOperationException($"SkiaSharp could not decode image from: {imageUrl}");
-                    if (width == 0 || height == 0)
+                    using var skImage = SKImage.FromEncodedData(imageData);
+                    
+                    if (skImage != null)
                     {
-                        width = skImage.Width;
-                        height = skImage.Height;
+                        if (width == 0 || height == 0)
+                        {
+                            width = skImage.Width;
+                            height = skImage.Height;
+                        }
+
+                        using var encoded = skImage.Encode(SKEncodedImageFormat.Webp, 90);
+                        if (encoded != null)
+                        {
+                            await Task.Run(() => { using var out2 = File.Create(filePath); encoded.SaveTo(out2); }, token);
+                            return (relativePath.Replace("\\", "/"), new FileInfo(filePath).Length, width, height);
+                        }
                     }
-                    using var encoded = skImage.Encode(SKEncodedImageFormat.Webp, 90);
-                    await Task.Run(() => { using var out2 = File.Create(filePath); encoded.SaveTo(out2); }, token);
-                    return (relativePath.Replace("\\", "/"), new FileInfo(filePath).Length, width, height);
+
+                    // Fallback using SKBitmap decoding if SKImage.Encode returned null
+                    memStream.Position = 0;
+                    using var bitmap = SKBitmap.Decode(memStream);
+                    if (bitmap != null)
+                    {
+                        if (width == 0 || height == 0)
+                        {
+                            width = bitmap.Width;
+                            height = bitmap.Height;
+                        }
+                        using var encodedBmp = bitmap.Encode(SKEncodedImageFormat.Webp, 90);
+                        if (encodedBmp != null)
+                        {
+                            await Task.Run(() => { using var out2 = File.Create(filePath); encodedBmp.SaveTo(out2); }, token);
+                            return (relativePath.Replace("\\", "/"), new FileInfo(filePath).Length, width, height);
+                        }
+                    }
+
+                    throw new InvalidOperationException($"SkiaSharp could not encode image to WebP from: {imageUrl}");
                 }
                 catch (Exception ex)
                 {
-                    Logger.LogWarning(ex, "SkiaSharp failed to decode {ImageUrl}. Saving raw stream.", imageUrl);
+                    Logger.LogWarning(ex, "SkiaSharp failed to decode/encode {ImageUrl}. Saving raw stream.", imageUrl);
                     memStream.Position = 0;
                     await using var out3 = File.Create(filePath);
                     await memStream.CopyToAsync(out3, token);
