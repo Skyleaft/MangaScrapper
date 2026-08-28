@@ -319,18 +319,23 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
                 else throw;
             }
 
+            byte[] imageBytes;
             using (imageStream)
             {
                 using var memStream = new MemoryStream();
                 await imageStream!.CopyToAsync(memStream, token);
-                memStream.Position = 0;
-                Directory.CreateDirectory(subDir);
-                var filePath = Path.Combine(subDir, fileName);
+                imageBytes = memStream.ToArray();
+            }
 
-                int width = 0;
-                int height = 0;
+            Directory.CreateDirectory(subDir);
+            var filePath = Path.Combine(subDir, fileName);
 
-                var dims = ImageDimensionReader.GetDimensions(memStream);
+            int width = 0;
+            int height = 0;
+
+            using (var dimStream = new MemoryStream(imageBytes, writable: false))
+            {
+                var dims = ImageDimensionReader.GetDimensions(dimStream);
                 if (dims.Width > 0 && dims.Height > 0)
                 {
                     width = dims.Width;
@@ -340,7 +345,7 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
                 {
                     try
                     {
-                        using var codec = SKCodec.Create(memStream);
+                        using var codec = SKCodec.Create(dimStream);
                         if (codec != null)
                         {
                             width = codec.Info.Width;
@@ -351,44 +356,40 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
                     {
                         Logger.LogWarning(ex, "Failed to read image dimensions from stream for {ImageUrl}", imageUrl);
                     }
-                    finally
+                }
+            }
+
+            if (IsWebpUrl(imageUrl) || IsAvifUrl(imageUrl))
+            {
+                await File.WriteAllBytesAsync(filePath, imageBytes, token);
+                return (relativePath.Replace("\\", "/"), new FileInfo(filePath).Length, width, height);
+            }
+
+            try
+            {
+                using var imageData = SKData.CreateCopy(imageBytes);
+                using var skImage = SKImage.FromEncodedData(imageData);
+                
+                if (skImage != null)
+                {
+                    if (width == 0 || height == 0)
                     {
-                        memStream.Position = 0;
+                        width = skImage.Width;
+                        height = skImage.Height;
+                    }
+
+                    using var encoded = skImage.Encode(SKEncodedImageFormat.Webp, 90);
+                    if (encoded != null)
+                    {
+                        await Task.Run(() => { using var out2 = File.Create(filePath); encoded.SaveTo(out2); }, token);
+                        return (relativePath.Replace("\\", "/"), new FileInfo(filePath).Length, width, height);
                     }
                 }
 
-                if (IsWebpUrl(imageUrl) || IsAvifUrl(imageUrl))
+                // Fallback using SKBitmap decoding if SKImage.Encode returned null
+                using (var bmpStream = new MemoryStream(imageBytes, writable: false))
+                using (var bitmap = SKBitmap.Decode(bmpStream))
                 {
-                    await using var output = File.Create(filePath);
-                    await memStream.CopyToAsync(output, token);
-                    return (relativePath.Replace("\\", "/"), new FileInfo(filePath).Length, width, height);
-                }
-
-                try
-                {
-                    memStream.Position = 0;
-                    using var imageData = SKData.Create(memStream);
-                    using var skImage = SKImage.FromEncodedData(imageData);
-                    
-                    if (skImage != null)
-                    {
-                        if (width == 0 || height == 0)
-                        {
-                            width = skImage.Width;
-                            height = skImage.Height;
-                        }
-
-                        using var encoded = skImage.Encode(SKEncodedImageFormat.Webp, 90);
-                        if (encoded != null)
-                        {
-                            await Task.Run(() => { using var out2 = File.Create(filePath); encoded.SaveTo(out2); }, token);
-                            return (relativePath.Replace("\\", "/"), new FileInfo(filePath).Length, width, height);
-                        }
-                    }
-
-                    // Fallback using SKBitmap decoding if SKImage.Encode returned null
-                    memStream.Position = 0;
-                    using var bitmap = SKBitmap.Decode(memStream);
                     if (bitmap != null)
                     {
                         if (width == 0 || height == 0)
@@ -403,17 +404,15 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
                             return (relativePath.Replace("\\", "/"), new FileInfo(filePath).Length, width, height);
                         }
                     }
+                }
 
-                    throw new InvalidOperationException($"SkiaSharp could not encode image to WebP from: {imageUrl}");
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogWarning(ex, "SkiaSharp failed to decode/encode {ImageUrl}. Saving raw stream.", imageUrl);
-                    memStream.Position = 0;
-                    await using var out3 = File.Create(filePath);
-                    await memStream.CopyToAsync(out3, token);
-                    return (relativePath.Replace("\\", "/"), new FileInfo(filePath).Length, width, height);
-                }
+                throw new InvalidOperationException($"SkiaSharp could not encode image to WebP from: {imageUrl}");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "SkiaSharp failed to decode/encode {ImageUrl}. Saving raw stream.", imageUrl);
+                await File.WriteAllBytesAsync(filePath, imageBytes, token);
+                return (relativePath.Replace("\\", "/"), new FileInfo(filePath).Length, width, height);
             }
         }, ct);
     }
