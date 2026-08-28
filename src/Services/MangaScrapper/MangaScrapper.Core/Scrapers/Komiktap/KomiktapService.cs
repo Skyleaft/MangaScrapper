@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Web;
 using HtmlAgilityPack;
@@ -161,6 +162,129 @@ public class KomiktapService : ScrapperServiceBase
         return DateTime.TryParse(normalized, CultureInfo.InvariantCulture, DateTimeStyles.None, out var date)
             ? date
             : DateTime.MinValue;
+    }
+
+    public override async Task<Chapter> GetChapterPage(
+        string mangaTitle,
+        Chapter chapter,
+        CancellationToken ct = default,
+        Func<int, int, Task>? onProgress = null)
+    {
+        var url = chapter.Link;
+        if (string.IsNullOrWhiteSpace(url)) return chapter;
+        if (!url.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+            url = Provider.BaseUrl.TrimEnd('/') + "/" + url.TrimStart('/');
+
+        var doc = await GetHtml(url, ct: ct);
+        var imageUrls = new List<string>();
+
+        // 1. Coba ambil dari static <img> tag jika ada
+        var imageNodes = doc.DocumentNode.SelectNodes(Provider.PageSelectors.Images);
+        if (imageNodes != null && imageNodes.Count > 0)
+        {
+            foreach (var node in imageNodes)
+            {
+                var src = node.GetAttributeValue("src", string.Empty);
+                if (!string.IsNullOrWhiteSpace(src))
+                {
+                    imageUrls.Add(src);
+                }
+            }
+        }
+
+        // 2. Jika tidak ada <img> tag di static HTML, ekstrak dari JavaScript ts_reader.run({...})
+        if (imageUrls.Count == 0)
+        {
+            var scriptNodes = doc.DocumentNode.SelectNodes("//script");
+            if (scriptNodes != null)
+            {
+                foreach (var script in scriptNodes)
+                {
+                    var text = script.InnerText;
+                    if (string.IsNullOrEmpty(text) || !text.Contains("ts_reader.run")) continue;
+
+                    var match = Regex.Match(text, @"ts_reader\.run\((?<json>\{.+?\})\);", RegexOptions.Singleline);
+                    if (match.Success)
+                    {
+                        try
+                        {
+                            using var jsonDoc = JsonDocument.Parse(match.Groups["json"].Value);
+                            if (jsonDoc.RootElement.TryGetProperty("sources", out var sourcesElement) &&
+                                sourcesElement.ValueKind == JsonValueKind.Array)
+                            {
+                                foreach (var source in sourcesElement.EnumerateArray())
+                                {
+                                    if (source.TryGetProperty("images", out var imagesElement) &&
+                                        imagesElement.ValueKind == JsonValueKind.Array)
+                                    {
+                                        foreach (var img in imagesElement.EnumerateArray())
+                                        {
+                                            var imgUrl = img.GetString();
+                                            if (!string.IsNullOrWhiteSpace(imgUrl))
+                                            {
+                                                imageUrls.Add(imgUrl.Trim());
+                                            }
+                                        }
+                                        if (imageUrls.Count > 0) break;
+                                    }
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.LogWarning(ex, "Failed to parse ts_reader.run JSON for chapter at {Url}", url);
+                        }
+                    }
+                }
+            }
+        }
+
+        if (imageUrls.Count == 0) return chapter;
+
+        var total = imageUrls.Count;
+        var completed = 0;
+        if (onProgress != null && total > 0)
+        {
+            await onProgress(0, total);
+        }
+
+        var downloadTasks = imageUrls.Select(async (imageUrl, index) =>
+        {
+            if (string.IsNullOrWhiteSpace(imageUrl)) return (Index: index, Page: null as Page);
+
+            await Semaphore.WaitAsync(ct);
+            try
+            {
+                var result = await DownloadAndConvertToWebP(
+                    mangaTitle,
+                    chapter.Number.ToString(CultureInfo.InvariantCulture),
+                    imageUrl,
+                    index + 1,
+                    ct);
+
+                var current = Interlocked.Increment(ref completed);
+                if (onProgress != null)
+                {
+                    await onProgress(current, total);
+                }
+
+                return (Index: index, Page: new Page(Guid.CreateVersion7(), imageUrl, result.path, result.size, result.width, result.height));
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Failed to download/convert image at index {Index} for {MangaTitle} (Komiktap)", index, mangaTitle);
+                throw;
+            }
+            finally
+            {
+                Semaphore.Release();
+            }
+        });
+
+        var results = await Task.WhenAll(downloadTasks);
+        var pages = results.OrderBy(r => r.Index).Where(r => r.Page != null).Select(r => r.Page!).ToList();
+        chapter.AddPages(pages);
+        return chapter;
     }
 
     public override async Task<List<SearchItem>> SearchManga(SearchRequest request, CancellationToken ct)

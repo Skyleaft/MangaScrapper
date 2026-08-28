@@ -19,6 +19,6 @@
     "UploadDate": ".//div[@class='eph-num']/a/span[@class='chapterdate']"
   },
   "PageSelectors": {
-    "Images": "//div[@id='readerarea']/img[contains(@class,'ts-main-image')]"
+    "Images": "//div[@id='readerarea']//img"
   }
 }
