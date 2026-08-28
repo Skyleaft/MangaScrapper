@@ -298,10 +298,14 @@ public class KomiktapService : ScrapperServiceBase
             var page = request.Page > 1 ? $"page/{request.Page}/" : string.Empty;
             url = $"{baseUrl}/{page}?s={HttpUtility.UrlEncode(request.Keyword)}";
         }
+        else if (!string.IsNullOrEmpty(request.Type))
+        {
+            url = $"{baseUrl}/manga/?page={request.Page}&type={HttpUtility.UrlEncode(request.Type)}&order=update";
+        }
         else
         {
             // Browse / filter endpoint: https://komiktap.info/page/1/?s (empty search = latest)
-            url = $"{baseUrl}/page/{request.Page}/?s";
+            url = $"{baseUrl}/manga/?page={request.Page}&type=&order=update";
         }
 
         var searchDoc = await GetHtml(url, ct: ct);
