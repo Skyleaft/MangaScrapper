@@ -298,22 +298,31 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
                 int width = 0;
                 int height = 0;
 
-                try
+                var dims = ImageDimensionReader.GetDimensions(memStream);
+                if (dims.Width > 0 && dims.Height > 0)
                 {
-                    using var codec = SKCodec.Create(memStream);
-                    if (codec != null)
+                    width = dims.Width;
+                    height = dims.Height;
+                }
+                else
+                {
+                    try
                     {
-                        width = codec.Info.Width;
-                        height = codec.Info.Height;
+                        using var codec = SKCodec.Create(memStream);
+                        if (codec != null)
+                        {
+                            width = codec.Info.Width;
+                            height = codec.Info.Height;
+                        }
                     }
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogWarning(ex, "Failed to read image dimensions from stream for {ImageUrl}", imageUrl);
-                }
-                finally
-                {
-                    memStream.Position = 0;
+                    catch (Exception ex)
+                    {
+                        Logger.LogWarning(ex, "Failed to read image dimensions from stream for {ImageUrl}", imageUrl);
+                    }
+                    finally
+                    {
+                        memStream.Position = 0;
+                    }
                 }
 
                 if (IsWebpUrl(imageUrl) || IsAvifUrl(imageUrl))

@@ -1,5 +1,6 @@
 using MangaScrapper.Core.Configuration;
 using MangaScrapper.Core.Repositories;
+using MangaScrapper.Core.Utils;
 using NovaStack.Contracts.Responses;
 using SkiaSharp;
 
@@ -32,7 +33,7 @@ public class StorageSyncService
         var errors = new List<string>();
 
         int page = 1;
-        const int pageSize = 100;
+        const int pageSize = 25;
 
         while (true)
         {
@@ -77,19 +78,29 @@ public class StorageSyncService
 
                                     if (p.Size != size || p.Width == 0 || p.Height == 0)
                                     {
-                                        try
+                                        var dims = ImageDimensionReader.GetDimensions(pagePath);
+                                        if (dims.Width > 0 && dims.Height > 0)
                                         {
-                                            using var stream = File.OpenRead(pagePath);
-                                            using var codec = SKCodec.Create(stream);
-                                            if (codec != null)
-                                            {
-                                                width = codec.Info.Width;
-                                                height = codec.Info.Height;
-                                            }
+                                            width = dims.Width;
+                                            height = dims.Height;
                                         }
-                                        catch (Exception ex)
+                                        else
                                         {
-                                            _logger.LogWarning(ex, "Failed to read image dimensions for {PagePath}", pagePath);
+                                            // Fallback to SkiaSharp only if header reading failed
+                                            try
+                                            {
+                                                using var stream = File.OpenRead(pagePath);
+                                                using var codec = SKCodec.Create(stream);
+                                                if (codec != null)
+                                                {
+                                                    width = codec.Info.Width;
+                                                    height = codec.Info.Height;
+                                                }
+                                            }
+                                            catch (Exception ex)
+                                            {
+                                                _logger.LogWarning(ex, "Failed to read image dimensions for {PagePath}", pagePath);
+                                            }
                                         }
 
                                         if (p.Size != size || p.Width != width || p.Height != height)
