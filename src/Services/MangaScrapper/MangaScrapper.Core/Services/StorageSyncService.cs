@@ -1,6 +1,7 @@
 using MangaScrapper.Core.Configuration;
 using MangaScrapper.Core.Repositories;
 using NovaStack.Contracts.Responses;
+using SkiaSharp;
 
 namespace MangaScrapper.Core.Services;
 
@@ -52,6 +53,7 @@ public class StorageSyncService
                             var size = new FileInfo(thumbPath).Length;
                             if (manga.ThumbnailSize != size)
                             {
+                                manga.UpdateLocalImage(manga.LocalImageUrl, size);
                                 modified = true;
                             }
                             totalThumbnailSize += size;
@@ -69,6 +71,33 @@ public class StorageSyncService
                                 {
                                     var size = new FileInfo(pagePath).Length;
                                     totalPagesSize += size;
+
+                                    int width = p.Width;
+                                    int height = p.Height;
+
+                                    if (p.Size != size || p.Width == 0 || p.Height == 0)
+                                    {
+                                        try
+                                        {
+                                            using var stream = File.OpenRead(pagePath);
+                                            using var codec = SKCodec.Create(stream);
+                                            if (codec != null)
+                                            {
+                                                width = codec.Info.Width;
+                                                height = codec.Info.Height;
+                                            }
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                            _logger.LogWarning(ex, "Failed to read image dimensions for {PagePath}", pagePath);
+                                        }
+
+                                        if (p.Size != size || p.Width != width || p.Height != height)
+                                        {
+                                            p.UpdateLocalImage(p.LocalImageUrl, size, width, height);
+                                            modified = true;
+                                        }
+                                    }
                                 }
                             }
                         }

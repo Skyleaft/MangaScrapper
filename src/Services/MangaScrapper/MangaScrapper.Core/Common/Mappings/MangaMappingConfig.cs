@@ -29,7 +29,11 @@ public sealed class MangaMappingConfig : IRegister
 
         config.NewConfig<Chapter, ChapterResponse>()
             .Map(dest => dest.Id, src => src.Id.Value)
-            .Map(dest => dest.Pages, src => src.Pages.Select(x => x.LocalImageUrl).ToList());
+            .Map(dest => dest.Pages, src => src.Pages.Select(x => new ChapterPageResponse(
+                x.LocalImageUrl,
+                x.Width,
+                x.Height,
+                x.ImageUrl)).ToList());
 
         
         config.NewConfig<Chapter, MeiliChapterDocument>()
@@ -132,7 +136,7 @@ public sealed class MangaMappingConfig : IRegister
                     c.Language,
                     c.TotalView,
                     c.UploadDate,
-                    c.Pages != null ? c.Pages.Select(p => new Page(p.Id, p.ImageUrl, p.LocalImageUrl, p.Size)).ToList() : null
+                    c.Pages != null ? c.Pages.Select(p => new Page(p.Id, p.ImageUrl, p.LocalImageUrl, p.Size, p.Width, p.Height)).ToList() : null
                 )).ToList() : null));
 
         config.NewConfig<Manga, MangaDocument>()
@@ -153,7 +157,9 @@ public sealed class MangaMappingConfig : IRegister
                     Id = p.Id,
                     ImageUrl = p.ImageUrl,
                     LocalImageUrl = p.LocalImageUrl,
-                    Size = p.Size
+                    Size = p.Size,
+                    Width = p.Width,
+                    Height = p.Height
                 }).ToList()
             }).ToList());
     }

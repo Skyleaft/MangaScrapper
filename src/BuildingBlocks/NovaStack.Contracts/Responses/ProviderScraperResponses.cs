@@ -53,6 +53,8 @@ public class ScrapperPageDocumentResponse
     public string ImageUrl { get; set; } = string.Empty;
     public string LocalImageUrl { get; set; } = string.Empty;
     public long Size { get; set; }
+    public int Width { get; set; }
+    public int Height { get; set; }
 }
 
 public class ScrapperMangaDocumentResponse

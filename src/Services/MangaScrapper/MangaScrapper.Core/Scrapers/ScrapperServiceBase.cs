@@ -20,7 +20,7 @@ namespace MangaScrapper.Core.Scrapers;
 public interface IScrapperService
 {
     Task<HtmlDocument> GetHtml(string url, string? query = null, HttpContent? formData = null, CancellationToken ct = default);
-    Task<(string path, long size)> DownloadAndConvertToWebP(string mangaTitle, string chapterNumber, string imageUrl, int index, CancellationToken ct = default);
+    Task<(string path, long size, int width, int height)> DownloadAndConvertToWebP(string mangaTitle, string chapterNumber, string imageUrl, int index, CancellationToken ct = default);
     Task<(string path, long size)> DownloadThumbnailAndConvertToWebP(string mangaTitle, string imageUrl, CancellationToken ct = default);
     string GetCleanTitle(string title);
     Task<Manga> UpdateMangaMetaData(Manga manga, CancellationToken ct = default);
@@ -217,7 +217,7 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
         throw new Exception("Retry failed");
     }
 
-    public async Task<(string path, long size)> DownloadAndConvertToWebP(string mangaTitle, string chapterNumber, string imageUrl, int index, CancellationToken ct = default)
+    public async Task<(string path, long size, int width, int height)> DownloadAndConvertToWebP(string mangaTitle, string chapterNumber, string imageUrl, int index, CancellationToken ct = default)
     {
         var cleanTitle = GetCleanTitle(mangaTitle);
         var subDir = Path.Combine(ImageStoragePath, cleanTitle, chapterNumber);
@@ -233,7 +233,8 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
             var cleanTitle = GetCleanTitle(mangaTitle);
             var subDir = Path.Combine(ImageStoragePath, cleanTitle);
             var ext = IsAvifUrl(imageUrl) ? ".avif" : ".webp";
-            return await SaveImageAsync(imageUrl, subDir, $"thumbnail{ext}", $"{cleanTitle}/thumbnail{ext}", ct);
+            var result = await SaveImageAsync(imageUrl, subDir, $"thumbnail{ext}", $"{cleanTitle}/thumbnail{ext}", ct);
+            return (result.path, result.size);
         }
         catch { return (string.Empty, 0); }
     }
@@ -245,7 +246,7 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
         return string.IsNullOrEmpty(cleaned) ? "manga" : cleaned;
     }
 
-    private async Task<(string path, long size)> SaveImageAsync(string imageUrl, string subDir, string fileName, string relativePath, CancellationToken ct)
+    private async Task<(string path, long size, int width, int height)> SaveImageAsync(string imageUrl, string subDir, string fileName, string relativePath, CancellationToken ct)
     {
         if (!Uri.TryCreate(imageUrl, UriKind.Absolute, out _))
             throw new ArgumentException($"Image URL must be absolute. Got: {imageUrl}", nameof(imageUrl));
@@ -294,11 +295,32 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
                 Directory.CreateDirectory(subDir);
                 var filePath = Path.Combine(subDir, fileName);
 
+                int width = 0;
+                int height = 0;
+
+                try
+                {
+                    using var codec = SKCodec.Create(memStream);
+                    if (codec != null)
+                    {
+                        width = codec.Info.Width;
+                        height = codec.Info.Height;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogWarning(ex, "Failed to read image dimensions from stream for {ImageUrl}", imageUrl);
+                }
+                finally
+                {
+                    memStream.Position = 0;
+                }
+
                 if (IsWebpUrl(imageUrl) || IsAvifUrl(imageUrl))
                 {
                     await using var output = File.Create(filePath);
                     await memStream.CopyToAsync(output, token);
-                    return (relativePath.Replace("\\", "/"), new FileInfo(filePath).Length);
+                    return (relativePath.Replace("\\", "/"), new FileInfo(filePath).Length, width, height);
                 }
 
                 try
@@ -306,9 +328,14 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
                     using var imageData = SKData.Create(memStream);
                     using var skImage = SKImage.FromEncodedData(imageData)
                         ?? throw new InvalidOperationException($"SkiaSharp could not decode image from: {imageUrl}");
+                    if (width == 0 || height == 0)
+                    {
+                        width = skImage.Width;
+                        height = skImage.Height;
+                    }
                     using var encoded = skImage.Encode(SKEncodedImageFormat.Webp, 90);
                     await Task.Run(() => { using var out2 = File.Create(filePath); encoded.SaveTo(out2); }, token);
-                    return (relativePath.Replace("\\", "/"), new FileInfo(filePath).Length);
+                    return (relativePath.Replace("\\", "/"), new FileInfo(filePath).Length, width, height);
                 }
                 catch (Exception ex)
                 {
@@ -316,7 +343,7 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
                     memStream.Position = 0;
                     await using var out3 = File.Create(filePath);
                     await memStream.CopyToAsync(out3, token);
-                    return (relativePath.Replace("\\", "/"), new FileInfo(filePath).Length);
+                    return (relativePath.Replace("\\", "/"), new FileInfo(filePath).Length, width, height);
                 }
             }
         }, ct);
@@ -598,7 +625,7 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
                 {
                     await onProgress(current, total);
                 }
-                return (Index: index, Page: new Page(Guid.CreateVersion7(), imageUrl, result.path, result.size));
+                return (Index: index, Page: new Page(Guid.CreateVersion7(), imageUrl, result.path, result.size, result.width, result.height));
             }
             catch (Exception ex)
             {
@@ -746,8 +773,10 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
                 Pages = c.Pages?.Select(p => new ScrapperPageDocumentResponse
                 {
                     ImageUrl = p.ImageUrl,
-                    LocalImageUrl = p.LocalImageUrl,
-                    Size = p.Size
+                    LocalImageUrl = p.LocalImageUrl ?? string.Empty,
+                    Size = p.Size,
+                    Width = p.Width,
+                    Height = p.Height
                 }).ToList() ?? new()
             }).ToList() ?? new()
         };

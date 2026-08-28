@@ -27,11 +27,17 @@ public record MangaSummaryResponse(
     int TotalView,
     ChapterResponse LatestChapter);
 
+public record ChapterPageResponse(
+    string? Url,
+    int Width,
+    int Height,
+    string? AlternateUrl = null);
+
 public record ChapterResponse(
     Guid Id,
     double Number,
     string? Link,
-    List<string> Pages,
+    List<ChapterPageResponse> Pages,
     string Language,
     string? ChapterProvider,
     string? ChapterProviderIcon,

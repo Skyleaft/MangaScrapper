@@ -164,5 +164,40 @@ public class MangaAggregateTests
         manga.Synonyms.Should().NotContain("");
         manga.Synonyms.Should().NotContain("  ");
     }
+
+    [Fact]
+    public void Page_ShouldStoreWidthAndHeight_AndUpdateCorrectly()
+    {
+        // Arrange
+        var pageId = Guid.NewGuid();
+        var page = new Page(pageId, "https://example.com/img1.jpg", "manga/1/1.webp", 12345, 800, 1200);
+
+        // Assert initial
+        page.Id.Should().Be(pageId);
+        page.ImageUrl.Should().Be("https://example.com/img1.jpg");
+        page.LocalImageUrl.Should().Be("manga/1/1.webp");
+        page.Size.Should().Be(12345);
+        page.Width.Should().Be(800);
+        page.Height.Should().Be(1200);
+
+        // Update dimension
+        page.UpdateDimension(1080, 1920);
+        page.Width.Should().Be(1080);
+        page.Height.Should().Be(1920);
+
+        // Update local image with dimension
+        page.UpdateLocalImage("manga/1/1_fixed.webp", 20000, 1200, 2000);
+        page.LocalImageUrl.Should().Be("manga/1/1_fixed.webp");
+        page.Size.Should().Be(20000);
+        page.Width.Should().Be(1200);
+        page.Height.Should().Be(2000);
+
+        // Update local image without dimension preserves existing dimensions
+        page.UpdateLocalImage("manga/1/1_v3.webp", 25000);
+        page.LocalImageUrl.Should().Be("manga/1/1_v3.webp");
+        page.Size.Should().Be(25000);
+        page.Width.Should().Be(1200);
+        page.Height.Should().Be(2000);
+    }
 }
 

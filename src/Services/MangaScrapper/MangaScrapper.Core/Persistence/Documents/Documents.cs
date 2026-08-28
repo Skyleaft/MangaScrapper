@@ -84,6 +84,8 @@ public class PageDocument
     [BsonIgnoreIfNull]
     public string? LocalImageUrl { get; set; }
     public long Size { get; set; }
+    public int Width { get; set; }
+    public int Height { get; set; }
 }
 
 public class UserDocument
