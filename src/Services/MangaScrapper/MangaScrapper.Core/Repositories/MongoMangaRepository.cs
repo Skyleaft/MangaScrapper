@@ -28,7 +28,7 @@ public class MongoMangaRepository(MangaMongoDbContext dbContext) : IMangaReposit
     }
 
     public async Task<PagedList<Manga>> GetPagedAsync(string? search, List<string>? genres, string? status, string? type, string sortBy, string orderBy, int page,
-        int pageSize, CancellationToken ct = default)
+        int pageSize, CancellationToken ct = default, bool excludePage = true)
     {
         var builder = Builders<MangaDocument>.Filter;
         var filter = builder.Empty;
@@ -74,12 +74,14 @@ public class MongoMangaRepository(MangaMongoDbContext dbContext) : IMangaReposit
                 ? sortBuilder.Ascending(m => m.UpdatedAt)
                 : sortBuilder.Descending(m => m.UpdatedAt),
         };
-        var docs = await dbContext.Mangas.Find(filter)
+        var query = dbContext.Mangas.Find(filter)
             .Sort(sortDefinition)
             .Skip((page - 1) * pageSize)
-            .Limit(pageSize)
-            .Project<MangaDocument>(Builders<MangaDocument>.Projection.Exclude("chapters.pages"))
-            .ToListAsync(ct);
+            .Limit(pageSize);
+
+        var docs = await (excludePage
+            ? query.Project<MangaDocument>(Builders<MangaDocument>.Projection.Exclude("chapters.pages"))
+            : query).ToListAsync(ct);
         var items = docs.Select(MapToDomain).ToList();
         return new PagedList<Manga>(items, page, pageSize, (int)totalCount);
     }
