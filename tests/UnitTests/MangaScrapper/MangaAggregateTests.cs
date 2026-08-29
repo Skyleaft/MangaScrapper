@@ -199,5 +199,23 @@ public class MangaAggregateTests
         page.Width.Should().Be(1200);
         page.Height.Should().Be(2000);
     }
+
+    [Fact]
+    public void UpdateThumbnail_ShouldUpdateAllThumbnailPropertiesAndUpdatedAt()
+    {
+        // Arrange
+        var manga = Manga.Create("One Piece", "Eiichiro Oda", "Manga", "Komiku");
+        var newImageUrl = "https://example.com/new-cover.jpg";
+        var newLocalImageUrl = "One Piece/thumbnail.webp";
+        var newSize = 54321L;
+
+        // Act
+        manga.UpdateThumbnail(newImageUrl, newLocalImageUrl, newSize);
+
+        // Assert
+        manga.ImageUrl.Should().Be(newImageUrl);
+        manga.LocalImageUrl.Should().Be(newLocalImageUrl);
+        manga.ThumbnailSize.Should().Be(newSize);
+    }
 }
 

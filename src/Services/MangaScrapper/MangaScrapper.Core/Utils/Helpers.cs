@@ -8,8 +8,8 @@ public static class ThumbnailHelper
     public static string RemoveResizeParams(string url)
     {
         if (string.IsNullOrEmpty(url)) return url;
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)) return url;
 
-        var uri = new Uri(url);
         var segments = uri.Segments;
 
         if (segments.Length > 0 && segments.Last().Contains('=') && !segments.Last().Contains("format=auto"))
@@ -26,6 +26,27 @@ public static class ThumbnailHelper
         if (string.IsNullOrWhiteSpace(url)) return url ?? string.Empty;
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)) return url;
         return new UriBuilder(uri) { Query = string.Empty }.Uri.ToString();
+    }
+
+    public static string GetCleanTitle(string title)
+    {
+        var invalidChars = Path.GetInvalidFileNameChars().Union(new[] { '?', '*', ':', '|', '<', '>', '"' }).ToArray();
+        var cleaned = string.Concat(title.Split(invalidChars)).TrimEnd('.', ' ');
+        return string.IsNullOrEmpty(cleaned) ? "manga" : cleaned;
+    }
+
+    public static bool IsWebpUrl(string imageUrl)
+    {
+        if (!Uri.TryCreate(imageUrl, UriKind.Absolute, out var uri))
+            return imageUrl.Contains(".webp", StringComparison.OrdinalIgnoreCase);
+        return string.Equals(Path.GetExtension(uri.AbsolutePath), ".webp", StringComparison.OrdinalIgnoreCase);
+    }
+
+    public static bool IsAvifUrl(string imageUrl)
+    {
+        if (!Uri.TryCreate(imageUrl, UriKind.Absolute, out var uri))
+            return imageUrl.Contains(".avif", StringComparison.OrdinalIgnoreCase);
+        return string.Equals(Path.GetExtension(uri.AbsolutePath), ".avif", StringComparison.OrdinalIgnoreCase);
     }
 }
 

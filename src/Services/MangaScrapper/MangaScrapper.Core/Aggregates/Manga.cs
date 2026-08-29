@@ -404,5 +404,13 @@ public class Manga : Entity<MangaId>
         ImageUrl = imageUrl;
         UpdatedAt = DateTime.UtcNow;
     }
+
+    public void UpdateThumbnail(string imageUrl, string localImageUrl, long size)
+    {
+        ImageUrl = imageUrl;
+        LocalImageUrl = localImageUrl;
+        ThumbnailSize = size;
+        UpdatedAt = DateTime.UtcNow;
+    }
 }
 
