@@ -100,6 +100,8 @@ public class LatestChapterScrapingJob(
             "kiryuu" => scope.ServiceProvider.GetKeyedService<IScrapperService>("kiryuu"),
             "komikcast" => scope.ServiceProvider.GetKeyedService<IScrapperService>("komikcast"),
             "mangadex" => scope.ServiceProvider.GetKeyedService<IScrapperService>("mangadex"),
+            "komiktap" => scope.ServiceProvider.GetKeyedService<IScrapperService>("komiktap"),
+            "doujindesu" => scope.ServiceProvider.GetKeyedService<IScrapperService>("doujindesu"),
             _ => null
         };
 

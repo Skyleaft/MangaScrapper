@@ -12,6 +12,7 @@ using MangaScrapper.Core.Messaging;
 using MangaScrapper.Core.Persistence;
 using MangaScrapper.Core.Repositories;
 using MangaScrapper.Core.Scrapers;
+using MangaScrapper.Core.Scrapers.DoujinDesu;
 using MangaScrapper.Core.Scrapers.Kiryuu;
 using MangaScrapper.Core.Scrapers.Komikcast;
 using MangaScrapper.Core.Scrapers.Komiku;
@@ -191,24 +192,28 @@ public static class CoreExtensions
         services.AddHttpClient<KomikcastService>();
         services.AddHttpClient<MangaDexService>();
         services.AddHttpClient<KomiktapService>();
+        services.AddHttpClient<DoujinDesuService>();
 
         services.AddScoped<KomikuService>();
         services.AddScoped<KiryuuService>();
         services.AddScoped<KomikcastService>();
         services.AddScoped<MangaDexService>();
         services.AddScoped<KomiktapService>();
+        services.AddScoped<DoujinDesuService>();
 
         services.AddKeyedScoped<IScrapperService, KomikuService>("komiku");
         services.AddKeyedScoped<IScrapperService, KiryuuService>("kiryuu");
         services.AddKeyedScoped<IScrapperService, KomikcastService>("komikcast");
         services.AddKeyedScoped<IScrapperService, MangaDexService>("mangadex");
         services.AddKeyedScoped<IScrapperService, KomiktapService>("komiktap");
+        services.AddKeyedScoped<IScrapperService, DoujinDesuService>("doujindesu");
 
         services.AddKeyedScoped<IProviderScrapperService, KomikuService>("komiku");
         services.AddKeyedScoped<IProviderScrapperService, KiryuuService>("kiryuu");
         services.AddKeyedScoped<IProviderScrapperService, KomikcastService>("komikcast");
         services.AddKeyedScoped<IProviderScrapperService, MangaDexService>("mangadex");
         services.AddKeyedScoped<IProviderScrapperService, KomiktapService>("komiktap");
+        services.AddKeyedScoped<IProviderScrapperService, DoujinDesuService>("doujindesu");
 
         services.AddScoped<IScrapperQueueService, ScrapperQueueService>();
 

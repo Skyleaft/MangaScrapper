@@ -28,12 +28,13 @@ public sealed class ScrapperQueueService : IScrapperQueueService
     {
         var providerKey = chapter.ChapterProvider?.ToLowerInvariant() switch
         {
-            "komiku"    => "komiku",
-            "kiryuu"    => "kiryuu",
-            "komikcast" => "komikcast",
-            "mangadex"  => "mangadex",
-            "komiktap"  => "komiktap",
-            _           => null
+            "komiku"     => "komiku",
+            "kiryuu"     => "kiryuu",
+            "komikcast"  => "komikcast",
+            "mangadex"   => "mangadex",
+            "komiktap"   => "komiktap",
+            "doujindesu" => "doujindesu",
+            _            => null
         };
 
         if (providerKey is null) return;
