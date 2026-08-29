@@ -165,7 +165,9 @@ public class DoujinDesuService : ScrapperServiceBase
             imageUrl: dto.CoverUrl,
             url: pageUrl,
             rating: dto.Rating,
-            status: status);
+            status: status,
+            nsfw:true,
+            releaseDate: dto.CreatedAt);
     }
 
     public override async Task<Chapter> GetChapterPage(string mangaTitle, Chapter chapter, CancellationToken ct = default, Func<int, int, Task>? onProgress = null)
