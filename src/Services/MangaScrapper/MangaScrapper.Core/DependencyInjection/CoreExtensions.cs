@@ -17,6 +17,7 @@ using MangaScrapper.Core.Scrapers.Kiryuu;
 using MangaScrapper.Core.Scrapers.Komikcast;
 using MangaScrapper.Core.Scrapers.Komiku;
 using MangaScrapper.Core.Scrapers.Komiktap;
+using MangaScrapper.Core.Scrapers.Manhwadesu;
 using MangaScrapper.Core.Scrapers.MangaDex;
 using MangaScrapper.Core.Security;
 using MangaScrapper.Core.Services;
@@ -192,6 +193,7 @@ public static class CoreExtensions
         services.AddHttpClient<KomikcastService>();
         services.AddHttpClient<MangaDexService>();
         services.AddHttpClient<KomiktapService>();
+        services.AddHttpClient<ManhwadesuService>();
         services.AddHttpClient<DoujinDesuService>();
 
         services.AddScoped<KomikuService>();
@@ -199,6 +201,7 @@ public static class CoreExtensions
         services.AddScoped<KomikcastService>();
         services.AddScoped<MangaDexService>();
         services.AddScoped<KomiktapService>();
+        services.AddScoped<ManhwadesuService>();
         services.AddScoped<DoujinDesuService>();
 
         services.AddKeyedScoped<IScrapperService, KomikuService>("komiku");
@@ -206,6 +209,7 @@ public static class CoreExtensions
         services.AddKeyedScoped<IScrapperService, KomikcastService>("komikcast");
         services.AddKeyedScoped<IScrapperService, MangaDexService>("mangadex");
         services.AddKeyedScoped<IScrapperService, KomiktapService>("komiktap");
+        services.AddKeyedScoped<IScrapperService, ManhwadesuService>("manhwadesu");
         services.AddKeyedScoped<IScrapperService, DoujinDesuService>("doujindesu");
 
         services.AddKeyedScoped<IProviderScrapperService, KomikuService>("komiku");
@@ -213,6 +217,7 @@ public static class CoreExtensions
         services.AddKeyedScoped<IProviderScrapperService, KomikcastService>("komikcast");
         services.AddKeyedScoped<IProviderScrapperService, MangaDexService>("mangadex");
         services.AddKeyedScoped<IProviderScrapperService, KomiktapService>("komiktap");
+        services.AddKeyedScoped<IProviderScrapperService, ManhwadesuService>("manhwadesu");
         services.AddKeyedScoped<IProviderScrapperService, DoujinDesuService>("doujindesu");
 
         services.AddScoped<IScrapperQueueService, ScrapperQueueService>();
