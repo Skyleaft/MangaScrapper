@@ -316,26 +316,54 @@
                             <div class="bg-surface rounded-2xl border border-border-main shadow-sm overflow-hidden transition-colors duration-300">
                                 <!-- Chapters Header -->
                                 <div class="px-4 sm:px-6 py-3 border-b border-border-main/50 flex items-center justify-between bg-bg-app transition-colors duration-300">
-                                    <div class="flex items-center gap-2 sm:gap-3">
-                                        <span class="text-[11px] sm:text-xs text-slate-400">
-                                            @{ var availableCount = Chapters.Count(c => c.Pages.Count>0); }
-                                            <span class="font-bold text-emerald-500">@availableCount</span> available
-                                            <span class="mx-1">·</span>
-                                            <span class="font-bold text-rose-400">@(Chapters.Count - availableCount)</span> missing
-                                        </span>
-                                    </div>
-                                    <button @onclick="ScrapMissingChapters" disabled="@_isScrapingActive" class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-secondary/10 text-secondary hover:bg-secondary/20 rounded-lg transition-all text-[9px] sm:text-[10px] font-bold uppercase tracking-wider disabled:opacity-50">
-                                        @if (_isScrapingActive)
-                                        {
-                                            <div class="w-3.5 h-3.5 border-2 border-secondary/30 border-t-secondary rounded-full animate-spin"></div>
-                                            <span>Scraping...</span>
-                                        }
-                                        else
-                                        {
-                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                                            <span>Scrap Missing</span>
-                                        }
-                                    </button>
+                                    @if (_selectedChapterIds.Count > 0)
+                                    {
+                                        <div class="flex items-center gap-2 sm:gap-3">
+                                            <span class="px-2.5 py-1 bg-primary/10 text-primary font-bold text-xs rounded-lg">
+                                                @_selectedChapterIds.Count selected
+                                            </span>
+                                            <button @onclick="ClearChapterSelection" class="text-xs text-slate-400 hover:text-text-main underline transition-colors">
+                                                Deselect All
+                                            </button>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <button @onclick="ConfirmBulkDeleteChapters" disabled="@_isDeletingBulkChapters" class="flex items-center gap-1.5 px-3 py-1.5 bg-rose-500 hover:bg-rose-600 text-white rounded-lg transition-all text-[10px] sm:text-xs font-bold shadow-sm shadow-rose-500/20 disabled:opacity-50">
+                                                @if (_isDeletingBulkChapters)
+                                                {
+                                                    <div class="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                                    <span>Deleting...</span>
+                                                }
+                                                else
+                                                {
+                                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                                    <span>Delete Selected (@_selectedChapterIds.Count)</span>
+                                                }
+                                            </button>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="flex items-center gap-2 sm:gap-3">
+                                            <span class="text-[11px] sm:text-xs text-slate-400">
+                                                @{ var availableCount = Chapters.Count(c => c.Pages.Count>0); }
+                                                <span class="font-bold text-emerald-500">@availableCount</span> available
+                                                <span class="mx-1">·</span>
+                                                <span class="font-bold text-rose-400">@(Chapters.Count - availableCount)</span> missing
+                                            </span>
+                                        </div>
+                                        <button @onclick="ScrapMissingChapters" disabled="@_isScrapingActive" class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-secondary/10 text-secondary hover:bg-secondary/20 rounded-lg transition-all text-[9px] sm:text-[10px] font-bold uppercase tracking-wider disabled:opacity-50">
+                                            @if (_isScrapingActive)
+                                            {
+                                                <div class="w-3.5 h-3.5 border-2 border-secondary/30 border-t-secondary rounded-full animate-spin"></div>
+                                                <span>Scraping...</span>
+                                            }
+                                            else
+                                            {
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                                                <span>Scrap Missing</span>
+                                            }
+                                        </button>
+                                    }
                                 </div>
 
                                 @if (_isScrapingActive)
@@ -417,20 +445,23 @@
                                     <table class="w-full text-left text-xs sm:text-sm">
                                         <thead class="bg-bg-app/50 border-b border-border-main">
                                             <tr>
-                                                <th class="px-4 sm:px-5 py-2.5 font-bold text-slate-400 text-[9px] sm:text-[10px] uppercase tracking-wider w-20 sm:w-24">Ch.</th>
-                                                <th class="px-4 sm:px-5 py-2.5 font-bold text-slate-400 text-[9px] sm:text-[10px] uppercase tracking-wider w-16 sm:w-20">Lang</th>
-                                                <th class="px-4 sm:px-5 py-2.5 font-bold text-slate-400 text-[9px] sm:text-[10px] uppercase tracking-wider">Status</th>
-                                                <th class="px-4 sm:px-5 py-2.5 font-bold text-slate-400 text-[9px] sm:text-[10px] uppercase tracking-wider hidden sm:table-cell">Provider</th>
-                                                <th class="px-4 sm:px-5 py-2.5 font-bold text-slate-400 text-[9px] sm:text-[10px] uppercase tracking-wider hidden md:table-cell">Date</th>
-                                                <th class="px-4 sm:px-5 py-2.5 font-bold text-slate-400 text-[9px] sm:text-[10px] uppercase tracking-wider text-right w-16 sm:w-20">Views</th>
-                                                <th class="px-3 sm:px-5 py-2.5 w-10 sm:w-12"></th>
+                                                <th class="px-3 sm:px-4 py-2.5 w-8">
+                                                    <input type="checkbox" checked="@IsAllChaptersSelected" @onchange="ToggleSelectAllChapters" class="rounded border-border-main text-primary focus:ring-primary/20 bg-bg-app cursor-pointer" title="Select All" />
+                                                </th>
+                                                <th class="px-3 sm:px-4 py-2.5 font-bold text-slate-400 text-[9px] sm:text-[10px] uppercase tracking-wider w-16 sm:w-20">Ch.</th>
+                                                <th class="px-3 sm:px-4 py-2.5 font-bold text-slate-400 text-[9px] sm:text-[10px] uppercase tracking-wider w-16 sm:w-20">Lang</th>
+                                                <th class="px-3 sm:px-4 py-2.5 font-bold text-slate-400 text-[9px] sm:text-[10px] uppercase tracking-wider">Status</th>
+                                                <th class="px-3 sm:px-4 py-2.5 font-bold text-slate-400 text-[9px] sm:text-[10px] uppercase tracking-wider hidden sm:table-cell">Provider</th>
+                                                <th class="px-3 sm:px-4 py-2.5 font-bold text-slate-400 text-[9px] sm:text-[10px] uppercase tracking-wider hidden md:table-cell">Date</th>
+                                                <th class="px-3 sm:px-4 py-2.5 font-bold text-slate-400 text-[9px] sm:text-[10px] uppercase tracking-wider text-right w-16 sm:w-20">Views</th>
+                                                <th class="px-3 sm:px-4 py-2.5 text-right w-20 sm:w-24 font-bold text-slate-400 text-[9px] sm:text-[10px] uppercase tracking-wider">Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody class="divide-y divide-border-main/50">
                                             @if (!Chapters.Any())
                                             {
                                                 <tr>
-                                                    <td colspan="7" class="px-5 py-12 text-center">
+                                                    <td colspan="8" class="px-5 py-12 text-center">
                                                         <div class="flex flex-col items-center gap-2">
                                                             <svg class="w-8 h-8 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
                                                             <p class="text-slate-400 text-xs">No chapters found</p>
@@ -442,14 +473,18 @@
                                             {
                                                 @foreach (var chapter in Chapters)
                                                 {
-                                                    <tr class="hover:bg-bg-app/50 transition-colors group">
-                                                        <td class="px-4 sm:px-5 py-2.5">
+                                                    var isSelected = _selectedChapterIds.Contains(chapter.Id);
+                                                    <tr class="hover:bg-bg-app/50 transition-colors group @(isSelected ? "bg-primary/5 dark:bg-primary/10" : "")">
+                                                        <td class="px-3 sm:px-4 py-2.5">
+                                                            <input type="checkbox" checked="@isSelected" @onchange="(e) => ToggleChapterSelection(chapter.Id, e)" class="rounded border-border-main text-primary focus:ring-primary/20 bg-bg-app cursor-pointer" />
+                                                        </td>
+                                                        <td class="px-3 sm:px-4 py-2.5">
                                                             <span class="font-bold text-text-main text-xs sm:text-sm">@chapter.Number</span>
                                                         </td>
-                                                        <td class="px-4 sm:px-5 py-2.5">
+                                                        <td class="px-3 sm:px-4 py-2.5">
                                                             <span class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-500 text-[9px] sm:text-[10px] font-bold rounded uppercase">@(string.IsNullOrEmpty(chapter.Language) ? "—" : chapter.Language)</span>
                                                         </td>
-                                                        <td class="px-4 sm:px-5 py-2.5">
+                                                        <td class="px-3 sm:px-4 py-2.5">
                                                             @if (_isScrapingActive && (_scrapingChapterId == chapter.Id || _scrapingChapterNumber == chapter.Number) && _scrapingStatus != "Completed")
                                                             {
                                                                 <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-secondary/10 text-secondary rounded-full text-[9px] sm:text-[10px] font-bold animate-pulse">
@@ -457,12 +492,12 @@
                                                                     @(_scrapingPercent > 0 ? $"{_scrapingPercent}%" : "Scraping")
                                                                 </span>
                                                             }
-                                                            else if (chapter.Pages.Count>0)
+                                                            else if (chapter.Pages.Count > 0)
                                                             {
-                                                                <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 rounded-full text-[9px] sm:text-[10px] font-bold">
+                                                                <button @onclick="() => OpenInspectChapterModal(chapter)" class="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-emerald-600 rounded-full text-[9px] sm:text-[10px] font-bold transition-colors" title="Click to inspect pages">
                                                                     <span class="w-1 h-1 rounded-full bg-emerald-500"></span>
                                                                     @chapter.Pages.Count pg
-                                                                </span>
+                                                                </button>
                                                             }
                                                             else
                                                             {
@@ -472,7 +507,7 @@
                                                                 </span>
                                                             }
                                                         </td>
-                                                        <td class="px-4 sm:px-5 py-2.5 hidden sm:table-cell">
+                                                        <td class="px-3 sm:px-4 py-2.5 hidden sm:table-cell">
                                                             @if (!string.IsNullOrEmpty(chapter.ChapterProvider))
                                                             {
                                                                 <span class="flex items-center gap-1.5 text-xs text-slate-500">
@@ -488,12 +523,17 @@
                                                                 <span class="text-slate-300 text-xs">—</span>
                                                             }
                                                         </td>
-                                                        <td class="px-4 sm:px-5 py-2.5 text-slate-500 text-xs whitespace-nowrap hidden md:table-cell">@chapter.UploadDate.ToLocalTime().ToString("MMM dd, yyyy")</td>
-                                                        <td class="px-4 sm:px-5 py-2.5 text-slate-500 text-xs text-right font-medium">@chapter.TotalView.ToString("N0")</td>
-                                                        <td class="px-3 sm:px-5 py-2.5 text-right">
-                                                            <button @onclick="() => ConfirmDeleteChapter(chapter)" class="p-1 text-slate-300 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-all" title="Delete Chapter">
-                                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                                                            </button>
+                                                        <td class="px-3 sm:px-4 py-2.5 text-slate-500 text-xs whitespace-nowrap hidden md:table-cell">@chapter.UploadDate.ToLocalTime().ToString("MMM dd, yyyy")</td>
+                                                        <td class="px-3 sm:px-4 py-2.5 text-slate-500 text-xs text-right font-medium">@chapter.TotalView.ToString("N0")</td>
+                                                        <td class="px-3 sm:px-4 py-2.5 text-right">
+                                                            <div class="flex items-center justify-end gap-1">
+                                                                <button @onclick="() => OpenInspectChapterModal(chapter)" class="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-all" title="Inspect Chapter Pages">
+                                                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                                                                </button>
+                                                                <button @onclick="() => ConfirmDeleteChapter(chapter)" class="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-all" title="Delete Chapter">
+                                                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                                                </button>
+                                                            </div>
                                                         </td>
                                                     </tr>
                                                 }
@@ -999,6 +1039,152 @@
                 </div>
             </div>
         }
+
+        @if (_isInspectChapterOpen && _inspectingChapter != null)
+        {
+            <div class="fixed inset-0 z-[220] flex items-center justify-center p-2 sm:p-4 bg-slate-900/70 backdrop-blur-sm animate-backdrop-in">
+                <div class="bg-surface rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col border border-border-main animate-modal-in z-[230]">
+                    <!-- Modal Header -->
+                    <div class="px-5 sm:px-6 py-4 border-b border-border-main flex items-center justify-between bg-surface">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                            </div>
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <h3 class="text-base sm:text-lg font-bold text-text-main">Chapter @_inspectingChapter.Number</h3>
+                                    <span class="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-500 text-[10px] font-bold rounded uppercase">@(string.IsNullOrEmpty(_inspectingChapter.Language) ? "—" : _inspectingChapter.Language)</span>
+                                    @if (_inspectingChapter.Pages.Count > 0)
+                                    {
+                                        <span class="px-2 py-0.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 rounded-full text-[10px] font-bold">@_inspectingChapter.Pages.Count Pages</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="px-2 py-0.5 bg-rose-50 dark:bg-rose-900/20 text-rose-500 rounded-full text-[10px] font-bold">0 Pages (Missing)</span>
+                                    }
+                                </div>
+                                <p class="text-xs text-slate-400 mt-0.5 flex items-center gap-2">
+                                    <span>Provider: @(_inspectingChapter.ChapterProvider ?? "Unknown")</span>
+                                    <span>•</span>
+                                    <span>Uploaded: @_inspectingChapter.UploadDate.ToLocalTime().ToString("MMM dd, yyyy")</span>
+                                </p>
+                            </div>
+                        </div>
+                        <button @onclick="CloseInspectChapterModal" class="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-bg-app rounded-full transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div>
+
+                    <!-- Modal Body / Pages Grid -->
+                    <div class="flex-grow overflow-y-auto p-4 sm:p-6 space-y-4 bg-bg-app/40">
+                        @if (!_inspectingChapter.Pages.Any())
+                        {
+                            <div class="py-16 text-center">
+                                <div class="w-14 h-14 mx-auto mb-3 rounded-2xl bg-rose-500/10 text-rose-500 flex items-center justify-center">
+                                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                                </div>
+                                <h4 class="font-bold text-sm text-text-main">No Pages Found</h4>
+                                <p class="text-xs text-slate-400 mt-1 max-w-sm mx-auto">This chapter has not been scraped or has 0 downloaded pages.</p>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
+                                @for (int i = 0; i < _inspectingChapter.Pages.Count; i++)
+                                {
+                                    var pageIdx = i;
+                                    var chPage = _inspectingChapter.Pages[i];
+                                    <div class="bg-surface rounded-xl border border-border-main p-2 hover:border-primary/50 transition-all shadow-sm group flex flex-col justify-between">
+                                        <div class="relative aspect-[3/4] rounded-lg overflow-hidden bg-slate-900/10 dark:bg-slate-900/50 flex items-center justify-center cursor-pointer" @onclick="() => OpenLightbox(pageIdx)">
+                                            @if (!string.IsNullOrEmpty(chPage.Url))
+                                            {
+                                                <img src="/images/@chPage.Url" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" alt="Page @(pageIdx + 1)" />
+                                            }
+                                            else if (!string.IsNullOrEmpty(chPage.AlternateUrl))
+                                            {
+                                                <img src="@chPage.AlternateUrl" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" alt="Page @(pageIdx + 1)" />
+                                            }
+                                            else
+                                            {
+                                                <div class="w-full h-full flex items-center justify-center text-slate-400 text-xs">No image</div>
+                                            }
+                                            <div class="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                                <span class="p-2 bg-slate-900/80 text-white rounded-full">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"></path></svg>
+                                                </span>
+                                            </div>
+                                            <span class="absolute top-1.5 left-1.5 px-1.5 py-0.5 bg-slate-900/80 text-white text-[9px] font-bold rounded">
+                                                #@(pageIdx + 1)
+                                            </span>
+                                        </div>
+                                        <div class="mt-2 text-[10px] text-slate-400 flex items-center justify-between">
+                                            <span>@(chPage.Width > 0 && chPage.Height > 0 ? $"{chPage.Width}×{chPage.Height}" : "WebP")</span>
+                                            @if (!string.IsNullOrEmpty(chPage.Url))
+                                            {
+                                                <a href="/images/@chPage.Url" target="_blank" class="text-primary hover:underline" title="Open original">View ↗</a>
+                                            }
+                                            else if (!string.IsNullOrEmpty(chPage.AlternateUrl))
+                                            {
+                                                <a href="@chPage.AlternateUrl" target="_blank" class="text-primary hover:underline" title="Open remote">View ↗</a>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+
+                    <!-- Modal Footer -->
+                    <div class="px-5 sm:px-6 py-3 border-t border-border-main flex items-center justify-between bg-surface">
+                        <span class="text-xs text-slate-400">Total: @_inspectingChapter.Pages.Count pages</span>
+                        <button @onclick="CloseInspectChapterModal" class="px-4 py-1.5 bg-bg-app hover:bg-slate-200 dark:hover:bg-slate-800 text-text-main font-bold text-xs rounded-xl transition-all">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fullscreen Lightbox Overlay -->
+            @if (_lightboxPageIndex >= 0 && _lightboxPageIndex < _inspectingChapter.Pages.Count)
+            {
+                var currentPage = _inspectingChapter.Pages[_lightboxPageIndex];
+                <div class="fixed inset-0 z-[240] flex flex-col items-center justify-center p-2 sm:p-4 bg-slate-950/90 backdrop-blur-md" @onclick="CloseLightbox">
+                    <div class="absolute top-4 right-4 z-50 flex items-center gap-3" @onclick:stopPropagation="true">
+                        <span class="px-3 py-1 bg-slate-800/80 text-white text-xs font-bold rounded-full">
+                            Page @(_lightboxPageIndex + 1) of @_inspectingChapter.Pages.Count
+                        </span>
+                        <button @onclick="CloseLightbox" class="p-2 bg-slate-800 hover:bg-slate-700 text-white rounded-full transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div>
+
+                    <div class="relative max-w-full max-h-[85vh] flex items-center justify-center" @onclick:stopPropagation="true">
+                        @if (_lightboxPageIndex > 0)
+                        {
+                            <button @onclick="PrevLightboxPage" class="absolute left-2 sm:-left-12 p-3 bg-slate-800/80 hover:bg-slate-700 text-white rounded-full transition-all shadow-lg">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                            </button>
+                        }
+
+                        @if (!string.IsNullOrEmpty(currentPage.Url))
+                        {
+                            <img src="/images/@currentPage.Url" class="max-h-[80vh] max-w-[90vw] object-contain rounded-lg shadow-2xl" alt="Page @(_lightboxPageIndex + 1)" />
+                        }
+                        else if (!string.IsNullOrEmpty(currentPage.AlternateUrl))
+                        {
+                            <img src="@currentPage.AlternateUrl" class="max-h-[80vh] max-w-[90vw] object-contain rounded-lg shadow-2xl" alt="Page @(_lightboxPageIndex + 1)" />
+                        }
+
+                        @if (_lightboxPageIndex < _inspectingChapter.Pages.Count - 1)
+                        {
+                            <button @onclick="NextLightboxPage" class="absolute right-2 sm:-right-12 p-3 bg-slate-800/80 hover:bg-slate-700 text-white rounded-full transition-all shadow-lg">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                            </button>
+                        }
+                    </div>
+                </div>
+            }
+        }
     </div>
 @* End of modal *@
 
@@ -1051,6 +1237,16 @@
     private IBrowserFile? _selectedUploadFile;
     private bool _isUpdatingThumbnail = false;
     private string? _thumbnailErrorMessage;
+
+    // Bulk Delete Chapters State
+    private HashSet<Guid> _selectedChapterIds = new();
+    private bool _isDeletingBulkChapters = false;
+    private bool IsAllChaptersSelected => Chapters.Count > 0 && _selectedChapterIds.Count == Chapters.Count;
+
+    // Inspect Chapter State
+    private bool _isInspectChapterOpen = false;
+    private ChapterResponse? _inspectingChapter;
+    private int _lightboxPageIndex = -1;
 
     private string GenresString => EditModel.Genres != null ? string.Join(", ", EditModel.Genres) : "";
     private string CategoriesString => EditModel.Categories != null ? string.Join(", ", EditModel.Categories) : "";
@@ -1324,6 +1520,82 @@
         }
     }
 
+    private void ToggleSelectAllChapters(ChangeEventArgs e)
+    {
+        var isChecked = (bool)(e.Value ?? false);
+        if (isChecked)
+        {
+            _selectedChapterIds = new HashSet<Guid>(Chapters.Select(c => c.Id));
+        }
+        else
+        {
+            _selectedChapterIds.Clear();
+        }
+    }
+
+    private void ToggleChapterSelection(Guid chapterId, ChangeEventArgs e)
+    {
+        var isChecked = (bool)(e.Value ?? false);
+        if (isChecked)
+        {
+            _selectedChapterIds.Add(chapterId);
+        }
+        else
+        {
+            _selectedChapterIds.Remove(chapterId);
+        }
+    }
+
+    private void ClearChapterSelection()
+    {
+        _selectedChapterIds.Clear();
+    }
+
+    private async Task ConfirmBulkDeleteChapters()
+    {
+        if (!_selectedChapterIds.Any()) return;
+
+        var count = _selectedChapterIds.Count;
+        var confirmed = await JS.InvokeAsync<bool>("confirm", $"Are you sure you want to delete {count} selected chapter(s) from storage and database?\n\nThis action cannot be undone.");
+        if (!confirmed) return;
+
+        _isDeletingBulkChapters = true;
+        StateHasChanged();
+
+        try
+        {
+            var idsToDelete = _selectedChapterIds.ToList();
+            var deleteTasks = idsToDelete.Select(async chapterId =>
+            {
+                try
+                {
+                    var response = await Http.DeleteAsync($"/api/v1/manga/{MangaId}/chapter/{chapterId}");
+                    return (ChapterId: chapterId, Success: response.IsSuccessStatusCode);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error deleting chapter {chapterId}: {ex.Message}");
+                    return (ChapterId: chapterId, Success: false);
+                }
+            });
+
+            var results = await Task.WhenAll(deleteTasks);
+            var successfulIds = results.Where(r => r.Success).Select(r => r.ChapterId).ToHashSet();
+
+            Chapters.RemoveAll(c => successfulIds.Contains(c.Id));
+            _selectedChapterIds.RemoveWhere(id => successfulIds.Contains(id));
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error during bulk delete: {ex.Message}");
+        }
+        finally
+        {
+            _isDeletingBulkChapters = false;
+            StateHasChanged();
+        }
+    }
+
     private async Task ConfirmDeleteChapter(ChapterResponse chapter)
     {
         var confirmed = await JS.InvokeAsync<bool>("confirm", $"Delete Chapter {chapter.Number} from storage and database?");
@@ -1335,6 +1607,7 @@
                 if (response.IsSuccessStatusCode)
                 {
                     Chapters.Remove(chapter);
+                    _selectedChapterIds.Remove(chapter.Id);
                     StateHasChanged();
                 }
             }
@@ -1342,6 +1615,46 @@
             {
                 Console.WriteLine($"Error deleting chapter: {ex.Message}");
             }
+        }
+    }
+
+    private void OpenInspectChapterModal(ChapterResponse chapter)
+    {
+        _inspectingChapter = chapter;
+        _lightboxPageIndex = -1;
+        _isInspectChapterOpen = true;
+    }
+
+    private void CloseInspectChapterModal()
+    {
+        _isInspectChapterOpen = false;
+        _inspectingChapter = null;
+        _lightboxPageIndex = -1;
+    }
+
+    private void OpenLightbox(int pageIndex)
+    {
+        _lightboxPageIndex = pageIndex;
+    }
+
+    private void CloseLightbox()
+    {
+        _lightboxPageIndex = -1;
+    }
+
+    private void PrevLightboxPage()
+    {
+        if (_inspectingChapter?.Pages != null && _lightboxPageIndex > 0)
+        {
+            _lightboxPageIndex--;
+        }
+    }
+
+    private void NextLightboxPage()
+    {
+        if (_inspectingChapter?.Pages != null && _lightboxPageIndex < _inspectingChapter.Pages.Count - 1)
+        {
+            _lightboxPageIndex++;
         }
     }
 
