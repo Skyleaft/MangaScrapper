@@ -63,15 +63,18 @@ public class ManhwadesuService : ScrapperServiceBase
             ?? doc.DocumentNode.SelectSingleNode("//div[contains(@class,'imptdt') and contains(.,'Status')]//i")?.InnerText.Trim()
             ?? "Ongoing";
 
-        var imageUrl = doc.DocumentNode
-            .SelectSingleNode(Provider.MangaSelectors.Thumbnail)?.GetAttributeValue("src", string.Empty)
-            ?? doc.DocumentNode.SelectSingleNode("//div[contains(@class,'thumb')]//img")?.GetAttributeValue("src", string.Empty);
+        var thumbContainer = doc.DocumentNode.SelectSingleNode("//div[contains(@class,'thumb')]")
+                             ?? doc.DocumentNode.SelectSingleNode("//div[@itemprop='image']");
+        var imgNode = doc.DocumentNode.SelectSingleNode(Provider.MangaSelectors.Thumbnail)
+                      ?? thumbContainer?.SelectSingleNode(".//img");
+
+        var imageUrl = ThumbnailHelper.ExtractImageUrl(imgNode, thumbContainer);
 
         // Posted On: parse datetime attribute from <time> tag
         DateTime? releaseDate = null;
         var releaseDateAttr = doc.DocumentNode
             .SelectSingleNode("//div[contains(@class,'imptdt') and contains(.,'Posted On')]//time")
-            ?.GetAttributeValue("datetime", null);
+            ?.GetAttributeValue("datetime", string.Empty);
 
         if (!string.IsNullOrEmpty(releaseDateAttr) &&
             DateTimeOffset.TryParse(releaseDateAttr, out var parsedRelease))
@@ -215,11 +218,8 @@ public class ManhwadesuService : ScrapperServiceBase
         {
             foreach (var node in imageNodes)
             {
-                var src = node.GetAttributeValue("src", string.Empty);
-                if (string.IsNullOrWhiteSpace(src))
-                    src = node.GetAttributeValue("data-src", string.Empty);
-
-                if (!string.IsNullOrWhiteSpace(src))
+                var src = ThumbnailHelper.ExtractImageUrl(node);
+                if (!string.IsNullOrWhiteSpace(src) && !src.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
                 {
                     imageUrls.Add(src.Trim());
                 }
@@ -361,7 +361,9 @@ public class ManhwadesuService : ScrapperServiceBase
                 if (string.IsNullOrWhiteSpace(titleText))
                     titleText = HttpUtility.HtmlDecode(card.SelectSingleNode(".//div[@class='tt']")?.InnerText.Trim() ?? string.Empty);
 
-                var thumbnail = card.SelectSingleNode(".//img")?.GetAttributeValue("src", string.Empty);
+                var imgNode = card.SelectSingleNode(".//img");
+                var thumbContainer = card.SelectSingleNode(".//div[contains(@class,'limit')]") ?? card;
+                var thumbnail = ThumbnailHelper.ExtractImageUrl(imgNode, thumbContainer);
 
                 // Latest chapter number
                 var latestChapterText = card.SelectSingleNode(".//div[@class='epxs']")?.InnerText.Trim();

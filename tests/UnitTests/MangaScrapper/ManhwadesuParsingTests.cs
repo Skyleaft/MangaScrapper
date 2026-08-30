@@ -152,4 +152,62 @@ public class ManhwadesuParsingTests
         latestChap.Should().Be("Chapter 13");
         score.Should().Be("5.9");
     }
+
+    [Fact]
+    public void Should_Extract_Real_Image_When_Src_Is_Base64_Placeholder()
+    {
+        var html = @"
+<div class=""thumb"" itemprop=""image"">
+    <img src=""data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7""
+         data-src=""https://i0.wp.com/manhwadesu.wiki/wp-content/uploads/images/thumbs/amoral-island-jou/69bd296e70abb.jpg""
+         alt=""Amoral Island Jou"">
+</div>";
+        var doc = new HtmlDocument();
+        doc.LoadHtml(html);
+
+        var thumbContainer = doc.DocumentNode.SelectSingleNode("//div[@itemprop='image']");
+        var img = thumbContainer.SelectSingleNode(".//img");
+
+        var url = ThumbnailHelper.ExtractImageUrl(img, thumbContainer);
+        url.Should().Be("https://i0.wp.com/manhwadesu.wiki/wp-content/uploads/images/thumbs/amoral-island-jou/69bd296e70abb.jpg");
+    }
+
+    [Fact]
+    public void Should_Extract_Real_Image_From_Data_Lazy_Src_Or_Srcset()
+    {
+        var html = @"
+<div class=""thumb"">
+    <img src=""data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7""
+         data-lazy-src=""https://manhwadesu.wiki/wp-content/uploads/lazy.jpg""
+         srcset=""https://manhwadesu.wiki/wp-content/uploads/lazy.jpg 1057w, https://manhwadesu.wiki/wp-content/uploads/lazy-300x426.jpg 300w"">
+</div>";
+        var doc = new HtmlDocument();
+        doc.LoadHtml(html);
+
+        var thumbContainer = doc.DocumentNode.SelectSingleNode("//div[contains(@class,'thumb')]");
+        var img = thumbContainer.SelectSingleNode(".//img");
+
+        var url = ThumbnailHelper.ExtractImageUrl(img, thumbContainer);
+        url.Should().Be("https://manhwadesu.wiki/wp-content/uploads/lazy.jpg");
+    }
+
+    [Fact]
+    public void Should_Extract_Real_Image_From_Noscript_Fallback()
+    {
+        var html = @"
+<div class=""thumb"">
+    <img src=""data:image/svg+xml..."" class=""lazyload"">
+    <noscript>
+        <img src=""https://manhwadesu.wiki/wp-content/uploads/noscript-fallback.jpg"">
+    </noscript>
+</div>";
+        var doc = new HtmlDocument();
+        doc.LoadHtml(html);
+
+        var thumbContainer = doc.DocumentNode.SelectSingleNode("//div[contains(@class,'thumb')]");
+        var img = thumbContainer.SelectSingleNode(".//img");
+
+        var url = ThumbnailHelper.ExtractImageUrl(img, thumbContainer);
+        url.Should().Be("https://manhwadesu.wiki/wp-content/uploads/noscript-fallback.jpg");
+    }
 }
