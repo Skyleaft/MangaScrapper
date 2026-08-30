@@ -274,7 +274,16 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
 
     private async Task<(string path, long size, int width, int height)> SaveImageAsync(string imageUrl, string subDir, string fileName, string relativePath, CancellationToken ct)
     {
-        if (!Uri.TryCreate(imageUrl, UriKind.Absolute, out _))
+        if (imageUrl.Contains("imgbox.com", StringComparison.OrdinalIgnoreCase))
+        {
+            imageUrl = System.Text.RegularExpressions.Regex.Replace(
+                imageUrl,
+                @"_(t|s)\.(jpe?g|png|webp)",
+                "_o.$2",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        }
+
+        if (!Uri.TryCreate(imageUrl, UriKind.Absolute, out var parsedUri))
             throw new ArgumentException($"Image URL must be absolute. Got: {imageUrl}", nameof(imageUrl));
 
         return await ExecuteWithRetryAsync(async token =>
@@ -282,21 +291,38 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
             Stream? imageStream = null;
             const string defaultUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
+            void ConfigureReferrer(HttpRequestMessage req)
+            {
+                if (parsedUri.Host.Contains("desu.pics", StringComparison.OrdinalIgnoreCase) ||
+                    parsedUri.Host.Contains("doujin.desu", StringComparison.OrdinalIgnoreCase))
+                {
+                    req.Headers.Referrer = new Uri("https://doujin.desu.xxx");
+                }
+                else if (parsedUri.Host.Contains("imgbox.com", StringComparison.OrdinalIgnoreCase))
+                {
+                    req.Headers.Referrer = new Uri("https://imgbox.com/");
+                }
+                else if (_provider != null)
+                {
+                    if (_provider.ProviderName == "MangaDex")
+                    {
+                        req.Headers.UserAgent.Clear();
+                        req.Headers.TryAddWithoutValidation("User-Agent", "MangaScrapper/1.0");
+                    }
+                    else
+                    {
+                        req.Headers.Referrer = new Uri(_provider.BaseUrl);
+                    }
+                }
+            }
+
             try
             {
                 using var request = new HttpRequestMessage(HttpMethod.Get, imageUrl);
                 request.Headers.TryAddWithoutValidation("User-Agent", defaultUserAgent);
                 request.Headers.TryAddWithoutValidation("Accept", "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8");
+                ConfigureReferrer(request);
 
-                if (_provider != null)
-                {
-                    if (_provider.ProviderName == "MangaDex")
-                    {
-                        request.Headers.UserAgent.Clear();
-                        request.Headers.TryAddWithoutValidation("User-Agent", "MangaScrapper/1.0");
-                    }
-                    else { request.Headers.Referrer = new Uri(_provider.BaseUrl); }
-                }
                 var response = await HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token);
                 response.EnsureSuccessStatusCode();
                 imageStream = await response.Content.ReadAsStreamAsync(token);
@@ -304,11 +330,10 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
             catch (Exception) when (FlareSolverrService is { IsEnabled: true })
             {
                 await FlareSolverrService.EnsureSessionAsync(imageUrl, token);
-                if (Uri.TryCreate(imageUrl, UriKind.Absolute, out var uri) &&
-                    FlareSolverrService.TryGetSession(uri.Host, out var userAgent, out var cookieHeader))
+                if (FlareSolverrService.TryGetSession(parsedUri.Host, out var userAgent, out var cookieHeader))
                 {
                     using var req2 = new HttpRequestMessage(HttpMethod.Get, imageUrl);
-                    if (_provider != null) req2.Headers.Referrer = new Uri(_provider.BaseUrl);
+                    ConfigureReferrer(req2);
                     req2.Headers.TryAddWithoutValidation("User-Agent", !string.IsNullOrEmpty(userAgent) ? userAgent : defaultUserAgent);
                     req2.Headers.TryAddWithoutValidation("Accept", "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8");
                     if (!string.IsNullOrEmpty(cookieHeader)) req2.Headers.TryAddWithoutValidation("Cookie", cookieHeader);
@@ -325,6 +350,11 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
                 using var memStream = new MemoryStream();
                 await imageStream!.CopyToAsync(memStream, token);
                 imageBytes = memStream.ToArray();
+            }
+
+            if (imageBytes.Length == 0 || (imageBytes.Length > 0 && (char)imageBytes[0] == '<'))
+            {
+                throw new InvalidOperationException($"Invalid image payload (received HTML or empty response) for: {imageUrl}");
             }
 
             Directory.CreateDirectory(subDir);
