@@ -119,11 +119,53 @@ public class ManhwadesuService : ScrapperServiceBase
             nsfw: isNsfw);
     }
 
+    private static List<int> GenerateChapterViews(int totalViews, int chapterCount)
+    {
+        if (totalViews <= 0 || chapterCount <= 0)
+            return Enumerable.Repeat(0, Math.Max(0, chapterCount)).ToList();
+
+        var rand = new Random();
+
+        // Step 1: generate weight (chapter awal lebih besar)
+        var weights = new double[chapterCount];
+
+        for (int i = 0; i < chapterCount; i++)
+        {
+            var baseWeight = (chapterCount - i);
+            weights[i] = baseWeight * (0.7 + rand.NextDouble() * 0.6);
+        }
+
+        var weightSum = weights.Sum();
+
+        // Step 2: convert ke view
+        var views = weights
+            .Select(w => (int)Math.Floor(w / weightSum * totalViews))
+            .ToList();
+
+        // Step 3: fix rounding (biar total pas)
+        var diff = totalViews - views.Sum();
+
+        for (int i = 0; i < diff; i++)
+        {
+            views[rand.Next(chapterCount)]++;
+        }
+
+        return views;
+    }
+
     protected override Task<List<Chapter>> ExtractChaptersMetadata(CancellationToken ct = default)
     {
         var chapters = new List<Chapter>();
         var chapterRows = doc!.DocumentNode.SelectNodes(Provider.ChapterSelectors.Rows);
         if (chapterRows == null) return Task.FromResult(chapters);
+
+        var viewsNode = doc.DocumentNode.SelectSingleNode("//div[contains(@class,'tsinfo')]//div[contains(@class,'imptdt') and contains(.,'Views')]//span[contains(@class,'ts-views-count')]")
+                        ?? doc.DocumentNode.SelectSingleNode("//div[contains(@class,'tsinfo')]//div[contains(@class,'imptdt') and contains(.,'Views')]//i");
+        var viewsText = viewsNode?.InnerText.Trim();
+        var totalViews = IntHelper.ParseCount(viewsText ?? string.Empty);
+
+        var viewsGenerated = GenerateChapterViews(totalViews, chapterRows.Count);
+        var index = chapterRows.Count - 1;
 
         foreach (var row in chapterRows)
         {
@@ -157,6 +199,13 @@ public class ManhwadesuService : ScrapperServiceBase
 
             var uploadDate = ParseIndonesianDate(dateText);
 
+            var chapterView = 0;
+            if (viewsGenerated.Count > 0 && index >= 0 && index < viewsGenerated.Count)
+            {
+                chapterView = viewsGenerated[index];
+                index--;
+            }
+
             chapters.Add(new Chapter(
                 id: ChapterId.New(),
                 number: chapterNumber,
@@ -164,7 +213,7 @@ public class ManhwadesuService : ScrapperServiceBase
                 chapterProvider: Provider.ProviderName,
                 chapterProviderIcon: Provider.ProviderIcon,
                 language: DefaultIndonesianLanguage,
-                totalView: 0,
+                totalView: chapterView,
                 uploadDate: uploadDate));
         }
 

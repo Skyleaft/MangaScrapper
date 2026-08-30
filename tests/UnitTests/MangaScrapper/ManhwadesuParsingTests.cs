@@ -210,4 +210,21 @@ public class ManhwadesuParsingTests
         var url = ThumbnailHelper.ExtractImageUrl(img, thumbContainer);
         url.Should().Be("https://manhwadesu.wiki/wp-content/uploads/noscript-fallback.jpg");
     }
+
+    [Fact]
+    public void Should_Parse_Views_Count_And_Distribute_To_Chapters()
+    {
+        var html = @"
+<div class=""tsinfo bixbox"">
+    <div class=""imptdt""> Views <i><span class=""ts-views-count"">174.3K</span></i></div>
+</div>";
+        var doc = new HtmlDocument();
+        doc.LoadHtml(html);
+
+        var viewsNode = doc.DocumentNode.SelectSingleNode("//div[contains(@class,'tsinfo')]//div[contains(@class,'imptdt') and contains(.,'Views')]//span[contains(@class,'ts-views-count')]");
+        viewsNode.Should().NotBeNull();
+
+        var totalViews = IntHelper.ParseCount(viewsNode!.InnerText.Trim());
+        totalViews.Should().Be(174300);
+    }
 }
