@@ -19,7 +19,8 @@ public interface IMangaRepository
         string orderBy,
         int page, 
         int pageSize, 
-        CancellationToken ct = default);
+        CancellationToken ct = default,
+        bool excludePage = true);
     Task<List<Manga>> GetByIdsAsync(List<Guid> ids, CancellationToken ct);
     Task AddAsync(Manga manga, CancellationToken ct = default);
     Task UpdateAsync(Manga manga, CancellationToken ct = default);

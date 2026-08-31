@@ -8,8 +8,8 @@ public static class ThumbnailHelper
     public static string RemoveResizeParams(string url)
     {
         if (string.IsNullOrEmpty(url)) return url;
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)) return url;
 
-        var uri = new Uri(url);
         var segments = uri.Segments;
 
         if (segments.Length > 0 && segments.Last().Contains('=') && !segments.Last().Contains("format=auto"))
@@ -26,6 +26,99 @@ public static class ThumbnailHelper
         if (string.IsNullOrWhiteSpace(url)) return url ?? string.Empty;
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)) return url;
         return new UriBuilder(uri) { Query = string.Empty }.Uri.ToString();
+    }
+
+    public static string GetCleanTitle(string title)
+    {
+        var invalidChars = Path.GetInvalidFileNameChars().Union(new[] { '?', '*', ':', '|', '<', '>', '"' }).ToArray();
+        var cleaned = string.Concat(title.Split(invalidChars)).TrimEnd('.', ' ');
+        return string.IsNullOrEmpty(cleaned) ? "manga" : cleaned;
+    }
+
+    public static bool IsWebpUrl(string imageUrl)
+    {
+        if (!Uri.TryCreate(imageUrl, UriKind.Absolute, out var uri))
+            return imageUrl.Contains(".webp", StringComparison.OrdinalIgnoreCase);
+        return string.Equals(Path.GetExtension(uri.AbsolutePath), ".webp", StringComparison.OrdinalIgnoreCase);
+    }
+
+    public static bool IsAvifUrl(string imageUrl)
+    {
+        if (!Uri.TryCreate(imageUrl, UriKind.Absolute, out var uri))
+            return imageUrl.Contains(".avif", StringComparison.OrdinalIgnoreCase);
+        return string.Equals(Path.GetExtension(uri.AbsolutePath), ".avif", StringComparison.OrdinalIgnoreCase);
+    }
+
+    public static string ExtractImageUrl(HtmlAgilityPack.HtmlNode? imgNode, HtmlAgilityPack.HtmlNode? fallbackContainer = null)
+    {
+        if (imgNode != null)
+        {
+            var src = imgNode.GetAttributeValue("src", string.Empty)?.Trim();
+            if (!string.IsNullOrWhiteSpace(src) && !src.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+            {
+                return NormalizeUrl(src);
+            }
+
+            // Common lazy-load attributes
+            var lazyAttributes = new[]
+            {
+                "data-src",
+                "data-lazy-src",
+                "data-orig-file",
+                "data-wpfc-original-src",
+                "data-original",
+                "data-full-url",
+                "data-cfsrc"
+            };
+
+            foreach (var attr in lazyAttributes)
+            {
+                var val = imgNode.GetAttributeValue(attr, string.Empty)?.Trim();
+                if (!string.IsNullOrWhiteSpace(val) && !val.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+                {
+                    return NormalizeUrl(val);
+                }
+            }
+
+            // Check data-srcset or srcset (e.g. "https://example.com/img.jpg 1057w, ...")
+            var srcset = imgNode.GetAttributeValue("data-srcset", string.Empty)?.Trim();
+            if (string.IsNullOrWhiteSpace(srcset) || srcset.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+            {
+                srcset = imgNode.GetAttributeValue("srcset", string.Empty)?.Trim();
+            }
+
+            if (!string.IsNullOrWhiteSpace(srcset) && !srcset.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+            {
+                var firstCandidate = srcset.Split(',')[0].Trim().Split(' ')[0].Trim();
+                if (!string.IsNullOrWhiteSpace(firstCandidate) && !firstCandidate.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+                {
+                    return NormalizeUrl(firstCandidate);
+                }
+            }
+        }
+
+        if (fallbackContainer != null)
+        {
+            var noscriptImg = fallbackContainer.SelectSingleNode(".//noscript//img");
+            if (noscriptImg != null)
+            {
+                var noscriptSrc = noscriptImg.GetAttributeValue("src", string.Empty)?.Trim();
+                if (!string.IsNullOrWhiteSpace(noscriptSrc) && !noscriptSrc.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+                {
+                    return NormalizeUrl(noscriptSrc);
+                }
+            }
+        }
+
+        return string.Empty;
+    }
+
+    public static string NormalizeUrl(string url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return string.Empty;
+        if (url.StartsWith("//", StringComparison.Ordinal))
+            return "https:" + url;
+        return url;
     }
 }
 

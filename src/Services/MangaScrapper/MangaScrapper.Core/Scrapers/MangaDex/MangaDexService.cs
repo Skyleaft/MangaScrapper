@@ -301,7 +301,7 @@ public class MangaDexService : ScrapperServiceBase
                     await onProgress(current, total);
                 }
 
-                return (Index: index, Page: new Page(Guid.CreateVersion7(), imageUrl, result.path, result.size));
+                return (Index: index, Page: new Page(Guid.CreateVersion7(), imageUrl, result.path, result.size, result.width, result.height));
             }
             catch (Exception ex)
             {

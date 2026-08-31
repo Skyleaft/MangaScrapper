@@ -1,6 +1,8 @@
 using MangaScrapper.Core.Configuration;
 using MangaScrapper.Core.Repositories;
+using MangaScrapper.Core.Utils;
 using NovaStack.Contracts.Responses;
+using SkiaSharp;
 
 namespace MangaScrapper.Core.Services;
 
@@ -31,11 +33,11 @@ public class StorageSyncService
         var errors = new List<string>();
 
         int page = 1;
-        const int pageSize = 100;
+        const int pageSize = 25;
 
         while (true)
         {
-            var paged = await _mangaRepository.GetPagedAsync("",null,"","","","asc",page, pageSize, ct);
+            var paged = await _mangaRepository.GetPagedAsync("", null, "", "", "", "asc", page, pageSize, ct, excludePage: false);
             if (paged.Items.Count == 0) break;
 
             foreach (var manga in paged.Items)
@@ -52,6 +54,7 @@ public class StorageSyncService
                             var size = new FileInfo(thumbPath).Length;
                             if (manga.ThumbnailSize != size)
                             {
+                                manga.UpdateLocalImage(manga.LocalImageUrl, size);
                                 modified = true;
                             }
                             totalThumbnailSize += size;
@@ -69,6 +72,43 @@ public class StorageSyncService
                                 {
                                     var size = new FileInfo(pagePath).Length;
                                     totalPagesSize += size;
+
+                                    int width = p.Width;
+                                    int height = p.Height;
+
+                                    if (p.Size != size || p.Width == 0 || p.Height == 0)
+                                    {
+                                        var dims = ImageDimensionReader.GetDimensions(pagePath);
+                                        if (dims.Width > 0 && dims.Height > 0)
+                                        {
+                                            width = dims.Width;
+                                            height = dims.Height;
+                                        }
+                                        else
+                                        {
+                                            // Fallback to SkiaSharp only if header reading failed
+                                            try
+                                            {
+                                                using var stream = File.OpenRead(pagePath);
+                                                using var codec = SKCodec.Create(stream);
+                                                if (codec != null)
+                                                {
+                                                    width = codec.Info.Width;
+                                                    height = codec.Info.Height;
+                                                }
+                                            }
+                                            catch (Exception ex)
+                                            {
+                                                _logger.LogWarning(ex, "Failed to read image dimensions for {PagePath}", pagePath);
+                                            }
+                                        }
+
+                                        if (p.Size != size || p.Width != width || p.Height != height)
+                                        {
+                                            p.UpdateLocalImage(p.LocalImageUrl, size, width, height);
+                                            modified = true;
+                                        }
+                                    }
                                 }
                             }
                         }

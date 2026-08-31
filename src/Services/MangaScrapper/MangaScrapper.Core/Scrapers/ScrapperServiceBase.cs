@@ -20,7 +20,7 @@ namespace MangaScrapper.Core.Scrapers;
 public interface IScrapperService
 {
     Task<HtmlDocument> GetHtml(string url, string? query = null, HttpContent? formData = null, CancellationToken ct = default);
-    Task<(string path, long size)> DownloadAndConvertToWebP(string mangaTitle, string chapterNumber, string imageUrl, int index, CancellationToken ct = default);
+    Task<(string path, long size, int width, int height)> DownloadAndConvertToWebP(string mangaTitle, string chapterNumber, string imageUrl, int index, CancellationToken ct = default);
     Task<(string path, long size)> DownloadThumbnailAndConvertToWebP(string mangaTitle, string imageUrl, CancellationToken ct = default);
     string GetCleanTitle(string title);
     Task<Manga> UpdateMangaMetaData(Manga manga, CancellationToken ct = default);
@@ -165,11 +165,37 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
 
             var response = await HttpClient.GetAsync(url, token);
             response.EnsureSuccessStatusCode();
-            var str = await response.Content.ReadAsStringAsync(token);
+            var str = await DecompressResponseAsync(response, token);
             var doc2 = new HtmlDocument();
             doc2.LoadHtml(str);
             return doc2;
         }, ct);
+    }
+
+    /// <summary>
+    /// Reads the HTTP response body and decompresses it when the server sends
+    /// <c>Content-Encoding: gzip</c>, <c>deflate</c>, or <c>br</c> (Brotli).
+    /// Falls back to <see cref="HttpContent.ReadAsStringAsync"/> when no compression is detected.
+    /// </summary>
+    private static async Task<string> DecompressResponseAsync(HttpResponseMessage response, CancellationToken ct)
+    {
+        var encoding = response.Content.Headers.ContentEncoding.FirstOrDefault()?.ToLowerInvariant();
+
+        await using var rawStream = await response.Content.ReadAsStreamAsync(ct);
+
+        Stream decompressedStream = encoding switch
+        {
+            "gzip"    => new System.IO.Compression.GZipStream(rawStream, System.IO.Compression.CompressionMode.Decompress),
+            "deflate" => new System.IO.Compression.DeflateStream(rawStream, System.IO.Compression.CompressionMode.Decompress),
+            "br"      => new System.IO.Compression.BrotliStream(rawStream, System.IO.Compression.CompressionMode.Decompress),
+            _         => rawStream
+        };
+
+        await using (decompressedStream)
+        using (var reader = new StreamReader(decompressedStream, System.Text.Encoding.UTF8))
+        {
+            return await reader.ReadToEndAsync(ct);
+        }
     }
 
     protected async Task<T?> GetFromJsonAsync<T>(string url, CancellationToken cancellationToken = default)
@@ -217,7 +243,7 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
         throw new Exception("Retry failed");
     }
 
-    public async Task<(string path, long size)> DownloadAndConvertToWebP(string mangaTitle, string chapterNumber, string imageUrl, int index, CancellationToken ct = default)
+    public async Task<(string path, long size, int width, int height)> DownloadAndConvertToWebP(string mangaTitle, string chapterNumber, string imageUrl, int index, CancellationToken ct = default)
     {
         var cleanTitle = GetCleanTitle(mangaTitle);
         var subDir = Path.Combine(ImageStoragePath, cleanTitle, chapterNumber);
@@ -233,7 +259,8 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
             var cleanTitle = GetCleanTitle(mangaTitle);
             var subDir = Path.Combine(ImageStoragePath, cleanTitle);
             var ext = IsAvifUrl(imageUrl) ? ".avif" : ".webp";
-            return await SaveImageAsync(imageUrl, subDir, $"thumbnail{ext}", $"{cleanTitle}/thumbnail{ext}", ct);
+            var result = await SaveImageAsync(imageUrl, subDir, $"thumbnail{ext}", $"{cleanTitle}/thumbnail{ext}", ct);
+            return (result.path, result.size);
         }
         catch { return (string.Empty, 0); }
     }
@@ -245,81 +272,275 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
         return string.IsNullOrEmpty(cleaned) ? "manga" : cleaned;
     }
 
-    private async Task<(string path, long size)> SaveImageAsync(string imageUrl, string subDir, string fileName, string relativePath, CancellationToken ct)
+    private static readonly Lazy<byte[]> FallbackBrokenImageBytes = new(() =>
     {
-        if (!Uri.TryCreate(imageUrl, UriKind.Absolute, out _))
-            throw new ArgumentException($"Image URL must be absolute. Got: {imageUrl}", nameof(imageUrl));
+        const int w = 720;
+        const int h = 1080;
+        using var surface = SKSurface.Create(new SKImageInfo(w, h, SKColorType.Rgba8888, SKAlphaType.Premul));
+        var canvas = surface.Canvas;
 
-        return await ExecuteWithRetryAsync(async token =>
+        // Background
+        canvas.Clear(new SKColor(24, 24, 27)); // #18181b
+
+        // Border / Card box
+        using var boxPaint = new SKPaint
         {
-            Stream? imageStream = null;
-            try
+            Color = new SKColor(39, 39, 42), // #27272a
+            Style = SKPaintStyle.Fill,
+            IsAntialias = true
+        };
+        var rrect = new SKRoundRect(new SKRect(60, 200, w - 60, h - 200), 24, 24);
+        canvas.DrawRoundRect(rrect, boxPaint);
+
+        using var borderPaint = new SKPaint
+        {
+            Color = new SKColor(63, 63, 70), // #3f3f46
+            Style = SKPaintStyle.Stroke,
+            StrokeWidth = 3,
+            IsAntialias = true
+        };
+        canvas.DrawRoundRect(rrect, borderPaint);
+
+        // Broken image icon (inner rectangle with broken line)
+        using var iconPaint = new SKPaint
+        {
+            Color = new SKColor(113, 113, 122), // #71717a
+            Style = SKPaintStyle.Stroke,
+            StrokeWidth = 4,
+            IsAntialias = true
+        };
+        var iconRect = new SKRect((w / 2f) - 60, (h / 2f) - 120, (w / 2f) + 60, (h / 2f) - 20);
+        canvas.DrawRoundRect(new SKRoundRect(iconRect, 12, 12), iconPaint);
+        canvas.DrawLine((w / 2f) - 30, (h / 2f) - 120, (w / 2f) + 10, (h / 2f) - 70, iconPaint);
+        canvas.DrawLine((w / 2f) + 10, (h / 2f) - 70, (w / 2f) - 10, (h / 2f) - 20, iconPaint);
+
+        // Text
+        using var textPaint = new SKPaint
+        {
+            Color = new SKColor(161, 161, 170), // #a1a1aa
+            IsAntialias = true
+        };
+        using var font = new SKFont(SKTypeface.Default, 28);
+        canvas.DrawText("Image Unavailable", w / 2f, (h / 2f) + 30, SKTextAlign.Center, font, textPaint);
+
+        using var subTextPaint = new SKPaint
+        {
+            Color = new SKColor(113, 113, 122), // #71717a
+            IsAntialias = true
+        };
+        using var subFont = new SKFont(SKTypeface.Default, 18);
+        canvas.DrawText("Failed to load source image", w / 2f, (h / 2f) + 70, SKTextAlign.Center, subFont, subTextPaint);
+
+        using var image = surface.Snapshot();
+        using var data = image.Encode(SKEncodedImageFormat.Webp, 75);
+        return data.ToArray();
+    });
+
+    private async Task<(string path, long size, int width, int height)> SaveFallbackImageAsync(string subDir, string fileName, string relativePath, CancellationToken ct)
+    {
+        try
+        {
+            Directory.CreateDirectory(subDir);
+            var filePath = Path.Combine(subDir, fileName);
+            var bytes = FallbackBrokenImageBytes.Value;
+            await File.WriteAllBytesAsync(filePath, bytes, ct);
+            return (relativePath.Replace("\\", "/"), bytes.Length, 720, 1080);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to write fallback broken image to {SubDir}/{FileName}", subDir, fileName);
+            return (relativePath.Replace("\\", "/"), 0, 0, 0);
+        }
+    }
+
+    private async Task<(string path, long size, int width, int height)> SaveImageAsync(string imageUrl, string subDir, string fileName, string relativePath, CancellationToken ct)
+    {
+        if (imageUrl.Contains("imgbox.com", StringComparison.OrdinalIgnoreCase))
+        {
+            imageUrl = System.Text.RegularExpressions.Regex.Replace(
+                imageUrl,
+                @"_(t|s)\.(jpe?g|png|webp)",
+                "_o.$2",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        }
+
+        if (!Uri.TryCreate(imageUrl, UriKind.Absolute, out var parsedUri))
+        {
+            Logger.LogWarning("Image URL is not a valid absolute URI: '{ImageUrl}'. Saving fallback broken image.", imageUrl);
+            return await SaveFallbackImageAsync(subDir, fileName, relativePath, ct);
+        }
+
+        try
+        {
+            return await ExecuteWithRetryAsync(async token =>
             {
-                using var request = new HttpRequestMessage(HttpMethod.Get, imageUrl);
-                if (_provider != null)
+                Stream? imageStream = null;
+                const string defaultUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
+
+                void ConfigureReferrer(HttpRequestMessage req)
                 {
-                    if (_provider.ProviderName == "MangaDex")
+                    if (parsedUri.Host.Contains("desu.pics", StringComparison.OrdinalIgnoreCase) ||
+                        parsedUri.Host.Contains("doujin.desu", StringComparison.OrdinalIgnoreCase))
                     {
-                        request.Headers.UserAgent.Clear();
-                        request.Headers.TryAddWithoutValidation("User-Agent", "MangaScrapper/1.0");
+                        req.Headers.Referrer = new Uri("https://doujin.desu.xxx");
                     }
-                    else { request.Headers.Referrer = new Uri(_provider.BaseUrl); }
-                }
-                var response = await HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token);
-                response.EnsureSuccessStatusCode();
-                imageStream = await response.Content.ReadAsStreamAsync(token);
-            }
-            catch (Exception) when (FlareSolverrService is { IsEnabled: true })
-            {
-                await FlareSolverrService.EnsureSessionAsync(imageUrl, token);
-                if (Uri.TryCreate(imageUrl, UriKind.Absolute, out var uri) &&
-                    FlareSolverrService.TryGetSession(uri.Host, out var userAgent, out var cookieHeader))
-                {
-                    using var req2 = new HttpRequestMessage(HttpMethod.Get, imageUrl);
-                    if (_provider != null) req2.Headers.Referrer = new Uri(_provider.BaseUrl);
-                    if (!string.IsNullOrEmpty(userAgent)) { req2.Headers.UserAgent.Clear(); req2.Headers.TryAddWithoutValidation("User-Agent", userAgent); }
-                    if (!string.IsNullOrEmpty(cookieHeader)) req2.Headers.TryAddWithoutValidation("Cookie", cookieHeader);
-                    var response2 = await HttpClient.SendAsync(req2, HttpCompletionOption.ResponseHeadersRead, token);
-                    response2.EnsureSuccessStatusCode();
-                    imageStream = await response2.Content.ReadAsStreamAsync(token);
-                }
-                else throw;
-            }
-
-            using (imageStream)
-            {
-                using var memStream = new MemoryStream();
-                await imageStream!.CopyToAsync(memStream, token);
-                memStream.Position = 0;
-                Directory.CreateDirectory(subDir);
-                var filePath = Path.Combine(subDir, fileName);
-
-                if (IsWebpUrl(imageUrl) || IsAvifUrl(imageUrl))
-                {
-                    await using var output = File.Create(filePath);
-                    await memStream.CopyToAsync(output, token);
-                    return (relativePath.Replace("\\", "/"), new FileInfo(filePath).Length);
+                    else if (parsedUri.Host.Contains("imgbox.com", StringComparison.OrdinalIgnoreCase))
+                    {
+                        req.Headers.Referrer = new Uri("https://imgbox.com/");
+                    }
+                    else if (_provider != null)
+                    {
+                        if (_provider.ProviderName == "MangaDex")
+                        {
+                            req.Headers.UserAgent.Clear();
+                            req.Headers.TryAddWithoutValidation("User-Agent", "MangaScrapper/1.0");
+                        }
+                        else
+                        {
+                            req.Headers.Referrer = new Uri(_provider.BaseUrl);
+                        }
+                    }
                 }
 
                 try
                 {
-                    using var imageData = SKData.Create(memStream);
-                    using var skImage = SKImage.FromEncodedData(imageData)
-                        ?? throw new InvalidOperationException($"SkiaSharp could not decode image from: {imageUrl}");
-                    using var encoded = skImage.Encode(SKEncodedImageFormat.Webp, 90);
-                    await Task.Run(() => { using var out2 = File.Create(filePath); encoded.SaveTo(out2); }, token);
-                    return (relativePath.Replace("\\", "/"), new FileInfo(filePath).Length);
+                    using var request = new HttpRequestMessage(HttpMethod.Get, imageUrl);
+                    request.Headers.TryAddWithoutValidation("User-Agent", defaultUserAgent);
+                    request.Headers.TryAddWithoutValidation("Accept", "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8");
+                    ConfigureReferrer(request);
+
+                    var response = await HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token);
+                    response.EnsureSuccessStatusCode();
+                    imageStream = await response.Content.ReadAsStreamAsync(token);
+                }
+                catch (Exception) when (FlareSolverrService is { IsEnabled: true })
+                {
+                    await FlareSolverrService.EnsureSessionAsync(imageUrl, token);
+                    if (FlareSolverrService.TryGetSession(parsedUri.Host, out var userAgent, out var cookieHeader))
+                    {
+                        using var req2 = new HttpRequestMessage(HttpMethod.Get, imageUrl);
+                        ConfigureReferrer(req2);
+                        req2.Headers.TryAddWithoutValidation("User-Agent", !string.IsNullOrEmpty(userAgent) ? userAgent : defaultUserAgent);
+                        req2.Headers.TryAddWithoutValidation("Accept", "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8");
+                        if (!string.IsNullOrEmpty(cookieHeader)) req2.Headers.TryAddWithoutValidation("Cookie", cookieHeader);
+                        var response2 = await HttpClient.SendAsync(req2, HttpCompletionOption.ResponseHeadersRead, token);
+                        response2.EnsureSuccessStatusCode();
+                        imageStream = await response2.Content.ReadAsStreamAsync(token);
+                    }
+                    else throw;
+                }
+
+                byte[] imageBytes;
+                using (imageStream)
+                {
+                    using var memStream = new MemoryStream();
+                    await imageStream!.CopyToAsync(memStream, token);
+                    imageBytes = memStream.ToArray();
+                }
+
+                if (imageBytes.Length == 0 || (imageBytes.Length > 0 && (char)imageBytes[0] == '<'))
+                {
+                    throw new InvalidOperationException($"Invalid image payload (received HTML or empty response) for: {imageUrl}");
+                }
+
+                Directory.CreateDirectory(subDir);
+                var filePath = Path.Combine(subDir, fileName);
+
+                int width = 0;
+                int height = 0;
+
+                using (var dimStream = new MemoryStream(imageBytes, writable: false))
+                {
+                    var dims = ImageDimensionReader.GetDimensions(dimStream);
+                    if (dims.Width > 0 && dims.Height > 0)
+                    {
+                        width = dims.Width;
+                        height = dims.Height;
+                    }
+                    else
+                    {
+                        try
+                        {
+                            using var codec = SKCodec.Create(dimStream);
+                            if (codec != null)
+                            {
+                                width = codec.Info.Width;
+                                height = codec.Info.Height;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.LogWarning(ex, "Failed to read image dimensions from stream for {ImageUrl}", imageUrl);
+                        }
+                    }
+                }
+
+                if (IsWebpUrl(imageUrl) || IsAvifUrl(imageUrl))
+                {
+                    await File.WriteAllBytesAsync(filePath, imageBytes, token);
+                    return (relativePath.Replace("\\", "/"), new FileInfo(filePath).Length, width, height);
+                }
+
+                try
+                {
+                    using var imageData = SKData.CreateCopy(imageBytes);
+                    using var skImage = SKImage.FromEncodedData(imageData);
+                    
+                    if (skImage != null)
+                    {
+                        if (width == 0 || height == 0)
+                        {
+                            width = skImage.Width;
+                            height = skImage.Height;
+                        }
+
+                        using var encoded = skImage.Encode(SKEncodedImageFormat.Webp, 90);
+                        if (encoded != null)
+                        {
+                            await Task.Run(() => { using var out2 = File.Create(filePath); encoded.SaveTo(out2); }, token);
+                            return (relativePath.Replace("\\", "/"), new FileInfo(filePath).Length, width, height);
+                        }
+                    }
+
+                    // Fallback using SKBitmap decoding if SKImage.Encode returned null
+                    using (var bmpStream = new MemoryStream(imageBytes, writable: false))
+                    using (var bitmap = SKBitmap.Decode(bmpStream))
+                    {
+                        if (bitmap != null)
+                        {
+                            if (width == 0 || height == 0)
+                            {
+                                width = bitmap.Width;
+                                height = bitmap.Height;
+                            }
+                            using var encodedBmp = bitmap.Encode(SKEncodedImageFormat.Webp, 90);
+                            if (encodedBmp != null)
+                            {
+                                await Task.Run(() => { using var out2 = File.Create(filePath); encodedBmp.SaveTo(out2); }, token);
+                                return (relativePath.Replace("\\", "/"), new FileInfo(filePath).Length, width, height);
+                            }
+                        }
+                    }
+
+                    throw new InvalidOperationException($"SkiaSharp could not encode image to WebP from: {imageUrl}");
                 }
                 catch (Exception ex)
                 {
-                    Logger.LogWarning(ex, "SkiaSharp failed to decode {ImageUrl}. Saving raw stream.", imageUrl);
-                    memStream.Position = 0;
-                    await using var out3 = File.Create(filePath);
-                    await memStream.CopyToAsync(out3, token);
-                    return (relativePath.Replace("\\", "/"), new FileInfo(filePath).Length);
+                    Logger.LogWarning(ex, "SkiaSharp failed to decode/encode {ImageUrl}. Saving raw stream.", imageUrl);
+                    await File.WriteAllBytesAsync(filePath, imageBytes, token);
+                    return (relativePath.Replace("\\", "/"), new FileInfo(filePath).Length, width, height);
                 }
-            }
-        }, ct);
+            }, ct);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Failed to download image from '{ImageUrl}'. Generating fallback broken image.", imageUrl);
+            return await SaveFallbackImageAsync(subDir, fileName, relativePath, ct);
+        }
     }
 
     private static bool IsWebpUrl(string imageUrl)
@@ -598,7 +819,7 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
                 {
                     await onProgress(current, total);
                 }
-                return (Index: index, Page: new Page(Guid.CreateVersion7(), imageUrl, result.path, result.size));
+                return (Index: index, Page: new Page(Guid.CreateVersion7(), imageUrl, result.path, result.size, result.width, result.height));
             }
             catch (Exception ex)
             {
@@ -746,8 +967,10 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
                 Pages = c.Pages?.Select(p => new ScrapperPageDocumentResponse
                 {
                     ImageUrl = p.ImageUrl,
-                    LocalImageUrl = p.LocalImageUrl,
-                    Size = p.Size
+                    LocalImageUrl = p.LocalImageUrl ?? string.Empty,
+                    Size = p.Size,
+                    Width = p.Width,
+                    Height = p.Height
                 }).ToList() ?? new()
             }).ToList() ?? new()
         };

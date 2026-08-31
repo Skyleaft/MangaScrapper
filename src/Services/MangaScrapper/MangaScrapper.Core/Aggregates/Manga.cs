@@ -54,19 +54,31 @@ public class Page
     public string ImageUrl { get; private set; }
     public string? LocalImageUrl { get; private set; }
     public long Size { get; private set; }
+    public int Width { get; private set; }
+    public int Height { get; private set; }
 
-    public Page(Guid id, string imageUrl, string? localImageUrl = null, long size = 0)
+    public Page(Guid id, string imageUrl, string? localImageUrl = null, long size = 0, int width = 0, int height = 0)
     {
         Id = id;
         ImageUrl = imageUrl;
         LocalImageUrl = localImageUrl;
         Size = size;
+        Width = width;
+        Height = height;
     }
 
-    public void UpdateLocalImage(string localImageUrl, long size)
+    public void UpdateLocalImage(string localImageUrl, long size, int? width = null, int? height = null)
     {
         LocalImageUrl = localImageUrl;
         Size = size;
+        if (width.HasValue) Width = width.Value;
+        if (height.HasValue) Height = height.Value;
+    }
+
+    public void UpdateDimension(int width, int height)
+    {
+        Width = width;
+        Height = height;
     }
 }
 
@@ -167,13 +179,14 @@ public class Manga : Entity<MangaId>
         string? url = null,
         double? rating = null,
         string? status = null,
-        DateTime? releaseDate = null)
+        DateTime? releaseDate = null,
+        bool? nsfw=null)
     {
         var id = MangaId.New();
         var manga = new Manga(
             id, title, author, type, source,
             malId: malId, anilistId: anilistId, mangaUpdateId: mangaUpdateId, synonyms: synonyms, genres: genres, categories: categories, description: description, imageUrl: imageUrl, url: url,
-            rating: rating, status: status, releaseDate: releaseDate);
+            rating: rating, status: status, releaseDate: releaseDate, nsfw:nsfw);
 
         manga.RaiseDomainEvent(new MangaCreatedDomainEvent(id, title, source));
         return manga;
@@ -389,6 +402,14 @@ public class Manga : Entity<MangaId>
     public void UpdateImageUrl(string imageUrl)
     {
         ImageUrl = imageUrl;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void UpdateThumbnail(string imageUrl, string localImageUrl, long size)
+    {
+        ImageUrl = imageUrl;
+        LocalImageUrl = localImageUrl;
+        ThumbnailSize = size;
         UpdatedAt = DateTime.UtcNow;
     }
 }
