@@ -31,7 +31,8 @@ public record ChapterPageResponse(
     string? Url,
     int Width,
     int Height,
-    string? AlternateUrl = null);
+    string? AlternateUrl = null,
+    bool IsFallback = false);
 
 public record ChapterResponse(
     Guid Id,

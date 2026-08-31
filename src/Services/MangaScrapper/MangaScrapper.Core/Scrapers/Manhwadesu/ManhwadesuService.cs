@@ -159,7 +159,7 @@ public class ManhwadesuService : ScrapperServiceBase
         var chapterRows = doc!.DocumentNode.SelectNodes(Provider.ChapterSelectors.Rows);
         if (chapterRows == null) return Task.FromResult(chapters);
 
-        var viewsNode = doc.DocumentNode.SelectSingleNode("//div[contains(@class,'tsinfo')]//div[contains(@class,'imptdt') and contains(.,'Views')]//span[contains(@class,'ts-views-count')]")
+        var viewsNode = doc.DocumentNode.SelectSingleNode("//div[contains(@class,'ts-views-count')]")
                         ?? doc.DocumentNode.SelectSingleNode("//div[contains(@class,'tsinfo')]//div[contains(@class,'imptdt') and contains(.,'Views')]//i");
         var viewsText = viewsNode?.InnerText.Trim();
         var totalViews = IntHelper.ParseCount(viewsText ?? string.Empty);
@@ -351,7 +351,7 @@ public class ManhwadesuService : ScrapperServiceBase
                     await onProgress(current, total);
                 }
 
-                return (Index: index, Page: new Page(Guid.CreateVersion7(), imageUrl, result.path, result.size, result.width, result.height));
+                return (Index: index, Page: new Page(Guid.CreateVersion7(), imageUrl, result.path, result.size, result.width, result.height, result.isFallback));
             }
             catch (Exception ex)
             {

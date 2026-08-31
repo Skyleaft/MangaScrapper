@@ -86,6 +86,7 @@ public class PageDocument
     public long Size { get; set; }
     public int Width { get; set; }
     public int Height { get; set; }
+    public bool IsFallback { get; set; }
 }
 
 public class UserDocument

@@ -17,6 +17,9 @@ public class Chapter
     public DateTime UploadDate { get; private set; }
     public List<Page> Pages { get; private set; }
 
+    public bool HasBrokenPages => Pages.Any(p => p.IsFallback);
+    public int BrokenPageCount => Pages.Count(p => p.IsFallback);
+
     public Chapter(
         ChapterId id,
         double number,
@@ -56,8 +59,9 @@ public class Page
     public long Size { get; private set; }
     public int Width { get; private set; }
     public int Height { get; private set; }
+    public bool IsFallback { get; private set; }
 
-    public Page(Guid id, string imageUrl, string? localImageUrl = null, long size = 0, int width = 0, int height = 0)
+    public Page(Guid id, string imageUrl, string? localImageUrl = null, long size = 0, int width = 0, int height = 0, bool isFallback = false)
     {
         Id = id;
         ImageUrl = imageUrl;
@@ -65,20 +69,27 @@ public class Page
         Size = size;
         Width = width;
         Height = height;
+        IsFallback = isFallback;
     }
 
-    public void UpdateLocalImage(string localImageUrl, long size, int? width = null, int? height = null)
+    public void UpdateLocalImage(string localImageUrl, long size, int? width = null, int? height = null, bool? isFallback = null)
     {
         LocalImageUrl = localImageUrl;
         Size = size;
         if (width.HasValue) Width = width.Value;
         if (height.HasValue) Height = height.Value;
+        if (isFallback.HasValue) IsFallback = isFallback.Value;
     }
 
     public void UpdateDimension(int width, int height)
     {
         Width = width;
         Height = height;
+    }
+
+    public void MarkAsFallback(bool isFallback = true)
+    {
+        IsFallback = isFallback;
     }
 }
 

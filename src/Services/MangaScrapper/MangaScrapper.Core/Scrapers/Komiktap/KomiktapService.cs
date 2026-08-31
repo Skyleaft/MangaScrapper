@@ -268,7 +268,7 @@ public class KomiktapService : ScrapperServiceBase
                     await onProgress(current, total);
                 }
 
-                return (Index: index, Page: new Page(Guid.CreateVersion7(), imageUrl, result.path, result.size, result.width, result.height));
+                return (Index: index, Page: new Page(Guid.CreateVersion7(), imageUrl, result.path, result.size, result.width, result.height, result.isFallback));
             }
             catch (Exception ex)
             {

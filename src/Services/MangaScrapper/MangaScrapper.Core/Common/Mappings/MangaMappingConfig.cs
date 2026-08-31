@@ -24,7 +24,7 @@ public sealed class MangaMappingConfig : IRegister
         // ── DTO & Contract Mappings ─────────────────────────────────────────
         config.NewConfig<Manga, MangaSummaryResponse>()
             .Map(dest => dest.Id, src => src.Id.Value)
-            .Map(dest => dest.TotalView, src => src.Chapters.Count==1?src.TotalView:src.Chapters.Sum(x => x.TotalView))
+            .Map(dest => dest.TotalView, src => src.Chapters.Count == 1 ? src.TotalView : src.Chapters.Sum(x => x.TotalView))
             .Map(dest => dest.LatestChapter, src => src.Chapters.OrderByDescending(c => c.Number).FirstOrDefault().Adapt<ChapterResponse>());
 
         config.NewConfig<Chapter, ChapterResponse>()
@@ -33,13 +33,13 @@ public sealed class MangaMappingConfig : IRegister
                 x.LocalImageUrl,
                 x.Width,
                 x.Height,
-                x.ImageUrl)).ToList());
+                x.ImageUrl,
+                x.IsFallback)).ToList());
 
-        
         config.NewConfig<Chapter, MeiliChapterDocument>()
             .Map(dest => dest.Id, src => src.Id.Value.ToString())
             .Map(dest => dest.UploadDateTimestamp, src => ((DateTimeOffset)src.UploadDate.ToUniversalTime()).ToUnixTimeSeconds());
-        
+
         config.NewConfig<Manga, MeiliMangaDocument>()
             .Map(dest => dest.Id, src => src.Id.Value.ToString())
             .Map(dest => dest.ReleaseDate, src => ((DateTimeOffset)src.ReleaseDate.GetValueOrDefault().ToUniversalTime()).ToUnixTimeSeconds())
@@ -97,7 +97,6 @@ public sealed class MangaMappingConfig : IRegister
                     }
                     : new List<Chapter>()
             ));
-        
 
         // ── Persistence BSON Document Mappings ─────────────────────────────
         config.NewConfig<MangaDocument, Manga>()
@@ -136,7 +135,7 @@ public sealed class MangaMappingConfig : IRegister
                     c.Language,
                     c.TotalView,
                     c.UploadDate,
-                    c.Pages != null ? c.Pages.Select(p => new Page(p.Id, p.ImageUrl, p.LocalImageUrl, p.Size, p.Width, p.Height)).ToList() : null
+                    c.Pages != null ? c.Pages.Select(p => new Page(p.Id, p.ImageUrl, p.LocalImageUrl, p.Size, p.Width, p.Height, p.IsFallback)).ToList() : null
                 )).ToList() : null));
 
         config.NewConfig<Manga, MangaDocument>()
@@ -159,7 +158,8 @@ public sealed class MangaMappingConfig : IRegister
                     LocalImageUrl = p.LocalImageUrl,
                     Size = p.Size,
                     Width = p.Width,
-                    Height = p.Height
+                    Height = p.Height,
+                    IsFallback = p.IsFallback
                 }).ToList()
             }).ToList());
     }

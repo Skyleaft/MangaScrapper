@@ -494,10 +494,21 @@
                                                             }
                                                             else if (chapter.Pages.Count > 0)
                                                             {
-                                                                <button @onclick="() => OpenInspectChapterModal(chapter)" class="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-emerald-600 rounded-full text-[9px] sm:text-[10px] font-bold transition-colors" title="Click to inspect pages">
-                                                                    <span class="w-1 h-1 rounded-full bg-emerald-500"></span>
-                                                                    @chapter.Pages.Count pg
-                                                                </button>
+                                                                var brokenPagesCount = chapter.Pages.Count(p => p.IsFallback);
+                                                                if (brokenPagesCount > 0)
+                                                                {
+                                                                    <button @onclick="() => OpenInspectChapterModal(chapter)" class="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 rounded-full text-[9px] sm:text-[10px] font-bold transition-colors border border-amber-500/20" title="Click to inspect (@brokenPagesCount broken page(s))">
+                                                                        <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                                                                        @chapter.Pages.Count pg (@brokenPagesCount broken)
+                                                                    </button>
+                                                                }
+                                                                else
+                                                                {
+                                                                    <button @onclick="() => OpenInspectChapterModal(chapter)" class="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-emerald-600 rounded-full text-[9px] sm:text-[10px] font-bold transition-colors" title="Click to inspect pages">
+                                                                        <span class="w-1 h-1 rounded-full bg-emerald-500"></span>
+                                                                        @chapter.Pages.Count pg
+                                                                    </button>
+                                                                }
                                                             }
                                                             else
                                                             {
@@ -1056,7 +1067,14 @@
                                     <span class="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-500 text-[10px] font-bold rounded uppercase">@(string.IsNullOrEmpty(_inspectingChapter.Language) ? "—" : _inspectingChapter.Language)</span>
                                     @if (_inspectingChapter.Pages.Count > 0)
                                     {
+                                        var brokenCount = _inspectingChapter.Pages.Count(p => p.IsFallback);
                                         <span class="px-2 py-0.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 rounded-full text-[10px] font-bold">@_inspectingChapter.Pages.Count Pages</span>
+                                        @if (brokenCount > 0)
+                                        {
+                                            <span class="px-2 py-0.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 rounded-full text-[10px] font-bold">
+                                                ⚠ @brokenCount Broken
+                                            </span>
+                                        }
                                     }
                                     else
                                     {
@@ -1094,7 +1112,7 @@
                                 {
                                     var pageIdx = i;
                                     var chPage = _inspectingChapter.Pages[i];
-                                    <div class="bg-surface rounded-xl border border-border-main p-2 hover:border-primary/50 transition-all shadow-sm group flex flex-col justify-between">
+                                    <div class="bg-surface rounded-xl border @(chPage.IsFallback ? "border-rose-500/50 bg-rose-500/5" : "border-border-main") p-2 hover:border-primary/50 transition-all shadow-sm group flex flex-col justify-between">
                                         <div class="relative aspect-[3/4] rounded-lg overflow-hidden bg-slate-900/10 dark:bg-slate-900/50 flex items-center justify-center cursor-pointer" @onclick="() => OpenLightbox(pageIdx)">
                                             @if (!string.IsNullOrEmpty(chPage.Url))
                                             {
@@ -1116,9 +1134,24 @@
                                             <span class="absolute top-1.5 left-1.5 px-1.5 py-0.5 bg-slate-900/80 text-white text-[9px] font-bold rounded">
                                                 #@(pageIdx + 1)
                                             </span>
+                                            @if (chPage.IsFallback)
+                                            {
+                                                <span class="absolute top-1.5 right-1.5 px-1.5 py-0.5 bg-rose-600 text-white text-[8px] font-bold rounded shadow uppercase">
+                                                    Broken
+                                                </span>
+                                            }
                                         </div>
                                         <div class="mt-2 text-[10px] text-slate-400 flex items-center justify-between">
-                                            <span>@(chPage.Width > 0 && chPage.Height > 0 ? $"{chPage.Width}×{chPage.Height}" : "WebP")</span>
+                                            <span>
+                                                @if (chPage.IsFallback)
+                                                {
+                                                    <span class="text-rose-500 font-bold">Fallback</span>
+                                                }
+                                                else
+                                                {
+                                                    @(chPage.Width > 0 && chPage.Height > 0 ? $"{chPage.Width}×{chPage.Height}" : "WebP")
+                                                }
+                                            </span>
                                             @if (!string.IsNullOrEmpty(chPage.Url))
                                             {
                                                 <a href="/images/@chPage.Url" target="_blank" class="text-primary hover:underline" title="Open original">View ↗</a>
@@ -2091,6 +2124,7 @@
         public int Width { get; set; }
         public int Height { get; set; }
         public string? AlternateUrl { get; set; }
+        public bool IsFallback { get; set; }
     }
 
     public class ChapterResponse

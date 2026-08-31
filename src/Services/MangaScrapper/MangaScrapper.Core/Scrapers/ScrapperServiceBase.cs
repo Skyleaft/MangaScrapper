@@ -20,7 +20,7 @@ namespace MangaScrapper.Core.Scrapers;
 public interface IScrapperService
 {
     Task<HtmlDocument> GetHtml(string url, string? query = null, HttpContent? formData = null, CancellationToken ct = default);
-    Task<(string path, long size, int width, int height)> DownloadAndConvertToWebP(string mangaTitle, string chapterNumber, string imageUrl, int index, CancellationToken ct = default);
+    Task<(string path, long size, int width, int height, bool isFallback)> DownloadAndConvertToWebP(string mangaTitle, string chapterNumber, string imageUrl, int index, CancellationToken ct = default);
     Task<(string path, long size)> DownloadThumbnailAndConvertToWebP(string mangaTitle, string imageUrl, CancellationToken ct = default);
     string GetCleanTitle(string title);
     Task<Manga> UpdateMangaMetaData(Manga manga, CancellationToken ct = default);
@@ -243,7 +243,7 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
         throw new Exception("Retry failed");
     }
 
-    public async Task<(string path, long size, int width, int height)> DownloadAndConvertToWebP(string mangaTitle, string chapterNumber, string imageUrl, int index, CancellationToken ct = default)
+    public async Task<(string path, long size, int width, int height, bool isFallback)> DownloadAndConvertToWebP(string mangaTitle, string chapterNumber, string imageUrl, int index, CancellationToken ct = default)
     {
         var cleanTitle = GetCleanTitle(mangaTitle);
         var subDir = Path.Combine(ImageStoragePath, cleanTitle, chapterNumber);
@@ -336,7 +336,7 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
         return data.ToArray();
     });
 
-    private async Task<(string path, long size, int width, int height)> SaveFallbackImageAsync(string subDir, string fileName, string relativePath, CancellationToken ct)
+    private async Task<(string path, long size, int width, int height, bool isFallback)> SaveFallbackImageAsync(string subDir, string fileName, string relativePath, CancellationToken ct)
     {
         try
         {
@@ -344,16 +344,16 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
             var filePath = Path.Combine(subDir, fileName);
             var bytes = FallbackBrokenImageBytes.Value;
             await File.WriteAllBytesAsync(filePath, bytes, ct);
-            return (relativePath.Replace("\\", "/"), bytes.Length, 720, 1080);
+            return (relativePath.Replace("\\", "/"), bytes.Length, 720, 1080, true);
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Failed to write fallback broken image to {SubDir}/{FileName}", subDir, fileName);
-            return (relativePath.Replace("\\", "/"), 0, 0, 0);
+            return (relativePath.Replace("\\", "/"), 0, 0, 0, true);
         }
     }
 
-    private async Task<(string path, long size, int width, int height)> SaveImageAsync(string imageUrl, string subDir, string fileName, string relativePath, CancellationToken ct)
+    private async Task<(string path, long size, int width, int height, bool isFallback)> SaveImageAsync(string imageUrl, string subDir, string fileName, string relativePath, CancellationToken ct)
     {
         if (imageUrl.Contains("imgbox.com", StringComparison.OrdinalIgnoreCase))
         {
@@ -478,7 +478,7 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
                 if (IsWebpUrl(imageUrl) || IsAvifUrl(imageUrl))
                 {
                     await File.WriteAllBytesAsync(filePath, imageBytes, token);
-                    return (relativePath.Replace("\\", "/"), new FileInfo(filePath).Length, width, height);
+                    return (relativePath.Replace("\\", "/"), new FileInfo(filePath).Length, width, height, false);
                 }
 
                 try
@@ -498,7 +498,7 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
                         if (encoded != null)
                         {
                             await Task.Run(() => { using var out2 = File.Create(filePath); encoded.SaveTo(out2); }, token);
-                            return (relativePath.Replace("\\", "/"), new FileInfo(filePath).Length, width, height);
+                            return (relativePath.Replace("\\", "/"), new FileInfo(filePath).Length, width, height, false);
                         }
                     }
 
@@ -517,7 +517,7 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
                             if (encodedBmp != null)
                             {
                                 await Task.Run(() => { using var out2 = File.Create(filePath); encodedBmp.SaveTo(out2); }, token);
-                                return (relativePath.Replace("\\", "/"), new FileInfo(filePath).Length, width, height);
+                                return (relativePath.Replace("\\", "/"), new FileInfo(filePath).Length, width, height, false);
                             }
                         }
                     }
@@ -528,7 +528,7 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
                 {
                     Logger.LogWarning(ex, "SkiaSharp failed to decode/encode {ImageUrl}. Saving raw stream.", imageUrl);
                     await File.WriteAllBytesAsync(filePath, imageBytes, token);
-                    return (relativePath.Replace("\\", "/"), new FileInfo(filePath).Length, width, height);
+                    return (relativePath.Replace("\\", "/"), new FileInfo(filePath).Length, width, height, false);
                 }
             }, ct);
         }
@@ -819,7 +819,7 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
                 {
                     await onProgress(current, total);
                 }
-                return (Index: index, Page: new Page(Guid.CreateVersion7(), imageUrl, result.path, result.size, result.width, result.height));
+                return (Index: index, Page: new Page(Guid.CreateVersion7(), imageUrl, result.path, result.size, result.width, result.height, result.isFallback));
             }
             catch (Exception ex)
             {
@@ -970,7 +970,8 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
                     LocalImageUrl = p.LocalImageUrl ?? string.Empty,
                     Size = p.Size,
                     Width = p.Width,
-                    Height = p.Height
+                    Height = p.Height,
+                    IsFallback = p.IsFallback
                 }).ToList() ?? new()
             }).ToList() ?? new()
         };
