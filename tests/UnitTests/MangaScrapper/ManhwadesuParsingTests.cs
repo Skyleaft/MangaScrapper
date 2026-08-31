@@ -227,4 +227,33 @@ public class ManhwadesuParsingTests
         var totalViews = IntHelper.ParseCount(viewsNode!.InnerText.Trim());
         totalViews.Should().Be(174300);
     }
+
+    [Fact]
+    public void Should_Extract_PostId_From_Dynamic_Ajax_View_Script()
+    {
+        var html = @"
+<div class=""tsinfo bixbox"">
+    <div class=""imptdt""> Views <i><span class=""ts-views-count"">?</span></i></div>
+</div>
+<script>ts_dynamic_ajax_view(21713)
+.then(function(resp){
+if(! resp) return;
+if(""views"" in resp===false) return;
+var view_count_element=jQuery('.ts-views-count');
+if(view_count_element.length) view_count_element.html(resp.views);
+});</script>";
+        var doc = new HtmlDocument();
+        doc.LoadHtml(html);
+
+        var match = Regex.Match(doc.DocumentNode.OuterHtml, @"ts_dynamic_ajax_view\((\d+)\)");
+        match.Success.Should().BeTrue();
+        match.Groups[1].Value.Should().Be("21713");
+
+        // Simulate JSON response from wp-admin/admin-ajax.php?action=ts_dynamic_ajax_view&post_id=21713
+        var mockJson = "{\"views\":\"174.3K\"}";
+        using var jsonDoc = System.Text.Json.JsonDocument.Parse(mockJson);
+        var viewsStr = jsonDoc.RootElement.GetProperty("views").GetString();
+        var totalViews = IntHelper.ParseCount(viewsStr ?? "");
+        totalViews.Should().Be(174300);
+    }
 }

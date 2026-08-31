@@ -144,6 +144,7 @@ public class MangaDexService : ScrapperServiceBase
                 break;
 
             offset += pageSize;
+            await Task.Delay(250, ct);
         }
 
         return allChapters;

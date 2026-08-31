@@ -133,27 +133,40 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
 
     public async Task<HtmlDocument> GetHtml(string url, string? query = null, HttpContent? formData = null, CancellationToken ct = default)
     {
+        byte[]? formBytes = null;
+        string? mediaType = null;
+        if (formData != null)
+        {
+            formBytes = await formData.ReadAsByteArrayAsync(ct);
+            mediaType = formData.Headers.ContentType?.MediaType ?? "application/x-www-form-urlencoded";
+        }
+
         return await ExecuteWithRetryAsync(async token =>
         {
             if (FlareSolverrService is { IsEnabled: true })
             {
                 await FlareSolverrService.EnsureSessionAsync(url, token);
-                var html = await FlareSolverrService.GetHtmlAsync(url, formData, token);
+                HttpContent? content = formBytes != null
+                    ? new ByteArrayContent(formBytes) { Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(mediaType!) } }
+                    : null;
+                var html = await FlareSolverrService.GetHtmlAsync(url, content, token);
                 var doc = new HtmlDocument();
                 doc.LoadHtml(html);
                 return doc;
             }
 
-            if (formData != null)
+            if (formBytes != null)
             {
-                var responseForm = await HttpClient.PostAsync(url, formData, token);
+                using var content1 = new ByteArrayContent(formBytes) { Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(mediaType!) } };
+                var responseForm = await HttpClient.PostAsync(url, content1, token);
                 if (responseForm.StatusCode is System.Net.HttpStatusCode.MovedPermanently or System.Net.HttpStatusCode.Found)
                 {
                     var newUrl = responseForm.Headers.Location;
                     if (newUrl != null)
                     {
                         if (!newUrl.IsAbsoluteUri) newUrl = new Uri(new Uri(url), newUrl);
-                        responseForm = await HttpClient.PostAsync(newUrl, formData, token);
+                        using var content2 = new ByteArrayContent(formBytes) { Headers = { ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(mediaType!) } };
+                        responseForm = await HttpClient.PostAsync(newUrl, content2, token);
                     }
                 }
                 responseForm.EnsureSuccessStatusCode();
@@ -202,21 +215,66 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
     {
         return await ExecuteWithRetryAsync<T?>(async token =>
         {
+            // First attempt with direct HttpClient
+            try
+            {
+                var response = await HttpClient.GetAsync(url, token);
+                if (response.IsSuccessStatusCode)
+                {
+                    var text = await DecompressResponseAsync(response, token);
+                    var trimmed = text.Trim();
+                    if (trimmed.StartsWith('{') || trimmed.StartsWith('['))
+                    {
+                        return JsonSerializer.Deserialize<T>(trimmed, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                    }
+                }
+                else if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+                {
+                    throw new HttpRequestException("Rate limited (429)", null, System.Net.HttpStatusCode.TooManyRequests);
+                }
+                else if ((int)response.StatusCode == 403 && FlareSolverrService is { IsEnabled: true })
+                {
+                    // Cloudflare block -> fall through to FlareSolverr
+                }
+                else
+                {
+                    response.EnsureSuccessStatusCode();
+                }
+            }
+            catch (Exception ex) when (ex is not HttpRequestException { StatusCode: System.Net.HttpStatusCode.TooManyRequests } && FlareSolverrService is { IsEnabled: true })
+            {
+                // Fall back to FlareSolverr if direct HttpClient failed
+            }
+
             if (FlareSolverrService is { IsEnabled: true })
             {
                 var jsonText = await FlareSolverrService.GetHtmlAsync(url, ct: token);
-                if (jsonText.TrimStart().StartsWith('<'))
+                var trimmed = jsonText.Trim();
+                if (trimmed.StartsWith('<'))
                 {
                     var doc = new HtmlDocument();
                     doc.LoadHtml(jsonText);
-                    var rawJson = doc.DocumentNode.SelectSingleNode("//pre")?.InnerText
-                                  ?? doc.DocumentNode.SelectSingleNode("//body")?.InnerText
-                                  ?? doc.DocumentNode.InnerText;
-                    jsonText = HtmlEntity.DeEntitize(rawJson).Trim();
+                    var preNode = doc.DocumentNode.SelectSingleNode("//pre");
+                    if (preNode != null)
+                    {
+                        trimmed = HtmlEntity.DeEntitize(preNode.InnerText).Trim();
+                    }
+                    else
+                    {
+                        var body = doc.DocumentNode.SelectSingleNode("//body")?.InnerText ?? doc.DocumentNode.InnerText;
+                        trimmed = HtmlEntity.DeEntitize(body).Trim();
+                    }
                 }
-                return JsonSerializer.Deserialize<T>(jsonText, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (trimmed.StartsWith('{') || trimmed.StartsWith('['))
+                {
+                    return JsonSerializer.Deserialize<T>(trimmed, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                }
+
+                throw new HttpRequestException($"Response from {url} is not valid JSON: {(trimmed.Length > 100 ? trimmed[..100] : trimmed)}");
             }
-            return await HttpClient.GetFromJsonAsync<T>(url, token);
+
+            throw new HttpRequestException($"Failed to retrieve valid JSON from {url}");
         }, cancellationToken);
     }
 

@@ -69,6 +69,13 @@ public class FlareSolverrService
             throw new ArgumentException($"Invalid URL: {url}", nameof(url));
 
         var host = uri.Host;
+        string? postData = null;
+        string? mediaType = null;
+        if (content != null)
+        {
+            postData = await content.ReadAsStringAsync(ct);
+            mediaType = content.Headers.ContentType?.MediaType ?? "application/x-www-form-urlencoded";
+        }
 
         if (_sessionCache.ContainsKey(host))
         {
@@ -81,8 +88,11 @@ public class FlareSolverrService
                     try
                     {
                         var client = _httpClientFactory.CreateClient();
-                        using var request = new HttpRequestMessage(content != null ? HttpMethod.Post : HttpMethod.Get, url);
-                        if (content != null) request.Content = content;
+                        using var request = new HttpRequestMessage(postData != null ? HttpMethod.Post : HttpMethod.Get, url);
+                        if (postData != null)
+                        {
+                            request.Content = new StringContent(postData, System.Text.Encoding.UTF8, mediaType);
+                        }
                         if (!string.IsNullOrEmpty(userAgent))
                         {
                             request.Headers.UserAgent.Clear();
@@ -120,7 +130,7 @@ public class FlareSolverrService
                     _sessionCache.TryRemove(host, out _);
                 }
 
-                return await SendThroughFlareSolverr(url, content, ct, host);
+                return await SendThroughFlareSolverr(url, postData, ct, host);
             }
             finally
             {
@@ -132,7 +142,7 @@ public class FlareSolverrService
         await lockSlim.WaitAsync(ct);
         try
         {
-            return await SendThroughFlareSolverr(url, content, ct, host);
+            return await SendThroughFlareSolverr(url, postData, ct, host);
         }
         finally
         {
@@ -140,14 +150,14 @@ public class FlareSolverrService
         }
     }
 
-    private async Task<string> SendThroughFlareSolverr(string url, HttpContent? content, CancellationToken ct, string host)
+    private async Task<string> SendThroughFlareSolverr(string url, string? postData, CancellationToken ct, string host)
     {
         var requestBody = new FlareSolverrRequest { Url = url, MaxTimeout = 60000 };
 
-        if (content != null)
+        if (postData != null)
         {
             requestBody.Cmd = "request.post";
-            requestBody.PostData = await content.ReadAsStringAsync(ct);
+            requestBody.PostData = postData;
         }
         else
         {

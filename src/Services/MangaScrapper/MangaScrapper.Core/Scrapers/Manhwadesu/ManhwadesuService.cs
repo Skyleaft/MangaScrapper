@@ -153,17 +153,91 @@ public class ManhwadesuService : ScrapperServiceBase
         return views;
     }
 
-    protected override Task<List<Chapter>> ExtractChaptersMetadata(CancellationToken ct = default)
+    private async Task<int> FetchDynamicTotalViewsAsync(CancellationToken ct = default)
+    {
+        var viewsNode = doc!.DocumentNode.SelectSingleNode("//div[contains(@class,'tsinfo')]//div[contains(@class,'imptdt') and contains(.,'Views')]//span[contains(@class,'ts-views-count')]")
+                        ?? doc.DocumentNode.SelectSingleNode("//span[contains(@class,'ts-views-count')]")
+                        ?? doc.DocumentNode.SelectSingleNode("//div[contains(@class,'tsinfo')]//div[contains(@class,'imptdt') and contains(.,'Views')]//i");
+        var viewsText = viewsNode?.InnerText.Trim();
+
+        // If viewsText is already a valid count and not '?' or placeholder
+        if (!string.IsNullOrWhiteSpace(viewsText) && !viewsText.Contains('?'))
+        {
+            var count = IntHelper.ParseCount(viewsText);
+            if (count > 0) return count;
+        }
+
+        // Extract post ID from script ts_dynamic_ajax_view(ID) or data-id attribute
+        var outerHtml = doc.DocumentNode.OuterHtml;
+        var match = Regex.Match(outerHtml, @"ts_dynamic_ajax_view\((\d+)\)");
+        var postId = match.Success ? match.Groups[1].Value : null;
+
+        if (string.IsNullOrEmpty(postId))
+        {
+            var bookmarkNode = doc.DocumentNode.SelectSingleNode("//div[contains(@class,'bookmark') and @data-id]");
+            postId = bookmarkNode?.GetAttributeValue("data-id", string.Empty);
+        }
+
+        if (string.IsNullOrEmpty(postId))
+        {
+            var shortlink = doc.DocumentNode.SelectSingleNode("//link[@rel='shortlink']")?.GetAttributeValue("href", string.Empty);
+            if (!string.IsNullOrEmpty(shortlink))
+            {
+                var pMatch = Regex.Match(shortlink, @"\?p=(\d+)");
+                if (pMatch.Success) postId = pMatch.Groups[1].Value;
+            }
+        }
+
+        if (!string.IsNullOrEmpty(postId))
+        {
+            var baseUrl = Provider.BaseUrl.TrimEnd('/');
+            var ajaxUrl = $"{baseUrl}/wp-admin/admin-ajax.php";
+
+            try
+            {
+                var parameters = new List<KeyValuePair<string, string>>
+                {
+                    new("action", "dynamic_view_ajax"),
+                    new("post_id", postId)
+                };
+                using var formData = new FormUrlEncodedContent(parameters);
+
+                var ajaxDoc = await GetHtml(ajaxUrl, formData: formData, ct: ct);
+                var rawText = ajaxDoc.DocumentNode.InnerText.Trim();
+
+                if (!string.IsNullOrEmpty(rawText) && (rawText.StartsWith('{') || rawText.Contains("views")))
+                {
+                    using var jsonDoc = JsonDocument.Parse(rawText);
+                    if (jsonDoc.RootElement.TryGetProperty("views", out var viewsProp))
+                    {
+                        var viewsString = viewsProp.ValueKind == JsonValueKind.Number
+                            ? viewsProp.GetInt64().ToString(CultureInfo.InvariantCulture)
+                            : viewsProp.GetString();
+
+                        if (!string.IsNullOrWhiteSpace(viewsString))
+                        {
+                            var parsed = IntHelper.ParseCount(viewsString);
+                            if (parsed > 0) return parsed;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogDebug(ex, "Failed to fetch dynamic views for post {PostId} via admin-ajax", postId);
+            }
+        }
+
+        return 0;
+    }
+
+    protected override async Task<List<Chapter>> ExtractChaptersMetadata(CancellationToken ct = default)
     {
         var chapters = new List<Chapter>();
         var chapterRows = doc!.DocumentNode.SelectNodes(Provider.ChapterSelectors.Rows);
-        if (chapterRows == null) return Task.FromResult(chapters);
+        if (chapterRows == null) return chapters;
 
-        var viewsNode = doc.DocumentNode.SelectSingleNode("//div[contains(@class,'ts-views-count')]")
-                        ?? doc.DocumentNode.SelectSingleNode("//div[contains(@class,'tsinfo')]//div[contains(@class,'imptdt') and contains(.,'Views')]//i");
-        var viewsText = viewsNode?.InnerText.Trim();
-        var totalViews = IntHelper.ParseCount(viewsText ?? string.Empty);
-
+        var totalViews = await FetchDynamicTotalViewsAsync(ct);
         var viewsGenerated = GenerateChapterViews(totalViews, chapterRows.Count);
         var index = chapterRows.Count - 1;
 
@@ -217,7 +291,7 @@ public class ManhwadesuService : ScrapperServiceBase
                 uploadDate: uploadDate));
         }
 
-        return Task.FromResult(chapters);
+        return chapters;
     }
 
     /// <summary>
@@ -383,14 +457,13 @@ public class ManhwadesuService : ScrapperServiceBase
         }
         else if (!string.IsNullOrEmpty(request.Type))
         {
-            var page = request.Page > 1 ? $"page/{request.Page}/" : string.Empty;
-            url = $"{baseUrl}/komik/{page}?type={HttpUtility.UrlEncode(request.Type)}&order=update";
+            url = $"{baseUrl}/komik/?page={request.Page}&type={HttpUtility.UrlEncode(request.Type)}&order=update";
         }
         else
         {
             // Default latest browse endpoint: https://manhwadesu.wiki/komik/?type=manhwa&order=update
-            var page = request.Page > 1 ? $"page/{request.Page}/" : string.Empty;
-            url = $"{baseUrl}/komik/{page}?type=manhwa&order=update";
+            var page = request.Page > 1 ? $"?page={request.Page}" : string.Empty;
+            url = $"{baseUrl}/komik/?page={request.Page}&order=update";
         }
 
         var searchDoc = await GetHtml(url, ct: ct);

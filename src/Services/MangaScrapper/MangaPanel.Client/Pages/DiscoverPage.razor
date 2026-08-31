@@ -274,12 +274,12 @@
                     <div class="relative h-36 sm:h-40 bg-bg-app overflow-hidden flex-shrink-0">
                         @if (detailManga != null && !string.IsNullOrEmpty(detailManga.ImageUrl))
                         {
-                            <img src="@ProxyThumbnail(detailManga.ImageUrl)" alt="@selectedItem.Title"
+                            <img src="@ProxyThumbnail(detailManga.ImageUrl,selectedProvider.ToLower()=="mangadex")" alt="@selectedItem.Title"
                                  class="w-full h-full object-cover" />
                         }
                         else if (!string.IsNullOrEmpty(selectedItem.Thumbnail))
                         {
-                            <img src="@ProxyThumbnail(selectedItem.Thumbnail)" alt="@selectedItem.Title"
+                            <img src="@ProxyThumbnail(selectedItem.Thumbnail,selectedProvider.ToLower()=="mangadex"))" alt="@selectedItem.Title"
                                  class="w-full h-full object-cover" />
                         }
                         <div class="absolute inset-0 bg-gradient-to-t from-surface via-surface/40 to-transparent"></div>
@@ -915,11 +915,12 @@
     /// Routes external thumbnail URLs through the server-side image proxy to avoid
     /// ERR_BLOCKED_BY_ORB / CORS issues with providers that don't set CORS headers.
     /// </summary>
-    private static string ProxyThumbnail(string url)
+    private static string ProxyThumbnail(string url,bool isLocal)
     {
         if (string.IsNullOrWhiteSpace(url)) return string.Empty;
         // Already a relative/local path — no proxying needed
         if (!url.StartsWith("http", StringComparison.OrdinalIgnoreCase)) return url;
+        if(isLocal) return url;
         return $"/api/v1/images/proxy?url={Uri.EscapeDataString(url)}";
     }
 
