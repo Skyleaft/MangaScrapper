@@ -145,6 +145,8 @@ try
         app.UseWebAssemblyDebugging();
     }
 
+    app.UseCors("DefaultCors");
+
     // ── Static Files (Serves physical wwwroot including _framework files) ────
     app.UseStaticFiles();
 
@@ -165,7 +167,6 @@ try
         RequestPath = "/images"
     });
 
-    app.UseCors("DefaultCors");
     app.UseAuthentication();
     app.UseAuthorization();
     app.UseAntiforgery();
