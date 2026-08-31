@@ -18,7 +18,7 @@
 
   <ItemGroup>
     <PackageReference Include="Hangfire.AspNetCore" Version="1.8.24" />
-    <PackageReference Include="Hangfire.Mongo" Version="1.16.1" />
+    <PackageReference Include="Hangfire.Mongo" Version="1.16.2" />
     <PackageReference Include="MeiliSearch" Version="0.20.0" />
     <PackageReference Include="Qdrant.Client" Version="1.19.0" />
     <PackageReference Include="HtmlAgilityPack" Version="1.12.4" />
