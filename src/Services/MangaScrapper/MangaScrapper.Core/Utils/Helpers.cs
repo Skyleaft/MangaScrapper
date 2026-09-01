@@ -42,12 +42,16 @@ public static class ThumbnailHelper
         return string.Equals(Path.GetExtension(uri.AbsolutePath), ".webp", StringComparison.OrdinalIgnoreCase);
     }
 
+    public static bool IsWebp(ReadOnlySpan<byte> bytes) => ImageDimensionReader.IsWebp(bytes);
+
     public static bool IsAvifUrl(string imageUrl)
     {
         if (!Uri.TryCreate(imageUrl, UriKind.Absolute, out var uri))
             return imageUrl.Contains(".avif", StringComparison.OrdinalIgnoreCase);
         return string.Equals(Path.GetExtension(uri.AbsolutePath), ".avif", StringComparison.OrdinalIgnoreCase);
     }
+
+    public static bool IsAvif(ReadOnlySpan<byte> bytes) => ImageDimensionReader.IsAvif(bytes);
 
     public static string ExtractImageUrl(HtmlAgilityPack.HtmlNode? imgNode, HtmlAgilityPack.HtmlNode? fallbackContainer = null)
     {

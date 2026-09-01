@@ -464,7 +464,7 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
                 {
                     using var request = new HttpRequestMessage(HttpMethod.Get, imageUrl);
                     request.Headers.TryAddWithoutValidation("User-Agent", defaultUserAgent);
-                    request.Headers.TryAddWithoutValidation("Accept", "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8");
+                    request.Headers.TryAddWithoutValidation("Accept", "image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8");
                     ConfigureReferrer(request);
 
                     var response = await HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token);
@@ -479,7 +479,7 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
                         using var req2 = new HttpRequestMessage(HttpMethod.Get, imageUrl);
                         ConfigureReferrer(req2);
                         req2.Headers.TryAddWithoutValidation("User-Agent", !string.IsNullOrEmpty(userAgent) ? userAgent : defaultUserAgent);
-                        req2.Headers.TryAddWithoutValidation("Accept", "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8");
+                        req2.Headers.TryAddWithoutValidation("Accept", "image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8");
                         if (!string.IsNullOrEmpty(cookieHeader)) req2.Headers.TryAddWithoutValidation("Cookie", cookieHeader);
                         var response2 = await HttpClient.SendAsync(req2, HttpCompletionOption.ResponseHeadersRead, token);
                         response2.EnsureSuccessStatusCode();
@@ -533,8 +533,35 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
                     }
                 }
 
-                if (IsWebpUrl(imageUrl) || IsAvifUrl(imageUrl))
+                var isAvif = ImageDimensionReader.IsAvif(imageBytes) || IsAvifUrl(imageUrl);
+                var isWebp = ImageDimensionReader.IsWebp(imageBytes) || IsWebpUrl(imageUrl);
+
+                if (isAvif)
                 {
+                    if (!fileName.EndsWith(".avif", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var nameWithoutExt = Path.GetFileNameWithoutExtension(fileName);
+                        fileName = $"{nameWithoutExt}.avif";
+                        filePath = Path.Combine(subDir, fileName);
+                        var dirName = Path.GetDirectoryName(relativePath)?.Replace("\\", "/");
+                        relativePath = string.IsNullOrEmpty(dirName) ? fileName : $"{dirName}/{fileName}";
+                    }
+
+                    await File.WriteAllBytesAsync(filePath, imageBytes, token);
+                    return (relativePath.Replace("\\", "/"), new FileInfo(filePath).Length, width, height, false);
+                }
+
+                if (isWebp)
+                {
+                    if (!fileName.EndsWith(".webp", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var nameWithoutExt = Path.GetFileNameWithoutExtension(fileName);
+                        fileName = $"{nameWithoutExt}.webp";
+                        filePath = Path.Combine(subDir, fileName);
+                        var dirName = Path.GetDirectoryName(relativePath)?.Replace("\\", "/");
+                        relativePath = string.IsNullOrEmpty(dirName) ? fileName : $"{dirName}/{fileName}";
+                    }
+
                     await File.WriteAllBytesAsync(filePath, imageBytes, token);
                     return (relativePath.Replace("\\", "/"), new FileInfo(filePath).Length, width, height, false);
                 }

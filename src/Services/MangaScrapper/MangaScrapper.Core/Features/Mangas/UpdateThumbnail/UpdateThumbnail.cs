@@ -43,17 +43,30 @@ internal static class ThumbnailProcessor
         var subDir = Path.Combine(storageRootPath, cleanTitle);
         Directory.CreateDirectory(subDir);
 
-        var isAvif = !string.IsNullOrEmpty(sourceUrlOrFileName) && ThumbnailHelper.IsAvifUrl(sourceUrlOrFileName);
-        var ext = isAvif ? ".avif" : ".webp";
-        var fileName = $"thumbnail{ext}";
-        var filePath = Path.Combine(subDir, fileName);
-        var relativePath = $"{cleanTitle}/{fileName}".Replace("\\", "/");
+        var isAvif = ImageDimensionReader.IsAvif(imageBytes) || (!string.IsNullOrEmpty(sourceUrlOrFileName) && ThumbnailHelper.IsAvifUrl(sourceUrlOrFileName));
+        var isWebp = ImageDimensionReader.IsWebp(imageBytes) || (!string.IsNullOrEmpty(sourceUrlOrFileName) && ThumbnailHelper.IsWebpUrl(sourceUrlOrFileName));
 
-        if (isAvif || (!string.IsNullOrEmpty(sourceUrlOrFileName) && ThumbnailHelper.IsWebpUrl(sourceUrlOrFileName)))
+        if (isAvif)
         {
+            var fileName = "thumbnail.avif";
+            var filePath = Path.Combine(subDir, fileName);
+            var relativePath = $"{cleanTitle}/{fileName}".Replace("\\", "/");
             await File.WriteAllBytesAsync(filePath, imageBytes, ct);
             return (relativePath, new FileInfo(filePath).Length);
         }
+
+        if (isWebp)
+        {
+            var fileName = "thumbnail.webp";
+            var filePath = Path.Combine(subDir, fileName);
+            var relativePath = $"{cleanTitle}/{fileName}".Replace("\\", "/");
+            await File.WriteAllBytesAsync(filePath, imageBytes, ct);
+            return (relativePath, new FileInfo(filePath).Length);
+        }
+
+        var webpFileName = "thumbnail.webp";
+        var webpFilePath = Path.Combine(subDir, webpFileName);
+        var webpRelativePath = $"{cleanTitle}/{webpFileName}".Replace("\\", "/");
 
         bool saved = false;
         try
@@ -65,7 +78,7 @@ internal static class ThumbnailProcessor
                 using var encoded = skImage.Encode(SKEncodedImageFormat.Webp, 90);
                 if (encoded != null)
                 {
-                    await using var outStream = File.Create(filePath);
+                    await using var outStream = File.Create(webpFilePath);
                     encoded.SaveTo(outStream);
                     saved = true;
                 }
@@ -80,7 +93,7 @@ internal static class ThumbnailProcessor
                     using var encodedBmp = bitmap.Encode(SKEncodedImageFormat.Webp, 90);
                     if (encodedBmp != null)
                     {
-                        await using var outStream = File.Create(filePath);
+                        await using var outStream = File.Create(webpFilePath);
                         encodedBmp.SaveTo(outStream);
                         saved = true;
                     }
@@ -94,10 +107,10 @@ internal static class ThumbnailProcessor
 
         if (!saved)
         {
-            await File.WriteAllBytesAsync(filePath, imageBytes, ct);
+            await File.WriteAllBytesAsync(webpFilePath, imageBytes, ct);
         }
 
-        return (relativePath, new FileInfo(filePath).Length);
+        return (webpRelativePath, new FileInfo(webpFilePath).Length);
     }
 }
 
@@ -128,7 +141,7 @@ public sealed class UpdateThumbnailCommandHandler(
             var httpClient = httpClientFactory.CreateClient();
             using var request = new HttpRequestMessage(HttpMethod.Get, imageUrl);
             request.Headers.TryAddWithoutValidation("User-Agent", DefaultUserAgent);
-            request.Headers.TryAddWithoutValidation("Accept", "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8");
+            request.Headers.TryAddWithoutValidation("Accept", "image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8");
 
             var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
             if (!response.IsSuccessStatusCode && flareSolverrService is { IsEnabled: true })
@@ -139,7 +152,7 @@ public sealed class UpdateThumbnailCommandHandler(
                 {
                     using var req2 = new HttpRequestMessage(HttpMethod.Get, imageUrl);
                     req2.Headers.TryAddWithoutValidation("User-Agent", !string.IsNullOrEmpty(userAgent) ? userAgent : DefaultUserAgent);
-                    req2.Headers.TryAddWithoutValidation("Accept", "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8");
+                    req2.Headers.TryAddWithoutValidation("Accept", "image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8");
                     if (!string.IsNullOrEmpty(cookieHeader)) req2.Headers.TryAddWithoutValidation("Cookie", cookieHeader);
                     response = await httpClient.SendAsync(req2, HttpCompletionOption.ResponseHeadersRead, ct);
                 }

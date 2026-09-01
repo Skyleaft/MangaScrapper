@@ -86,6 +86,12 @@ public static class ImageDimensionReader
                     result = (Math.Abs(width), Math.Abs(rawHeight));
                 }
             }
+            // 6. AVIF (....ftyp)
+            else if (IsAvif(buffer.Slice(0, bytesRead)))
+            {
+                if (stream.CanSeek) stream.Position = startPos;
+                result = GetAvifDimensions(stream);
+            }
 
             if (stream.CanSeek) stream.Position = startPos;
             return result;
@@ -200,5 +206,85 @@ public static class ImageDimensionReader
         }
 
         return (0, 0);
+    }
+
+    private static (int Width, int Height) GetAvifDimensions(Stream stream)
+    {
+        Span<byte> buffer = stackalloc byte[4096];
+        int bytesRead = stream.Read(buffer);
+        if (bytesRead < 16) return (0, 0);
+
+        for (int i = 0; i <= bytesRead - 16; i++)
+        {
+            // Search for FourCC 'ispe' (0x69, 0x73, 0x70, 0x65)
+            if (buffer[i] == 0x69 && buffer[i + 1] == 0x73 && buffer[i + 2] == 0x70 && buffer[i + 3] == 0x65)
+            {
+                int width = (buffer[i + 8] << 24) | (buffer[i + 9] << 16) | (buffer[i + 10] << 8) | buffer[i + 11];
+                int height = (buffer[i + 12] << 24) | (buffer[i + 13] << 16) | (buffer[i + 14] << 8) | buffer[i + 15];
+                if (width > 0 && height > 0)
+                {
+                    return (width, height);
+                }
+            }
+        }
+
+        return (0, 0);
+    }
+
+    public static bool IsAvif(ReadOnlySpan<byte> buffer)
+    {
+        if (buffer.Length < 12) return false;
+        if (buffer[4] == (byte)'f' && buffer[5] == (byte)'t' && buffer[6] == (byte)'y' && buffer[7] == (byte)'p')
+        {
+            // Direct major brand check: 'avif' or 'avis'
+            if (buffer[8] == (byte)'a' && buffer[9] == (byte)'v' && buffer[10] == (byte)'i' && (buffer[11] == (byte)'f' || buffer[11] == (byte)'s'))
+                return true;
+
+            // Check compatible brands if major brand is mif1, msf1, or miaf
+            if ((buffer[8] == (byte)'m' && buffer[9] == (byte)'i' && buffer[10] == (byte)'f' && buffer[11] == (byte)'1') ||
+                (buffer[8] == (byte)'m' && buffer[9] == (byte)'i' && buffer[10] == (byte)'a' && buffer[11] == (byte)'f') ||
+                (buffer[8] == (byte)'m' && buffer[9] == (byte)'s' && buffer[10] == (byte)'f' && buffer[11] == (byte)'1'))
+            {
+                int boxLength = (buffer[0] << 24) | (buffer[1] << 16) | (buffer[2] << 8) | buffer[3];
+                int limit = Math.Min(buffer.Length, boxLength > 0 ? boxLength : buffer.Length);
+                for (int i = 16; i + 4 <= limit; i += 4)
+                {
+                    if (buffer[i] == (byte)'a' && buffer[i + 1] == (byte)'v' && buffer[i + 2] == (byte)'i' && (buffer[i + 3] == (byte)'f' || buffer[i + 3] == (byte)'s'))
+                        return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    public static bool IsWebp(ReadOnlySpan<byte> buffer)
+    {
+        return buffer.Length >= 12 &&
+               buffer[0] == (byte)'R' && buffer[1] == (byte)'I' && buffer[2] == (byte)'F' && buffer[3] == (byte)'F' &&
+               buffer[8] == (byte)'W' && buffer[9] == (byte)'E' && buffer[10] == (byte)'B' && buffer[11] == (byte)'P';
+    }
+
+    public static bool IsJpeg(ReadOnlySpan<byte> buffer)
+    {
+        return buffer.Length >= 2 && buffer[0] == 0xFF && buffer[1] == 0xD8;
+    }
+
+    public static bool IsPng(ReadOnlySpan<byte> buffer)
+    {
+        return buffer.Length >= 8 &&
+               buffer[0] == 0x89 && buffer[1] == 0x50 && buffer[2] == 0x4E && buffer[3] == 0x47 &&
+               buffer[4] == 0x0D && buffer[5] == 0x0A && buffer[6] == 0x1A && buffer[7] == 0x0A;
+    }
+
+    public static bool IsGif(ReadOnlySpan<byte> buffer)
+    {
+        return buffer.Length >= 6 &&
+               buffer[0] == (byte)'G' && buffer[1] == (byte)'I' && buffer[2] == (byte)'F' &&
+               buffer[3] == (byte)'8' && (buffer[4] == (byte)'7' || buffer[4] == (byte)'9') && buffer[5] == (byte)'a';
+    }
+
+    public static bool IsBmp(ReadOnlySpan<byte> buffer)
+    {
+        return buffer.Length >= 2 && buffer[0] == (byte)'B' && buffer[1] == (byte)'M';
     }
 }
