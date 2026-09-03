@@ -1,9 +1,11 @@
+using System.IO.Compression;
 using System.Security.Claims;
 using Hangfire;
 using MangaScrapper.Api.Components;
 using MangaScrapper.Core.DependencyInjection;
 using MangaScrapper.Core.Security;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.Extensions.FileProviders;
 using NovaStack.Infrastructure.DependencyInjection;
 using NovaStack.Infrastructure.Http;
@@ -87,6 +89,26 @@ try
         });
     });
 
+    // ── Response Compression ──────────────────────────────────────────────────
+    builder.Services.AddResponseCompression(options =>
+    {
+        options.EnableForHttps = true;
+        options.Providers.Add<BrotliCompressionProvider>();
+        options.Providers.Add<GzipCompressionProvider>();
+        options.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(
+            [ "application/octet-stream", "image/svg+xml" ]);
+    });
+
+    builder.Services.Configure<BrotliCompressionProviderOptions>(options =>
+    {
+        options.Level = CompressionLevel.Fastest;
+    });
+
+    builder.Services.Configure<GzipCompressionProviderOptions>(options =>
+    {
+        options.Level = CompressionLevel.Fastest;
+    });
+
     // ── Problem Details ──────────────────────────────────────────────────────
     builder.Services.AddProblemDetails();
 
@@ -146,6 +168,7 @@ try
     }
 
     app.UseCors("DefaultCors");
+    app.UseResponseCompression();
 
     // ── Static Files (Serves physical wwwroot including _framework files) ────
     app.UseStaticFiles();
