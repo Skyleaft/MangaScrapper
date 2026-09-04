@@ -18,7 +18,7 @@ internal sealed class GetAllChaptersQueryHandler(IMangaRepository mangaRepositor
 {
     public async Task<Result<List<ChapterResponse>>> Handle(GetAllChaptersQuery query, CancellationToken ct)
     {
-        var manga = await mangaRepository.GetByIdAsync(MangaId.From(query.MangaId), ct,excludePage:true);
+        var manga = await mangaRepository.GetByIdAsync(MangaId.From(query.MangaId), ct);
         if (manga is null)
             return Error.NotFound("Manga.NotFound", $"Manga with Id '{query.MangaId}' was not found.");
 
