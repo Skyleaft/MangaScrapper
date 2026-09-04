@@ -740,7 +740,6 @@ public abstract class ScrapperServiceBase : IScrapperService, IProviderScrapperS
 
         if (existingManga != null)
         {
-            existingManga = await UpdateThumbnail(existingManga, mangaData.ImageUrl, ct);
             var existingNumbers = existingManga.Chapters.Select(c => c.Number).ToHashSet();
             var newChapters = chapters.Where(c => !existingNumbers.Contains(c.Number)).ToList();
 
