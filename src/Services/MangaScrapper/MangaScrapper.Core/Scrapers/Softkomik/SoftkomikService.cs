@@ -31,9 +31,13 @@ public class SoftkomikService : ScrapperServiceBase
 
     private readonly HttpClient _sessionClient;
     private readonly SemaphoreSlim _sessionLock = new(1, 1);
-    private string? _cachedToken;
-    private string? _cachedSign;
-    private DateTime _tokenExpiry = DateTime.MinValue;
+    private string? _cachedChapterToken;
+    private string? _cachedChapterSign;
+    private DateTime _chapterTokenExpiry = DateTime.MinValue;
+
+    private string? _cachedGeneralToken;
+    private string? _cachedGeneralSign;
+    private DateTime _generalTokenExpiry = DateTime.MinValue;
 
     private string _currentMangaSlug = string.Empty;
 
@@ -67,19 +71,53 @@ public class SoftkomikService : ScrapperServiceBase
 
     // ── Session Management ────────────────────────────────────────────────────────
 
-    private async Task<(string Token, string Sign)> EnsureSessionAsync(CancellationToken ct = default)
+    private async Task<(string Token, string Sign)> EnsureSessionAsync(bool isChapterImage = false, bool forceRefresh = false, CancellationToken ct = default)
     {
-        if (!string.IsNullOrEmpty(_cachedToken) && !string.IsNullOrEmpty(_cachedSign) && _tokenExpiry > DateTime.UtcNow.AddMinutes(5))
+        if (!forceRefresh)
         {
-            return (_cachedToken, _cachedSign);
+            if (isChapterImage)
+            {
+                if (!string.IsNullOrEmpty(_cachedChapterToken) && !string.IsNullOrEmpty(_cachedChapterSign) && _chapterTokenExpiry > DateTime.UtcNow.AddMinutes(5))
+                {
+                    return (_cachedChapterToken, _cachedChapterSign);
+                }
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(_cachedChapterToken) && !string.IsNullOrEmpty(_cachedChapterSign) && _chapterTokenExpiry > DateTime.UtcNow.AddMinutes(5))
+                {
+                    return (_cachedChapterToken, _cachedChapterSign);
+                }
+                if (!string.IsNullOrEmpty(_cachedGeneralToken) && !string.IsNullOrEmpty(_cachedGeneralSign) && _generalTokenExpiry > DateTime.UtcNow.AddMinutes(5))
+                {
+                    return (_cachedGeneralToken, _cachedGeneralSign);
+                }
+            }
         }
 
         await _sessionLock.WaitAsync(ct);
         try
         {
-            if (!string.IsNullOrEmpty(_cachedToken) && !string.IsNullOrEmpty(_cachedSign) && _tokenExpiry > DateTime.UtcNow.AddMinutes(5))
+            if (!forceRefresh)
             {
-                return (_cachedToken, _cachedSign);
+                if (isChapterImage)
+                {
+                    if (!string.IsNullOrEmpty(_cachedChapterToken) && !string.IsNullOrEmpty(_cachedChapterSign) && _chapterTokenExpiry > DateTime.UtcNow.AddMinutes(5))
+                    {
+                        return (_cachedChapterToken, _cachedChapterSign);
+                    }
+                }
+                else
+                {
+                    if (!string.IsNullOrEmpty(_cachedChapterToken) && !string.IsNullOrEmpty(_cachedChapterSign) && _chapterTokenExpiry > DateTime.UtcNow.AddMinutes(5))
+                    {
+                        return (_cachedChapterToken, _cachedChapterSign);
+                    }
+                    if (!string.IsNullOrEmpty(_cachedGeneralToken) && !string.IsNullOrEmpty(_cachedGeneralSign) && _generalTokenExpiry > DateTime.UtcNow.AddMinutes(5))
+                    {
+                        return (_cachedGeneralToken, _cachedGeneralSign);
+                    }
+                }
             }
 
             // 1. Visit homepage to establish Next.js session cookies (AhyyL, zEm983)
@@ -89,25 +127,63 @@ public class SoftkomikService : ScrapperServiceBase
             using var initRes = await _sessionClient.SendAsync(initReq, ct);
 
             // 2. Fetch session token from internal Next.js API
-            using var sessReq = new HttpRequestMessage(HttpMethod.Get, $"{BaseSiteUrl}/api/session/aksjkas");
-            sessReq.Headers.TryAddWithoutValidation("User-Agent", DefaultUserAgent);
-            sessReq.Headers.TryAddWithoutValidation("Referer", $"{BaseSiteUrl}/");
-            sessReq.Headers.TryAddWithoutValidation("Origin", BaseSiteUrl);
-            sessReq.Headers.TryAddWithoutValidation("Accept", "application/json");
+            // For chapter images, must use /api/session/chapter/oaisos which generates a token with type "chapterImg".
+            var endpointsToTry = isChapterImage
+                ? new[] { $"{BaseSiteUrl}/api/session/chapter/oaisos", $"{BaseSiteUrl}/api/session/aksjkas" }
+                : new[] { $"{BaseSiteUrl}/api/session/chapter/oaisos", $"{BaseSiteUrl}/api/session/aksjkas" };
 
-            using var sessRes = await _sessionClient.SendAsync(sessReq, ct);
-            sessRes.EnsureSuccessStatusCode();
+            SoftkomikSessionResponse? sessObj = null;
+            string? usedEndpoint = null;
 
-            var sessJson = await sessRes.Content.ReadAsStringAsync(ct);
-            var sessObj = JsonSerializer.Deserialize<SoftkomikSessionResponse>(sessJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
-                ?? throw new InvalidOperationException("Failed to deserialize Softkomik session.");
+            foreach (var ep in endpointsToTry)
+            {
+                try
+                {
+                    using var sessReq = new HttpRequestMessage(HttpMethod.Get, ep);
+                    sessReq.Headers.TryAddWithoutValidation("User-Agent", DefaultUserAgent);
+                    sessReq.Headers.TryAddWithoutValidation("Referer", $"{BaseSiteUrl}/");
+                    sessReq.Headers.TryAddWithoutValidation("Origin", BaseSiteUrl);
+                    sessReq.Headers.TryAddWithoutValidation("Accept", "application/json");
 
-            _cachedToken = sessObj.Token;
+                    using var sessRes = await _sessionClient.SendAsync(sessReq, ct);
+                    if (sessRes.IsSuccessStatusCode)
+                    {
+                        var sessJson = await sessRes.Content.ReadAsStringAsync(ct);
+                        sessObj = JsonSerializer.Deserialize<SoftkomikSessionResponse>(sessJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                        if (sessObj != null && !string.IsNullOrEmpty(sessObj.Token))
+                        {
+                            usedEndpoint = ep;
+                            break;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogWarning(ex, "Failed to fetch session from {Endpoint}", ep);
+                }
+            }
+
+            if (sessObj == null || string.IsNullOrEmpty(sessObj.Token))
+                throw new InvalidOperationException("Failed to obtain Softkomik session token.");
+
+            var token = sessObj.Token;
             var rawSign = sessObj.Sign;
-            _cachedSign = rawSign.Contains("|oiq&") ? rawSign.Split("|oiq&")[0] : (rawSign.Length > 64 ? rawSign[..64] : rawSign);
-            _tokenExpiry = DateTime.UtcNow.AddHours(1);
+            var sign = rawSign.Contains("|oiq&") ? rawSign.Split("|oiq&")[0] : (rawSign.Length > 64 ? rawSign[..64] : rawSign);
 
-            return (_cachedToken, _cachedSign);
+            if (usedEndpoint != null && usedEndpoint.Contains("/chapter"))
+            {
+                _cachedChapterToken = token;
+                _cachedChapterSign = sign;
+                _chapterTokenExpiry = DateTime.UtcNow.AddHours(1);
+            }
+            else
+            {
+                _cachedGeneralToken = token;
+                _cachedGeneralSign = sign;
+                _generalTokenExpiry = DateTime.UtcNow.AddHours(1);
+            }
+
+            return (token, sign);
         }
         finally
         {
@@ -115,9 +191,12 @@ public class SoftkomikService : ScrapperServiceBase
         }
     }
 
-    private async Task<T?> SendApiGetAsync<T>(string url, CancellationToken ct = default)
+    private Task<T?> SendApiGetAsync<T>(string url, CancellationToken ct = default) =>
+        SendApiGetAsync<T>(url, isChapterImage: false, ct);
+
+    private async Task<T?> SendApiGetAsync<T>(string url, bool isChapterImage, CancellationToken ct = default)
     {
-        var (token, sign) = await EnsureSessionAsync(ct);
+        var (token, sign) = await EnsureSessionAsync(isChapterImage, forceRefresh: false, ct);
 
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
         request.Headers.TryAddWithoutValidation("User-Agent", DefaultUserAgent);
@@ -128,14 +207,41 @@ public class SoftkomikService : ScrapperServiceBase
         request.Headers.TryAddWithoutValidation("Accept", "application/json, text/plain, */*");
 
         using var response = await _sessionClient.SendAsync(request, ct);
-        if (!response.IsSuccessStatusCode)
+        if (response.IsSuccessStatusCode)
         {
-            Logger.LogWarning("Softkomik API GET {Url} returned status {StatusCode}", url, response.StatusCode);
-            return default;
+            var json = await response.Content.ReadAsStringAsync(ct);
+            return JsonSerializer.Deserialize<T>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         }
 
-        var json = await response.Content.ReadAsStringAsync(ct);
-        return JsonSerializer.Deserialize<T>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        // Retry once on 401 Unauthorized or 404 NotFound by forcing a session refresh
+        if (response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.Unauthorized)
+        {
+            Logger.LogInformation("Softkomik API GET {Url} returned {StatusCode}. Retrying with fresh session...", url, response.StatusCode);
+            var (freshToken, freshSign) = await EnsureSessionAsync(isChapterImage, forceRefresh: true, ct);
+
+            using var retryReq = new HttpRequestMessage(HttpMethod.Get, url);
+            retryReq.Headers.TryAddWithoutValidation("User-Agent", DefaultUserAgent);
+            retryReq.Headers.TryAddWithoutValidation("Referer", $"{BaseSiteUrl}/");
+            retryReq.Headers.TryAddWithoutValidation("Origin", BaseSiteUrl);
+            retryReq.Headers.TryAddWithoutValidation("X-Token", freshToken);
+            retryReq.Headers.TryAddWithoutValidation("X-Sign", freshSign);
+            retryReq.Headers.TryAddWithoutValidation("Accept", "application/json, text/plain, */*");
+
+            using var retryRes = await _sessionClient.SendAsync(retryReq, ct);
+            if (retryRes.IsSuccessStatusCode)
+            {
+                var json = await retryRes.Content.ReadAsStringAsync(ct);
+                return JsonSerializer.Deserialize<T>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            }
+
+            Logger.LogWarning("Softkomik API GET retry {Url} returned status {StatusCode}", url, retryRes.StatusCode);
+        }
+        else
+        {
+            Logger.LogWarning("Softkomik API GET {Url} returned status {StatusCode}", url, response.StatusCode);
+        }
+
+        return default;
     }
 
     // ── Detail & Metadata ─────────────────────────────────────────────────────────
@@ -254,7 +360,13 @@ public class SoftkomikService : ScrapperServiceBase
             var chapterNum = chapterData.Chapter ?? chapter.Number.ToString(CultureInfo.InvariantCulture);
             var imgsApiUrl = $"{BaseApiUrl}/komik/{slug}/chapter/{chapterNum}/imgs/{chapterData.Data.Id}";
 
-            var imgsResponse = await SendApiGetAsync<SoftkomikChapterImgsResponse>(imgsApiUrl, ct);
+            var imgsResponse = await SendApiGetAsync<SoftkomikChapterImgsResponse>(imgsApiUrl, isChapterImage: true, ct);
+            if (imgsResponse?.ImageSrc == null || imgsResponse.ImageSrc.Count == 0)
+            {
+                var fallbackApiUrl = $"{BaseApiUrl}/komik/{slug}/chapter/{chapterNum}/img/{chapterData.Data.Id}";
+                imgsResponse = await SendApiGetAsync<SoftkomikChapterImgsResponse>(fallbackApiUrl, isChapterImage: true, ct);
+            }
+
             if (imgsResponse?.ImageSrc != null)
             {
                 imagePaths = imgsResponse.ImageSrc;
