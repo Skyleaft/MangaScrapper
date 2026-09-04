@@ -276,6 +276,21 @@ public class MongoUserLibraryRepository(MangaMongoDbContext dbContext) : IUserLi
         await dbContext.UserLibraries.DeleteManyAsync(l => l.MangaId == mangaId, ct);
     }
 
+    public async Task UpdateMangaInfoAsync(Guid mangaId, string newTitle, string? newImageUrl, CancellationToken ct = default)
+    {
+        var filter = Builders<UserLibraryDocument>.Filter.Eq(l => l.MangaId, mangaId);
+        var update = Builders<UserLibraryDocument>.Update
+            .Set(l => l.MangaTitle, newTitle)
+            .Set(l => l.UpdatedAt, DateTime.UtcNow);
+
+        if (!string.IsNullOrEmpty(newImageUrl))
+        {
+            update = update.Set(l => l.MangaImageUrl, newImageUrl);
+        }
+
+        await dbContext.UserLibraries.UpdateManyAsync(filter, update, cancellationToken: ct);
+    }
+
     private static UserLibrary MapToDomain(UserLibraryDocument doc)
     {
         return UserLibrary.Reconstitute(doc.Id, doc.UserId.ToString(), MangaId.From(doc.MangaId), doc.AddedAt,doc.UpdatedAt,doc.Status,doc.IsFavorite);

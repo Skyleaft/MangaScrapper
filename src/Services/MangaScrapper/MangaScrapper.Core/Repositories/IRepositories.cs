@@ -104,6 +104,7 @@ public interface IUserLibraryRepository
     Task UpdateAsync(UserLibrary userLibrary, CancellationToken ct = default);
     Task DeleteAsync(Guid id, CancellationToken ct = default);
     Task DeleteByMangaIdAsync(Guid mangaId, CancellationToken ct = default);
+    Task UpdateMangaInfoAsync(Guid mangaId, string newTitle, string? newImageUrl, CancellationToken ct = default);
 }
 
 public interface IUserProgressionRepository

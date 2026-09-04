@@ -217,5 +217,67 @@ public class MangaAggregateTests
         manga.LocalImageUrl.Should().Be(newLocalImageUrl);
         manga.ThumbnailSize.Should().Be(newSize);
     }
+
+    [Fact]
+    public void UpdateTitleAndFileRoutes_ShouldUpdateTitle_PreserveOldTitleInSynonyms_AndMigrateAllFileRoutes()
+    {
+        // Arrange
+        var manga = Manga.Create("Solo Leveling", "Chugong", "Manhwa", "Komiku");
+        manga.UpdateThumbnail("https://example.com/sl.jpg", "Solo Leveling/thumbnail.webp", 12345);
+
+        var chapter = new Chapter(
+            ChapterId.New(),
+            1.0,
+            "https://example.com/ch1",
+            "Komiku",
+            null,
+            "en",
+            100,
+            DateTime.UtcNow,
+            new List<Page>
+            {
+                new(Guid.NewGuid(), "https://example.com/p1.jpg", "Solo Leveling/1/1.webp", 1000, 800, 1200),
+                new(Guid.NewGuid(), "https://example.com/p2.jpg", "Solo Leveling/1/2.webp", 2000, 800, 1200)
+            });
+        manga.AddChapter(chapter);
+
+        // Act
+        manga.UpdateTitleAndFileRoutes("Only I Level Up", "Only I Level Up", "Solo Leveling");
+
+        // Assert
+        manga.Title.Should().Be("Only I Level Up");
+        manga.Synonyms.Should().Contain("Solo Leveling");
+        manga.LocalImageUrl.Should().Be("Only I Level Up/thumbnail.webp");
+        manga.Chapters[0].Pages[0].LocalImageUrl.Should().Be("Only I Level Up/1/1.webp");
+        manga.Chapters[0].Pages[1].LocalImageUrl.Should().Be("Only I Level Up/1/2.webp");
+    }
+
+    [Fact]
+    public void UpdateTitleAndFileRoutes_WhenOldTitleAlreadyInSynonyms_ShouldNotDuplicateSynonym()
+    {
+        // Arrange
+        var manga = Manga.Create("Naruto", "Kishimoto", "Manga", "Komiku", synonyms: new List<string> { "Naruto" });
+
+        // Act
+        manga.UpdateTitleAndFileRoutes("Naruto Shippuden", "Naruto Shippuden", "Naruto");
+
+        // Assert
+        manga.Title.Should().Be("Naruto Shippuden");
+        manga.Synonyms.Count(s => s.Equals("Naruto", StringComparison.OrdinalIgnoreCase)).Should().Be(1);
+    }
+
+    [Fact]
+    public void UpdateTitleOnly_ShouldUpdateTitle_AndPreserveOldTitleInSynonyms()
+    {
+        // Arrange
+        var manga = Manga.Create("One Piece!", "Oda", "Manga", "Komiku");
+
+        // Act
+        manga.UpdateTitleOnly("One Piece?");
+
+        // Assert
+        manga.Title.Should().Be("One Piece?");
+        manga.Synonyms.Should().Contain("One Piece!");
+    }
 }
 

@@ -91,6 +91,11 @@ public class Page
     {
         IsFallback = isFallback;
     }
+
+    public void UpdateLocalImageUrl(string localImageUrl)
+    {
+        LocalImageUrl = localImageUrl;
+    }
 }
 
 public class Manga : Entity<MangaId>
@@ -422,6 +427,64 @@ public class Manga : Entity<MangaId>
         LocalImageUrl = localImageUrl;
         ThumbnailSize = size;
         UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void UpdateTitleAndFileRoutes(string newTitle, string newCleanTitle, string oldCleanTitle)
+    {
+        var oldTitle = Title;
+        Title = Guard.NotNullOrWhiteSpace(newTitle, nameof(newTitle));
+
+        if (!string.IsNullOrWhiteSpace(oldTitle) && !Synonyms.Any(s => string.Equals(s, oldTitle, StringComparison.OrdinalIgnoreCase)))
+        {
+            Synonyms.Add(oldTitle);
+        }
+
+        if (!string.IsNullOrEmpty(LocalImageUrl))
+        {
+            LocalImageUrl = MigrateRelativePath(LocalImageUrl, oldCleanTitle, newCleanTitle);
+        }
+
+        foreach (var chapter in Chapters)
+        {
+            foreach (var page in chapter.Pages)
+            {
+                if (!string.IsNullOrEmpty(page.LocalImageUrl))
+                {
+                    page.UpdateLocalImageUrl(MigrateRelativePath(page.LocalImageUrl, oldCleanTitle, newCleanTitle));
+                }
+            }
+        }
+
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void UpdateTitleOnly(string newTitle)
+    {
+        var oldTitle = Title;
+        Title = Guard.NotNullOrWhiteSpace(newTitle, nameof(newTitle));
+
+        if (!string.IsNullOrWhiteSpace(oldTitle) && !Synonyms.Any(s => string.Equals(s, oldTitle, StringComparison.OrdinalIgnoreCase)))
+        {
+            Synonyms.Add(oldTitle);
+        }
+
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    private static string MigrateRelativePath(string currentPath, string oldCleanTitle, string newCleanTitle)
+    {
+        if (string.IsNullOrEmpty(currentPath)) return currentPath;
+
+        var normalized = currentPath.Replace('\\', '/');
+        if (normalized.StartsWith(oldCleanTitle + "/", StringComparison.OrdinalIgnoreCase))
+        {
+            return newCleanTitle + normalized[oldCleanTitle.Length..];
+        }
+        if (normalized.StartsWith("/" + oldCleanTitle + "/", StringComparison.OrdinalIgnoreCase))
+        {
+            return "/" + newCleanTitle + normalized[(oldCleanTitle.Length + 1)..];
+        }
+        return normalized;
     }
 }
 
