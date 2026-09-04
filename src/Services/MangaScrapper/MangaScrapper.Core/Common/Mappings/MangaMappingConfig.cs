@@ -101,6 +101,9 @@ public sealed class MangaMappingConfig : IRegister
         // ── Persistence BSON Document Mappings ─────────────────────────────
         config.NewConfig<MangaDocument, Manga>()
             .Map(dest => dest.Id, src => MangaId.From(src.Id))
+            .Map(dest => dest.Synonyms, src => src.Synonyms ?? new List<string>())
+            .Map(dest => dest.Genres, src => src.Genres ?? new List<string>())
+            .Map(dest => dest.Categories, src => src.Categories ?? new List<string>())
             .ConstructUsing(doc => Manga.Reconstitute(
                 MangaId.From(doc.Id),
                 doc.Title,

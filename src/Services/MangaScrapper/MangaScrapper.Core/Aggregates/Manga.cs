@@ -15,7 +15,12 @@ public class Chapter
     public string Language { get; private set; }
     public int TotalView { get; private set; }
     public DateTime UploadDate { get; private set; }
-    public List<Page> Pages { get; private set; }
+    private List<Page> _pages = [];
+    public List<Page> Pages
+    {
+        get => _pages ??= [];
+        private set => _pages = value ?? [];
+    }
 
     public bool HasBrokenPages => Pages.Any(p => p.IsFallback);
     public int BrokenPageCount => Pages.Count(p => p.IsFallback);
@@ -104,14 +109,29 @@ public class Manga : Entity<MangaId>
     public int? AnilistId { get; private set; }
     public long? MangaUpdateId { get; private set; }
     public string Title { get; private set; }
-    public List<string> Synonyms { get; private set; } = [];
+    private List<string> _synonyms = [];
+    public List<string> Synonyms
+    {
+        get => _synonyms ??= [];
+        private set => _synonyms = value ?? [];
+    }
     public string Author { get; private set; }
     public string Type { get; private set; }
     public double? Rating { get; private set; }
     public int Popularity { get; private set; }
     public int Members { get; private set; }
-    public List<string> Genres { get; private set; } = [];
-    public List<string> Categories { get; private set; } = [];
+    private List<string> _genres = [];
+    public List<string> Genres
+    {
+        get => _genres ??= [];
+        private set => _genres = value ?? [];
+    }
+    private List<string> _categories = [];
+    public List<string> Categories
+    {
+        get => _categories ??= [];
+        private set => _categories = value ?? [];
+    }
     public string? Description { get; private set; }
     public string? ImageUrl { get; private set; }
     public string? LocalImageUrl { get; private set; }
@@ -123,7 +143,12 @@ public class Manga : Entity<MangaId>
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
     public string? Url { get; private set; }
-    public List<Chapter> Chapters { get; private set; } = [];
+    private List<Chapter> _chapters = [];
+    public List<Chapter> Chapters
+    {
+        get => _chapters ??= [];
+        private set => _chapters = value ?? [];
+    }
 
     private Manga(
         MangaId id,

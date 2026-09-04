@@ -156,4 +156,38 @@ public class UpdateMangaTests : IDisposable
         result.Error.Code.Should().Be("Manga.DirectoryConflict");
         mangaRepo.Verify(r => r.UpdateAsync(It.IsAny<Manga>(), It.IsAny<CancellationToken>()), Times.Never);
     }
+
+    [Fact]
+    public async Task Handle_WhenCommandSynonymsIsNull_ShouldUpdateTitleSuccessfully()
+    {
+        var manga = Manga.Create("Old Manga Title", "Author", "Manga", "Komiku");
+        var mangaId = manga.Id.Value;
+
+        var mangaRepo = new Mock<IMangaRepository>();
+        mangaRepo.Setup(r => r.GetByIdAsync(manga.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(manga);
+
+        var externalRepo = new Mock<IMangaExternalRepository>();
+        var settings = new Mock<IScrapperSettingsProvider>();
+        settings.SetupGet(s => s.ImageStoragePath).Returns(_tempStorageDir);
+
+        var userLibRepo = new Mock<IUserLibraryRepository>();
+        var logger = new Mock<ILogger<UpdateMangaCommandHandler>>();
+
+        var handler = new UpdateMangaCommandHandler(
+            mangaRepo.Object, externalRepo.Object, settings.Object, userLibRepo.Object, logger.Object);
+
+        var command = new UpdateMangaCommand(
+            mangaId, 0, null, null, "Author", "Manga", null, new List<string>(), new List<string>(),
+            null, null, null, false, null, 0, 0, 0, "New Manga Title");
+
+        // Act
+        var result = await handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        manga.Title.Should().Be("New Manga Title");
+        manga.Synonyms.Should().Contain("Old Manga Title");
+    }
 }
+

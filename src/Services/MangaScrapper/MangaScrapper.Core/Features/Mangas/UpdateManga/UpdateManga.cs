@@ -50,7 +50,7 @@ public sealed class UpdateMangaCommandHandler(
         if (manga is null)
             return Error.NotFound("Manga.NotFound", $"Manga with Id '{command.Id}' was not found.");
 
-        var synonyms = command.Synonyms != null ? new List<string>(command.Synonyms) : manga.Synonyms;
+        var synonyms = command.Synonyms != null ? new List<string>(command.Synonyms) : new List<string>(manga.Synonyms ?? []);
 
         if (!string.IsNullOrWhiteSpace(command.Title) && command.Title != manga.Title)
         {
