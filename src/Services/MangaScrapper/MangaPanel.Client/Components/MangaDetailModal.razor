@@ -72,7 +72,7 @@
                             <!-- Quick Info -->
                             <div class="flex-grow min-w-0 w-full space-y-2.5 sm:space-y-3">
                                 <!-- Stats Row -->
-                                <div class="flex flex-wrap gap-1.5 sm:gap-2">
+                                <div class="flex flex-wrap gap-1.5 sm:gap-2 items-center">
                                     @if (!string.IsNullOrEmpty(Manga.Type))
                                     {
                                         <span class="px-2 sm:px-2.5 py-0.5 sm:py-1 bg-primary/10 text-primary text-[9px] sm:text-[10px] font-bold rounded-lg uppercase">@Manga.Type</span>
@@ -91,6 +91,32 @@
                                     @if (Chapters.Count > 0)
                                     {
                                         <span class="px-2 sm:px-2.5 py-0.5 sm:py-1 bg-slate-500/10 text-slate-500 text-[9px] sm:text-[10px] font-bold rounded-lg">@Chapters.Count chapters</span>
+                                    }
+
+                                    @* Metadata Hotlink Badges *@
+                                    @if (Manga.MalId > 0)
+                                    {
+                                        <a href="https://myanimelist.net/manga/@Manga.MalId" target="_blank" rel="noopener noreferrer" title="View on MyAnimeList" class="px-2 sm:px-2.5 py-0.5 sm:py-1 bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/20 rounded-lg text-[9px] sm:text-[10px] font-bold flex items-center gap-1 transition-all shadow-sm group">
+                                            <span class="font-black text-blue-500">MAL</span>
+                                            <span>#@Manga.MalId</span>
+                                            <svg class="w-2.5 h-2.5 opacity-60 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                                        </a>
+                                    }
+                                    @if (Manga.AnilistId.HasValue && Manga.AnilistId > 0)
+                                    {
+                                        <a href="https://anilist.co/manga/@Manga.AnilistId" target="_blank" rel="noopener noreferrer" title="View on AniList" class="px-2 sm:px-2.5 py-0.5 sm:py-1 bg-teal-500/10 hover:bg-teal-500/20 text-teal-600 dark:text-teal-400 border border-teal-500/20 rounded-lg text-[9px] sm:text-[10px] font-bold flex items-center gap-1 transition-all shadow-sm group">
+                                            <span class="font-black text-teal-500">AL</span>
+                                            <span>#@Manga.AnilistId</span>
+                                            <svg class="w-2.5 h-2.5 opacity-60 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                                        </a>
+                                    }
+                                    @if (Manga.MangaUpdateId.HasValue && Manga.MangaUpdateId > 0)
+                                    {
+                                        <a href="https://www.mangaupdates.com/series.html?id=@Manga.MangaUpdateId" target="_blank" rel="noopener noreferrer" title="View on MangaUpdates" class="px-2 sm:px-2.5 py-0.5 sm:py-1 bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-400 border border-purple-500/20 rounded-lg text-[9px] sm:text-[10px] font-bold flex items-center gap-1 transition-all shadow-sm group">
+                                            <span class="font-black text-purple-500">MU</span>
+                                            <span>#@Manga.MangaUpdateId</span>
+                                            <svg class="w-2.5 h-2.5 opacity-60 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                                        </a>
                                     }
                                 </div>
 
@@ -127,11 +153,6 @@
                                     {
                                         <span class="text-slate-400">•</span>
                                         <span class="text-slate-500">Thumbnail: @FormatFileSize(Manga.ThumbnailSize)</span>
-                                    }
-                                    @if (Manga.MalId > 0)
-                                    {
-                                        <span class="text-slate-400">•</span>
-                                        <span class="text-slate-500">MAL #@Manga.MalId</span>
                                     }
                                 </div>
 
@@ -194,7 +215,16 @@
 
                                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-5">
                                         <div class="space-y-1 sm:space-y-1.5">
-                                            <label class="text-[11px] sm:text-xs font-bold text-slate-600 dark:text-slate-400 ml-1">MAL ID</label>
+                                            <div class="flex items-center justify-between">
+                                                <label class="text-[11px] sm:text-xs font-bold text-slate-600 dark:text-slate-400 ml-1">MAL ID</label>
+                                                @if (EditModel.MalId > 0)
+                                                {
+                                                    <a href="https://myanimelist.net/manga/@EditModel.MalId" target="_blank" rel="noopener noreferrer" class="text-[10px] text-blue-500 hover:underline flex items-center gap-0.5 mr-1 font-semibold" title="Open MyAnimeList">
+                                                        <span>View MAL</span>
+                                                        <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                                                    </a>
+                                                }
+                                            </div>
                                             <div class="flex gap-2">
                                                 <input type="number" @bind="EditModel.MalId" class="flex-grow px-3.5 sm:px-4 py-2 sm:py-2.5 bg-bg-app border border-border-main rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-400 text-xs sm:text-sm text-text-main" placeholder="e.g. 123456" />
                                                 <button @onclick="OpenJikanSearch" class="p-2 sm:p-2.5 bg-primary/10 text-primary hover:bg-primary/20 rounded-xl transition-all flex-shrink-0" title="Search MyAnimeList">
@@ -203,7 +233,16 @@
                                             </div>
                                         </div>
                                         <div class="space-y-1 sm:space-y-1.5">
-                                            <label class="text-[11px] sm:text-xs font-bold text-slate-600 dark:text-slate-400 ml-1">Anilist ID</label>
+                                            <div class="flex items-center justify-between">
+                                                <label class="text-[11px] sm:text-xs font-bold text-slate-600 dark:text-slate-400 ml-1">Anilist ID</label>
+                                                @if (EditModel.AnilistId.HasValue && EditModel.AnilistId > 0)
+                                                {
+                                                    <a href="https://anilist.co/manga/@EditModel.AnilistId" target="_blank" rel="noopener noreferrer" class="text-[10px] text-teal-500 hover:underline flex items-center gap-0.5 mr-1 font-semibold" title="Open AniList">
+                                                        <span>View AL</span>
+                                                        <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                                                    </a>
+                                                }
+                                            </div>
                                             <div class="flex gap-2">
                                                 <input type="number" @bind="EditModel.AnilistId" class="flex-grow px-3.5 sm:px-4 py-2 sm:py-2.5 bg-bg-app border border-border-main rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-400 text-xs sm:text-sm text-text-main" placeholder="e.g. 98396" />
                                                 <button @onclick="OpenAnilistSearch" class="p-2 sm:p-2.5 bg-teal-500/10 text-teal-600 hover:bg-teal-500/20 rounded-xl transition-all flex-shrink-0" title="Search Anilist">
@@ -212,7 +251,16 @@
                                             </div>
                                         </div>
                                         <div class="space-y-1 sm:space-y-1.5">
-                                            <label class="text-[11px] sm:text-xs font-bold text-slate-600 dark:text-slate-400 ml-1">MangaUpdates ID</label>
+                                            <div class="flex items-center justify-between">
+                                                <label class="text-[11px] sm:text-xs font-bold text-slate-600 dark:text-slate-400 ml-1">MangaUpdates ID</label>
+                                                @if (EditModel.MangaUpdateId.HasValue && EditModel.MangaUpdateId > 0)
+                                                {
+                                                    <a href="https://www.mangaupdates.com/series.html?id=@EditModel.MangaUpdateId" target="_blank" rel="noopener noreferrer" class="text-[10px] text-purple-500 hover:underline flex items-center gap-0.5 mr-1 font-semibold" title="Open MangaUpdates">
+                                                        <span>View MU</span>
+                                                        <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                                                    </a>
+                                                }
+                                            </div>
                                             <div class="flex gap-2">
                                                 <input type="number" @bind="EditModel.MangaUpdateId" class="flex-grow px-3.5 sm:px-4 py-2 sm:py-2.5 bg-bg-app border border-border-main rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-400 text-xs sm:text-sm text-text-main" placeholder="e.g. 1234" />
                                                 <button @onclick="OpenMangaUpdatesSearch" class="p-2 sm:p-2.5 bg-purple-500/10 text-purple-600 hover:bg-purple-500/20 rounded-xl transition-all flex-shrink-0" title="Search MangaUpdates">
