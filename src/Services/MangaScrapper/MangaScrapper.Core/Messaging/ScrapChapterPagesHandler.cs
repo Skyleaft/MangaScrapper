@@ -78,7 +78,7 @@ public sealed class ScrapChapterPagesHandler(
                 };
             }
 
-            var processedChapter = await scrapper.GetChapterPage(evt.MangaTitle, chapter, ct, onProgress);
+            var processedChapter = await scrapper.GetChapterPage(manga.Title, chapter, ct, onProgress);
 
             if (processedChapter.Pages is not { Count: > 0 })
             {
