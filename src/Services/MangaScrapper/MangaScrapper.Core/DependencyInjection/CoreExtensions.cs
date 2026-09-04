@@ -19,6 +19,7 @@ using MangaScrapper.Core.Scrapers.Komiku;
 using MangaScrapper.Core.Scrapers.Komiktap;
 using MangaScrapper.Core.Scrapers.Manhwadesu;
 using MangaScrapper.Core.Scrapers.MangaDex;
+using MangaScrapper.Core.Scrapers.Softkomik;
 using MangaScrapper.Core.Security;
 using MangaScrapper.Core.Services;
 using MediatR;
@@ -195,6 +196,7 @@ public static class CoreExtensions
         services.AddHttpClient<KomiktapService>();
         services.AddHttpClient<ManhwadesuService>();
         services.AddHttpClient<DoujinDesuService>();
+        services.AddHttpClient<SoftkomikService>();
 
         services.AddScoped<KomikuService>();
         services.AddScoped<KiryuuService>();
@@ -203,6 +205,7 @@ public static class CoreExtensions
         services.AddScoped<KomiktapService>();
         services.AddScoped<ManhwadesuService>();
         services.AddScoped<DoujinDesuService>();
+        services.AddScoped<SoftkomikService>();
 
         services.AddKeyedScoped<IScrapperService, KomikuService>("komiku");
         services.AddKeyedScoped<IScrapperService, KiryuuService>("kiryuu");
@@ -211,6 +214,7 @@ public static class CoreExtensions
         services.AddKeyedScoped<IScrapperService, KomiktapService>("komiktap");
         services.AddKeyedScoped<IScrapperService, ManhwadesuService>("manhwadesu");
         services.AddKeyedScoped<IScrapperService, DoujinDesuService>("doujindesu");
+        services.AddKeyedScoped<IScrapperService, SoftkomikService>("softkomik");
 
         services.AddKeyedScoped<IProviderScrapperService, KomikuService>("komiku");
         services.AddKeyedScoped<IProviderScrapperService, KiryuuService>("kiryuu");
@@ -219,6 +223,7 @@ public static class CoreExtensions
         services.AddKeyedScoped<IProviderScrapperService, KomiktapService>("komiktap");
         services.AddKeyedScoped<IProviderScrapperService, ManhwadesuService>("manhwadesu");
         services.AddKeyedScoped<IProviderScrapperService, DoujinDesuService>("doujindesu");
+        services.AddKeyedScoped<IProviderScrapperService, SoftkomikService>("softkomik");
 
         services.AddScoped<IScrapperQueueService, ScrapperQueueService>();
 

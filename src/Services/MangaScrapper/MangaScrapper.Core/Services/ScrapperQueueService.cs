@@ -35,6 +35,7 @@ public sealed class ScrapperQueueService : IScrapperQueueService
             "komiktap"   => "komiktap",
             "manhwadesu" => "manhwadesu",
             "doujindesu" => "doujindesu",
+            "softkomik"  => "softkomik",
             _            => null
         };
 
