@@ -226,9 +226,12 @@ public static class CoreExtensions
         services.AddKeyedScoped<IProviderScrapperService, SoftkomikService>("softkomik");
 
         services.AddScoped<IScrapperQueueService, ScrapperQueueService>();
+        services.AddSingleton<IScrapingCancellationManager, ScrapingCancellationManager>();
+        services.AddSingleton<IScrapingProcessTracker, ScrapingProcessTracker>();
 
         return services;
     }
+
 
     private static IServiceCollection AddHangfireWithMongo(
         this IServiceCollection services,
@@ -293,6 +296,7 @@ public static class CoreExtensions
         services.AddScoped<ScrapMangaHandler>();
         services.AddScoped<ChapterPagesScrapedSignalRHandler>();
         services.AddScoped<ChapterScrapingProgressSignalRHandler>();
+        services.AddScoped<CancelScrapingHandler>();
 
         if (includeWorkerConsumer)
         {
@@ -301,9 +305,13 @@ public static class CoreExtensions
 
             services.AddRabbitMqConsumer<ScrapChapterPagesIntegrationEvent, ScrapChapterPagesHandler>(
                 "scrape-chapter-pages");
+
+            services.AddRabbitMqConsumer<CancelScrapingIntegrationEvent, CancelScrapingHandler>(
+                "cancel-scraping");
                 
             services.AddRabbitMqConsumer<DeleteMangaIntegrationEvent, DeleteMangaHandler>(
                 "delete-manga");
+
                 
             services.AddRabbitMqConsumer<DeleteChapterIntegrationEvent, DeleteChapterHandler>(
                 "delete-chapter");

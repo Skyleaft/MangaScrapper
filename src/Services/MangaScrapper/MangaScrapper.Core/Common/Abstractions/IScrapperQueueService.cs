@@ -12,4 +12,11 @@ public interface IScrapperQueueService
 
     /// <summary>Returns enqueued + processing jobs as simple tuples (id, jobName, state).</summary>
     Task<List<(string Id, string JobName, string State)>> GetQueuedJobsAsync();
+
+    /// <summary>Purges all ready messages from the chapter scraping queue in RabbitMQ.</summary>
+    Task<int> PurgeQueueAsync(CancellationToken ct = default);
+
+    /// <summary>Cancels active and/or queued scraping processes.</summary>
+    Task CancelScrapingAsync(Guid? mangaId = null, Guid? chapterId = null, bool cancelAll = false, CancellationToken ct = default);
 }
+

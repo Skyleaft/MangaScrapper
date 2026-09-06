@@ -1,3 +1,4 @@
+using MangaScrapper.Core.Common.Abstractions;
 using MangaScrapper.Core.Hubs;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
@@ -12,13 +13,16 @@ namespace MangaScrapper.Core.Messaging;
 /// </summary>
 public sealed class ChapterScrapingProgressSignalRHandler(
     IHubContext<MangaHub> hubContext,
-    ILogger<ChapterScrapingProgressSignalRHandler> logger)
+    ILogger<ChapterScrapingProgressSignalRHandler> logger,
+    IScrapingProcessTracker? processTracker = null)
     : IIntegrationEventHandler<ChapterScrapingProgressIntegrationEvent>
 {
     public async Task HandleAsync(ChapterScrapingProgressIntegrationEvent evt, CancellationToken ct = default)
     {
         try
         {
+            processTracker?.TrackProgress(evt);
+
             var payload = new
             {
                 mangaId = evt.MangaId,

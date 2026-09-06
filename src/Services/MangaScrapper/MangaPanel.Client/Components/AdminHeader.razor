@@ -1,5 +1,7 @@
 @using MangaPanel.Client.Authentication
 @using Microsoft.AspNetCore.Components.Routing
+@using Microsoft.AspNetCore.SignalR.Client
+@using System.Net.Http.Json
 @implements IDisposable
 @inject NavigationManager Navigation
 @inject HttpClient Http
@@ -22,6 +24,38 @@
     </div>
     
     <div class="flex items-center gap-3 sm:gap-4 lg:gap-6">
+        <!-- Background Processes Monitor Button -->
+        <button type="button" @onclick="OpenProcessesModal" 
+                title="View background scraping processes & queue"
+                class="relative h-9 sm:h-10 px-2.5 sm:px-3 rounded-xl bg-bg-app border border-border-main flex items-center gap-2 text-slate-500 hover:text-primary hover:border-primary transition-all shadow-sm cursor-pointer group">
+            <div class="relative flex items-center justify-center">
+                @if (_activeProcessesCount > 0)
+                {
+                    <svg class="w-4 h-4 sm:w-5 sm:h-5 text-amber-500 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                    </svg>
+                }
+                else
+                {
+                    <svg class="w-4 h-4 sm:w-5 sm:h-5 text-slate-400 group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                    </svg>
+                }
+            </div>
+            
+            <span class="text-xs font-bold hidden sm:inline text-text-main">
+                Tasks
+            </span>
+
+            @if (_activeProcessesCount > 0)
+            {
+                <span class="flex h-5 items-center justify-center px-1.5 rounded-full bg-amber-500 text-white text-[10px] font-black animate-pulse shadow-sm shadow-amber-500/30">
+                    @_activeProcessesCount
+                </span>
+            }
+        </button>
+
         <!-- Theme Toggle -->
         <button type="button" @onclick="ToggleTheme" class="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-bg-app border border-border-main flex items-center justify-center text-slate-500 hover:text-primary hover:border-primary transition-all shadow-sm cursor-pointer">
             @if (_isDarkMode)
@@ -119,7 +153,12 @@
     </aside>
 </div>
 
+<RunningProcessesModal IsOpen="_processesModalOpen" 
+                       OnClose="CloseProcessesModal" 
+                       OnActiveCountChanged="UpdateActiveProcessesCount" />
+
 @code {
+
     private List<MenuData> _menuDatas = new()
     {
         new ()
@@ -166,10 +205,63 @@
 
     private bool _isDarkMode;
     private bool _mobileMenuOpen = false;
+    private bool _processesModalOpen = false;
+    private int _activeProcessesCount = 0;
+    private HubConnection? _hubConnection;
 
     protected override void OnInitialized()
     {
         Navigation.LocationChanged += OnLocationChanged;
+        _ = LoadInitialActiveCountAsync();
+        _ = InitializeSignalRAsync();
+    }
+
+    private void OpenProcessesModal() => _processesModalOpen = true;
+    private void CloseProcessesModal() => _processesModalOpen = false;
+    private void UpdateActiveProcessesCount(int count)
+    {
+        _activeProcessesCount = count;
+        StateHasChanged();
+    }
+
+    private async Task LoadInitialActiveCountAsync()
+    {
+        try
+        {
+            var res = await Http.GetFromJsonAsync<RunningProcessesModal.ProcessesApiResponse>("/api/v1/scrapper/processes");
+            if (res?.Data?.Processes != null)
+            {
+                _activeProcessesCount = res.Data.Processes.Count(p => p.Status is "InProgress" or "Starting" or "Queued");
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error fetching initial active count: {ex.Message}");
+        }
+    }
+
+    private async Task InitializeSignalRAsync()
+    {
+        try
+        {
+            var hubUrl = Navigation.ToAbsoluteUri("/manga-hub");
+            _hubConnection = new HubConnectionBuilder()
+                .WithUrl(hubUrl)
+                .WithAutomaticReconnect()
+                .Build();
+
+            _hubConnection.On<System.Text.Json.JsonElement>("ChapterScrapingProgress", async (_) =>
+            {
+                await LoadInitialActiveCountAsync();
+            });
+
+            await _hubConnection.StartAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"SignalR init error in AdminHeader: {ex.Message}");
+        }
     }
 
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
@@ -180,6 +272,7 @@
             StateHasChanged();
         }
     }
+
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -226,5 +319,10 @@
     public void Dispose()
     {
         Navigation.LocationChanged -= OnLocationChanged;
+        if (_hubConnection != null)
+        {
+            _ = _hubConnection.DisposeAsync();
+        }
     }
 }
+

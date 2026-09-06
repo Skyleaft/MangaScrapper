@@ -203,3 +203,28 @@ public sealed record ScrapMangaIntegrationEvent : IIntegrationEvent
         LinkId = linkId;
     }
 }
+
+/// <summary>
+/// Integration event published to cancel active and/or queued chapter scraping processes.
+/// Consumed by the Scrapper.Worker via RabbitMQ.
+/// </summary>
+public sealed record CancelScrapingIntegrationEvent : IIntegrationEvent
+{
+    public Guid EventId { get; init; } = Guid.CreateVersion7();
+    public DateTime OccurredOn { get; init; } = DateTime.UtcNow;
+    public string EventType { get; init; } = nameof(CancelScrapingIntegrationEvent);
+
+    public Guid? MangaId { get; init; }
+    public Guid? ChapterId { get; init; }
+    public bool CancelAll { get; init; }
+
+    public CancelScrapingIntegrationEvent() { }
+
+    public CancelScrapingIntegrationEvent(Guid? mangaId, Guid? chapterId, bool cancelAll = false)
+    {
+        MangaId = mangaId;
+        ChapterId = chapterId;
+        CancelAll = cancelAll;
+    }
+}
+
