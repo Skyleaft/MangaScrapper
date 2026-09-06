@@ -66,6 +66,7 @@ services:
       - Messaging__RabbitMQ__Password=guest
       - Scrapper__ImageStoragePath=/app/images
       - Scrapper__MaxParallelDownloads=10
+      - Scrapper__ApiBaseUrl=http://api:8080
       - Observability__AspireDashboard__Enabled=true
       - Observability__AspireDashboard__Endpoint=http://aspire-dashboard:18889
       - Observability__UsePrometheus__Enabled=false

@@ -1,5 +1,6 @@
 using MangaScrapper.Core.Aggregates;
 using MangaScrapper.Core.Common.Abstractions;
+using MangaScrapper.Core.Hubs;
 using MangaScrapper.Core.Persistence.Documents;
 using MangaScrapper.Core.Repositories;
 using MangaScrapper.Core.Scrapers;
@@ -41,43 +42,52 @@ public sealed class ScrapChapterPagesHandler(
             if (chapter is null)
                 throw new InvalidOperationException($"Chapter '{evt.ChapterId}' not found in manga '{evt.MangaTitle}'.");
 
+            var broadcaster = scope.ServiceProvider.GetService<IScrapingProgressBroadcaster>();
             var eventBus = scope.ServiceProvider.GetService<IEventBus>();
-            if (eventBus != null)
-            {
-                await eventBus.PublishAsync(
-                    new ChapterScrapingProgressIntegrationEvent(
-                        evt.MangaId,
-                        evt.MangaTitle,
-                        chapterId,
-                        evt.ChapterNumber,
-                        downloadedPages: 0,
-                        totalPages: 0,
-                        percent: 0,
-                        status: "Starting"),
-                    "chapter-scraping-progress",
-                    ct);
-            }
 
-            Func<int, int, Task>? onProgress = null;
-            if (eventBus != null)
+            async Task ReportProgressAsync(string status, int downloaded, int total, int percent, CancellationToken token)
             {
-                onProgress = async (downloaded, total) =>
+                var payload = new ChapterScrapingProgressPayload
                 {
-                    var percent = total > 0 ? (int)Math.Round((double)downloaded / total * 100) : 0;
+                    MangaId = evt.MangaId,
+                    MangaTitle = evt.MangaTitle,
+                    ChapterId = chapterId,
+                    ChapterNumber = evt.ChapterNumber,
+                    DownloadedPages = downloaded,
+                    TotalPages = total,
+                    Percent = percent,
+                    Status = status,
+                    OccurredOn = DateTime.UtcNow
+                };
+
+                if (broadcaster != null)
+                {
+                    await broadcaster.BroadcastProgressAsync(payload, token);
+                }
+                else if (eventBus != null)
+                {
                     await eventBus.PublishAsync(
                         new ChapterScrapingProgressIntegrationEvent(
                             evt.MangaId,
                             evt.MangaTitle,
                             chapterId,
                             evt.ChapterNumber,
-                            downloadedPages: downloaded,
-                            totalPages: total,
-                            percent: percent,
-                            status: "InProgress"),
+                            downloaded,
+                            total,
+                            percent,
+                            status),
                         "chapter-scraping-progress",
-                        ct);
-                };
+                        token);
+                }
             }
+
+            await ReportProgressAsync("Starting", 0, 0, 0, ct);
+
+            Func<int, int, Task> onProgress = async (downloaded, total) =>
+            {
+                var percent = total > 0 ? (int)Math.Round((double)downloaded / total * 100) : 0;
+                await ReportProgressAsync("InProgress", downloaded, total, percent, ct);
+            };
 
             var cancellationManager = scope.ServiceProvider.GetService<IScrapingCancellationManager>();
             using var linkedCts = cancellationManager != null 
@@ -94,43 +104,29 @@ public sealed class ScrapChapterPagesHandler(
                         "No pages scraped for Manga={MangaTitle}, Chapter={ChapterNumber}. Skipping update.",
                         evt.MangaTitle, evt.ChapterNumber);
 
-                    if (eventBus != null)
-                    {
-                        await eventBus.PublishAsync(
-                            new ChapterScrapingProgressIntegrationEvent(
-                                evt.MangaId,
-                                evt.MangaTitle,
-                                chapterId,
-                                evt.ChapterNumber,
-                                downloadedPages: 0,
-                                totalPages: 0,
-                                percent: 0,
-                                status: "Failed"),
-                            "chapter-scraping-progress",
-                            ct);
-                    }
-
+                    await ReportProgressAsync("Failed", 0, 0, 0, ct);
                     return;
                 }
 
                 await repo.UpdateChapterPagesAsync(evt.MangaId, chapterId, processedChapter.Pages, ct);
 
-                if (eventBus != null)
-                {
-                    // Publish progress completed
-                    await eventBus.PublishAsync(
-                        new ChapterScrapingProgressIntegrationEvent(
-                            evt.MangaId,
-                            evt.MangaTitle,
-                            chapterId,
-                            evt.ChapterNumber,
-                            downloadedPages: processedChapter.Pages.Count,
-                            totalPages: processedChapter.Pages.Count,
-                            percent: 100,
-                            status: "Completed"),
-                        "chapter-scraping-progress",
-                        ct);
+                // Report progress completed & broadcast scraped notification
+                await ReportProgressAsync("Completed", processedChapter.Pages.Count, processedChapter.Pages.Count, 100, ct);
 
+                if (broadcaster != null)
+                {
+                    await broadcaster.BroadcastPagesScrapedAsync(new ChapterPagesScrapedPayload
+                    {
+                        MangaId = evt.MangaId,
+                        MangaTitle = evt.MangaTitle,
+                        ChapterId = chapterId,
+                        ChapterNumber = evt.ChapterNumber,
+                        PageCount = processedChapter.Pages.Count,
+                        OccurredOn = DateTime.UtcNow
+                    }, ct);
+                }
+                else if (eventBus != null)
+                {
                     var scrapedEvent = new ChapterPagesScrapedIntegrationEvent(
                         evt.MangaId,
                         evt.MangaTitle,
@@ -139,9 +135,6 @@ public sealed class ScrapChapterPagesHandler(
                         processedChapter.Pages.Count);
 
                     await eventBus.PublishAsync(scrapedEvent, "chapter-pages-scraped", ct);
-                    logger.LogInformation(
-                        "Published ChapterPagesScrapedIntegrationEvent for Manga={MangaTitle}, Chapter={ChapterNumber}",
-                        evt.MangaTitle, evt.ChapterNumber);
                 }
 
                 logger.LogInformation(
@@ -151,21 +144,7 @@ public sealed class ScrapChapterPagesHandler(
             catch (OperationCanceledException) when (linkedCts.IsCancellationRequested && !ct.IsCancellationRequested)
             {
                 logger.LogInformation("Scraping for Manga={MangaTitle}, Chapter={ChapterNumber} was cancelled by user.", evt.MangaTitle, evt.ChapterNumber);
-                if (eventBus != null)
-                {
-                    await eventBus.PublishAsync(
-                        new ChapterScrapingProgressIntegrationEvent(
-                            evt.MangaId,
-                            evt.MangaTitle,
-                            chapterId,
-                            evt.ChapterNumber,
-                            downloadedPages: 0,
-                            totalPages: 0,
-                            percent: 0,
-                            status: "Cancelled"),
-                        "chapter-scraping-progress",
-                        CancellationToken.None);
-                }
+                await ReportProgressAsync("Cancelled", 0, 0, 0, CancellationToken.None);
             }
             finally
             {

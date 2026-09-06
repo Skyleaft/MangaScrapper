@@ -1,13 +1,68 @@
+using MangaScrapper.Core.Common.Abstractions;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
+using NovaStack.Contracts.IntegrationEvents;
 
 namespace MangaScrapper.Core.Hubs;
 
 /// <summary>
 /// SignalR Hub for real-time notifications related to manga and chapter updates.
 /// </summary>
-public sealed class MangaHub(ILogger<MangaHub> logger) : Hub
+public sealed class MangaHub(
+    ILogger<MangaHub> logger,
+    IScrapingProcessTracker? processTracker = null) : Hub
 {
+    /// <summary>
+    /// Invoked directly by background workers (e.g. Scrapper.Worker) to stream scraping progress over WebSocket/SignalR,
+    /// updating the in-memory process tracker and broadcasting live to UI clients.
+    /// </summary>
+    public async Task ReportScrapingProgress(ChapterScrapingProgressPayload payload)
+    {
+        try
+        {
+            if (processTracker != null)
+            {
+                var evt = new ChapterScrapingProgressIntegrationEvent(
+                    payload.MangaId,
+                    payload.MangaTitle,
+                    payload.ChapterId,
+                    payload.ChapterNumber,
+                    payload.DownloadedPages,
+                    payload.TotalPages,
+                    payload.Percent,
+                    payload.Status)
+                {
+                    OccurredOn = payload.OccurredOn != default ? payload.OccurredOn : DateTime.UtcNow
+                };
+                processTracker.TrackProgress(evt);
+            }
+
+            var groupName = GetMangaGroupName(payload.MangaId);
+            await Clients.Group(groupName).SendAsync("ChapterScrapingProgress", payload);
+            await Clients.All.SendAsync("ChapterScrapingProgress", payload);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to broadcast ReportScrapingProgress for Manga={MangaId}, Chapter={ChapterId}", payload.MangaId, payload.ChapterId);
+        }
+    }
+
+    /// <summary>
+    /// Invoked directly by background workers when a chapter's pages have finished scraping and saved to DB.
+    /// </summary>
+    public async Task ReportChapterPagesScraped(ChapterPagesScrapedPayload payload)
+    {
+        try
+        {
+            var groupName = GetMangaGroupName(payload.MangaId);
+            await Clients.Group(groupName).SendAsync("ChaptersUpdated", payload);
+            await Clients.All.SendAsync("ChaptersUpdated", payload);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to broadcast ReportChapterPagesScraped for Manga={MangaId}, Chapter={ChapterId}", payload.MangaId, payload.ChapterId);
+        }
+    }
     /// <summary>
     /// Joins the group for a specific manga to receive localized chapter update notifications.
     /// </summary>

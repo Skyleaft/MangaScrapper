@@ -245,9 +245,10 @@
     {
         try
         {
-            var hubUrl = Navigation.ToAbsoluteUri("/manga-hub");
+            var hubUrl = Navigation.ToAbsoluteUri("/hubs/manga");
             _hubConnection = new HubConnectionBuilder()
                 .WithUrl(hubUrl)
+
                 .WithAutomaticReconnect()
                 .Build();
 

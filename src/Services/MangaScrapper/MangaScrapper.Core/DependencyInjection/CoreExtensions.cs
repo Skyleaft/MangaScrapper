@@ -50,8 +50,7 @@ public static class CoreExtensions
         this IServiceCollection services,
         IConfiguration configuration,
         bool includeHangfireServer = false,
-        bool includeRabbitMqConsumer = false,
-        bool includeSignalRConsumer = false)
+        bool includeRabbitMqConsumer = false)
     {
         var assembly = typeof(CoreExtensions).Assembly;
 
@@ -76,7 +75,7 @@ public static class CoreExtensions
             .AddExternalServices(configuration)
             .AddScraperServices(configuration)
             .AddHangfireWithMongo(configuration, includeHangfireServer)
-            .AddRabbitMqMessaging(configuration, includeRabbitMqConsumer, includeSignalRConsumer)
+            .AddRabbitMqMessaging(configuration, includeRabbitMqConsumer)
             .AddSecurityServices()
             .AddFirebaseApp(configuration);
 
@@ -228,6 +227,7 @@ public static class CoreExtensions
         services.AddScoped<IScrapperQueueService, ScrapperQueueService>();
         services.AddSingleton<IScrapingCancellationManager, ScrapingCancellationManager>();
         services.AddSingleton<IScrapingProcessTracker, ScrapingProcessTracker>();
+        services.AddSingleton<IScrapingProgressBroadcaster, WorkerSignalRBroadcaster>();
 
         return services;
     }
@@ -277,8 +277,7 @@ public static class CoreExtensions
     private static IServiceCollection AddRabbitMqMessaging(
         this IServiceCollection services,
         IConfiguration configuration,
-        bool includeWorkerConsumer,
-        bool includeSignalRConsumer)
+        bool includeWorkerConsumer)
     {
         services.Configure<MessagingOptions>(configuration.GetSection(MessagingOptions.SectionName));
 
@@ -330,15 +329,6 @@ public static class CoreExtensions
 
             services.AddRabbitMqConsumer<UpsertMangaQdrantIntegrationEvent, UpsertMangaQdrantHandler>(
                 "upsert-manga-qdrant");
-        }
-
-        if (includeSignalRConsumer)
-        {
-            services.AddRabbitMqConsumer<ChapterPagesScrapedIntegrationEvent, ChapterPagesScrapedSignalRHandler>(
-                "chapter-pages-scraped");
-                
-            services.AddRabbitMqConsumer<ChapterScrapingProgressIntegrationEvent, ChapterScrapingProgressSignalRHandler>(
-                "chapter-scraping-progress");
         }
 
         return services;

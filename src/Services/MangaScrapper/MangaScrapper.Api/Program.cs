@@ -69,9 +69,7 @@ try
         "MangaScrapper.Api");
 
     // ── Core VSA Layer (CQRS, Scrapers, Repositories, Background Jobs, Messaging) ──
-    builder.Services.AddMangaScrapperCore(
-        builder.Configuration,
-        includeSignalRConsumer: true);
+    builder.Services.AddMangaScrapperCore(builder.Configuration);
     builder.Services.AddNovaStackMappings(typeof(CoreExtensions).Assembly);
 
     // ── CORS ─────────────────────────────────────────────────────────────────
@@ -206,7 +204,9 @@ try
     app.MapScalarApiReference();
     app.MapMangaScrapperEndpoints();
     app.MapHub<MangaHub>("/hubs/manga");
+    app.MapHub<MangaHub>("/manga-hub");
     app.MapHealthChecks("/health");
+
 
     app.MapRazorComponents<App>()
         .AddInteractiveServerRenderMode()
