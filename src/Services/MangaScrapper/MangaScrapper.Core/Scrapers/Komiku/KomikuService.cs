@@ -99,18 +99,65 @@ public class KomikuService : ScrapperServiceBase
         return views;
     }
 
-    protected override Task<List<Chapter>> ExtractChaptersMetadata(CancellationToken ct = default)
+    protected override async Task<List<Chapter>> ExtractChaptersMetadata(CancellationToken ct = default)
     {
         var chapters = new List<Chapter>();
-        var chapterRows = doc.DocumentNode.SelectNodes(Provider.ChapterSelectors.Rows);
-        if (chapterRows == null) return Task.FromResult(chapters);
+        if (doc == null) return chapters;
 
-        var dViews =
-            HttpUtility.HtmlDecode(doc.DocumentNode.SelectSingleNode("//td[text()='Pembaca:']/following-sibling::td")?.InnerText.Trim() ??
-                                   string.Empty);
-        var totalMatch = Regex.Match(dViews, @"Total:\s*([\d\.]+)");
-        var totalText = totalMatch.Groups[1].Value.Replace(".", "");
-        var total = int.TryParse(totalText, out var t) ? t : 0;
+        var chapterRows = doc.DocumentNode.SelectNodes(Provider.ChapterSelectors.Rows);
+        if (chapterRows == null) return chapters;
+
+        var total = 0;
+
+        // Coba ekstrak total pembaca dari struktur baru:
+        // <div class="viewskomik" hx-get="..." ...><section class="stats-card"><div class="stats-card__total"><p class="stats-card__figure">12.427</p>...
+        var figureNode = doc.DocumentNode.SelectSingleNode("//div[contains(@class, 'stats-card__total')]//p[contains(@class, 'stats-card__figure')]")
+                         ?? doc.DocumentNode.SelectSingleNode("//p[contains(@class, 'stats-card__figure')]");
+
+        // Jika stats-card belum ada di dokumen (karena dimuat via hx-get), ambil dari URL hx-get jika ada
+        if (figureNode == null)
+        {
+            var hxGet = doc.DocumentNode.SelectSingleNode("//div[contains(@class, 'viewskomik') and @hx-get]")
+                ?.GetAttributeValue("hx-get", string.Empty);
+
+            if (!string.IsNullOrWhiteSpace(hxGet))
+            {
+                try
+                {
+                    var viewsDoc = await GetHtml(HttpUtility.HtmlDecode(hxGet), ct: ct);
+                    figureNode = viewsDoc.DocumentNode.SelectSingleNode("//div[contains(@class, 'stats-card__total')]//p[contains(@class, 'stats-card__figure')]")
+                                 ?? viewsDoc.DocumentNode.SelectSingleNode("//p[contains(@class, 'stats-card__figure')]");
+                }
+                catch
+                {
+                    // Abaikan error jika pemanggilan views eksternal gagal
+                }
+            }
+        }
+
+        if (figureNode != null)
+        {
+            var totalMatch = Regex.Match(figureNode.InnerText.Trim(), @"[\d\.]+");
+            var totalText = totalMatch.Value.Replace(".", "");
+            if (int.TryParse(totalText, out var t))
+            {
+                total = t;
+            }
+        }
+
+        // Fallback ke format lama jika tidak ditemukan
+        if (total == 0)
+        {
+            var dViews =
+                HttpUtility.HtmlDecode(doc.DocumentNode.SelectSingleNode("//td[text()='Pembaca:']/following-sibling::td")?.InnerText.Trim() ??
+                                       string.Empty);
+            var totalMatch = Regex.Match(dViews, @"Total:\s*([\d\.]+)");
+            var totalText = totalMatch.Groups[1].Value.Replace(".", "");
+            if (int.TryParse(totalText, out var t))
+            {
+                total = t;
+            }
+        }
 
         var viewsGenerated = GenerateChapterViews(total, chapterRows.Count);
         var index = chapterRows.Count - 1;
@@ -148,7 +195,7 @@ public class KomikuService : ScrapperServiceBase
                 uploadDate: uploadDate));
         }
 
-        return Task.FromResult(chapters);
+        return chapters;
     }
 
     public override async Task<List<SearchItem>> SearchManga(SearchRequest request, CancellationToken ct)
