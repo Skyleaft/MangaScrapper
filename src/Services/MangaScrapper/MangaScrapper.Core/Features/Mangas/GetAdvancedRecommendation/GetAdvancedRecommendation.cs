@@ -1,5 +1,6 @@
 using FluentValidation;
 using MangaScrapper.Core.Common.Abstractions;
+using MangaScrapper.Core.RateLimiting;
 using MangaScrapper.Core.Repositories;
 using Mapster;
 using MediatR;
@@ -56,6 +57,7 @@ public sealed class GetAdvancedRecommendationEndpoint : IEndpointDefinition
             .WithName("GetAdvancedRecommendation")
             .WithSummary("Recommend manga using positive (liked) and negative (disliked) examples via Qdrant native vector arithmetic")
             .WithTags("Manga")
+            .RequireRateLimiting(RateLimitPolicies.VectorSearch)
             .Produces<ApiResponse<List<MangaSummaryResponse>>>();
     }
 

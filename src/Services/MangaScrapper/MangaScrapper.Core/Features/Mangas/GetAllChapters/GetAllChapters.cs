@@ -1,4 +1,5 @@
 using MangaScrapper.Core.Common.Abstractions;
+using MangaScrapper.Core.RateLimiting;
 using MangaScrapper.Core.Repositories;
 using MangaScrapper.Core.ValueObjects;
 using Mapster;
@@ -36,6 +37,7 @@ public sealed class GetAllChaptersEndpoint : IEndpointDefinition
             .WithName("GetAllChapters")
             .WithSummary("Get all chapters for a manga")
             .WithTags("Manga")
+            .RequireRateLimiting(RateLimitPolicies.Default)
             .Produces<ApiResponse<List<ChapterResponse>>>();
     }
 

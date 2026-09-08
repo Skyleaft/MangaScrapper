@@ -2,6 +2,7 @@ using System.Security.Claims;
 using FluentValidation;
 using Isopoh.Cryptography.Argon2;
 using MangaScrapper.Core.Common.Abstractions;
+using MangaScrapper.Core.RateLimiting;
 using MangaScrapper.Core.Repositories;
 using MediatR;
 using Microsoft.AspNetCore.Authentication;
@@ -65,6 +66,7 @@ public sealed class LoginEndpoint : IEndpointDefinition
             .WithName("Login")
             .WithSummary("User login")
             .WithTags("Auth")
+            .RequireRateLimiting(RateLimitPolicies.Auth)
             .Produces<ApiResponse<LoginResponse>>();
     }
 

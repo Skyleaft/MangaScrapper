@@ -1,5 +1,6 @@
 using MangaScrapper.Core.Aggregates;
 using MangaScrapper.Core.Common.Abstractions;
+using MangaScrapper.Core.RateLimiting;
 using MangaScrapper.Core.Repositories;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
@@ -140,7 +141,9 @@ public sealed class FixFileEndpoints : IEndpointDefinition
 {
     public void DefineEndpoints(IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/v1/scrapper").WithTags("Scrapper");
+        var group = app.MapGroup("/api/v1/scrapper")
+            .WithTags("Scrapper")
+            .RequireRateLimiting(RateLimitPolicies.Scraping);
 
         group.MapGet("/fixfile", async (ISender sender, CancellationToken ct) =>
         {

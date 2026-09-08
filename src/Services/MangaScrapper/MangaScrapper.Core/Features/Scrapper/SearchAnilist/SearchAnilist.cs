@@ -1,4 +1,5 @@
 using MangaScrapper.Core.Common.Abstractions;
+using MangaScrapper.Core.RateLimiting;
 using Mapster;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
@@ -36,7 +37,9 @@ public sealed class SearchAnilistEndpoints : IEndpointDefinition
 {
     public void DefineEndpoints(IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/v1/scrapper").WithTags("Scrapper");
+        var group = app.MapGroup("/api/v1/scrapper")
+            .WithTags("Scrapper")
+            .RequireRateLimiting(RateLimitPolicies.Scraping);
 
         group.MapGet("/anilist/search", async (string title, ISender sender, CancellationToken ct) =>
         {

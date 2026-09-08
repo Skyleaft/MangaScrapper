@@ -3,6 +3,7 @@ using FluentValidation;
 using Isopoh.Cryptography.Argon2;
 using MangaScrapper.Core.Aggregates;
 using MangaScrapper.Core.Common.Abstractions;
+using MangaScrapper.Core.RateLimiting;
 using MangaScrapper.Core.Repositories;
 using MangaScrapper.Core.ValueObjects;
 using MediatR;
@@ -69,6 +70,7 @@ public sealed class RegisterEndpoint : IEndpointDefinition
             .WithName("Register")
             .WithSummary("Register a new user account")
             .WithTags("Auth")
+            .RequireRateLimiting(RateLimitPolicies.Auth)
             .Produces<ApiResponse<LoginResponse>>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status409Conflict)

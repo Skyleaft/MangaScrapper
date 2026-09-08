@@ -1,5 +1,6 @@
 using MangaScrapper.Core.Aggregates;
 using MangaScrapper.Core.Common.Abstractions;
+using MangaScrapper.Core.RateLimiting;
 using MangaScrapper.Core.Repositories;
 using MangaScrapper.Core.Services;
 using MangaScrapper.Core.Utils;
@@ -151,6 +152,7 @@ public sealed class UpdateMangaEndpoint : IEndpointDefinition
         app.MapPatch("/api/v1/manga/{id:guid}", HandleUpdateAsync)
             .WithName("UpdateManga")
             .RequireAuthorization(User.UserRoles.SuperUser)
+            .RequireRateLimiting(RateLimitPolicies.Default)
             .WithSummary("Update manga details")
             .WithTags("Manga")
             .Produces<ApiResponse<object>>();

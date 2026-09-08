@@ -1,5 +1,6 @@
 using MangaScrapper.Core.Aggregates;
 using MangaScrapper.Core.Common.Abstractions;
+using MangaScrapper.Core.RateLimiting;
 using MangaScrapper.Core.Repositories;
 using Mapster;
 using MediatR;
@@ -60,6 +61,7 @@ public sealed class GetPagedMangaEndpoint : IEndpointDefinition
             .WithName("GetPagedManga")
             .WithSummary("Get paged list of manga")
             .WithTags("Manga")
+            .RequireRateLimiting(RateLimitPolicies.Default)
             .Produces<ApiResponse<PagedResponse<MangaSummaryResponse>>>();
     }
 

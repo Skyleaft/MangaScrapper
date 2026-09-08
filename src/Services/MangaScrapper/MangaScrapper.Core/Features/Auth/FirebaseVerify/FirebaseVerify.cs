@@ -2,6 +2,7 @@ using System.Security.Claims;
 using FirebaseAdmin.Auth;
 using MangaScrapper.Core.Aggregates;
 using MangaScrapper.Core.Common.Abstractions;
+using MangaScrapper.Core.RateLimiting;
 using MangaScrapper.Core.Repositories;
 using MangaScrapper.Core.ValueObjects;
 using MediatR;
@@ -107,6 +108,7 @@ public sealed class FirebaseVerifyEndpoint : IEndpointDefinition
             .WithName("FirebaseVerify")
             .WithSummary("Authenticate via Firebase ID token")
             .WithTags("Auth")
+            .RequireRateLimiting(RateLimitPolicies.Auth)
             .Produces<ApiResponse<LoginResponse>>()
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status400BadRequest)

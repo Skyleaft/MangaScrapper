@@ -1,4 +1,5 @@
 using MangaScrapper.Core.Common.Abstractions;
+using MangaScrapper.Core.RateLimiting;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -47,7 +48,8 @@ public sealed class ProxyImageEndpoint : IEndpointDefinition
         app.MapGet("/api/v1/images/proxy", HandleAsync)
             .WithName("ProxyImage")
             .WithSummary("Proxy remote image requests")
-            .WithTags("Images");
+            .WithTags("Images")
+            .RequireRateLimiting(RateLimitPolicies.ImageProxy);
     }
 
     private static async Task<IResult> HandleAsync(string url, ISender sender, CancellationToken ct)

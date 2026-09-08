@@ -1,4 +1,5 @@
 using MangaScrapper.Core.Common.Abstractions;
+using MangaScrapper.Core.RateLimiting;
 using MangaScrapper.Core.Repositories;
 using MangaScrapper.Core.ValueObjects;
 using MediatR;
@@ -45,7 +46,9 @@ public sealed class ScrapChapterPagesEndpoints : IEndpointDefinition
 {
     public void DefineEndpoints(IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/v1/scrapper").WithTags("Scrapper");
+        var group = app.MapGroup("/api/v1/scrapper")
+            .WithTags("Scrapper")
+            .RequireRateLimiting(RateLimitPolicies.Scraping);
 
         group.MapGet("/manga/{mangaId:guid}/chapter-pages", async (Guid mangaId, ISender sender, CancellationToken ct) =>
         {

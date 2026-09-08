@@ -1,4 +1,5 @@
 using MangaScrapper.Core.Common.Abstractions;
+using MangaScrapper.Core.RateLimiting;
 using MangaScrapper.Core.Repositories;
 using Mapster;
 using MediatR;
@@ -37,6 +38,7 @@ public sealed class GetRecomendationQueryEndpoint : IEndpointDefinition
             .WithName("GetRecomendation")
             .WithSummary("Get manga recomendations by")
             .WithTags("Manga")
+            .RequireRateLimiting(RateLimitPolicies.VectorSearch)
             .Produces<ApiResponse<List<MangaSummaryResponse>>>();
     }
 

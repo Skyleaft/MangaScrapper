@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using MangaScrapper.Core.Aggregates;
 using MangaScrapper.Core.Common.Abstractions;
+using MangaScrapper.Core.RateLimiting;
 using MangaScrapper.Core.Repositories;
 using MangaScrapper.Core.Services;
 using MangaScrapper.Core.Utils;
@@ -229,6 +230,7 @@ public sealed class UpdateThumbnailEndpoint : IEndpointDefinition
         app.MapPatch("/api/v1/manga/{id:guid}/thumbnail", HandleUpdateThumbnailAsync)
             .WithName("UpdateMangaThumbnail")
             .RequireAuthorization(User.UserRoles.SuperUser)
+            .RequireRateLimiting(RateLimitPolicies.Default)
             .WithSummary("Update manga thumbnail from a remote URL")
             .WithTags("Manga")
             .Produces<ApiResponse<MangaSummaryResponse>>();
@@ -236,6 +238,7 @@ public sealed class UpdateThumbnailEndpoint : IEndpointDefinition
         app.MapPost("/api/v1/manga/{id:guid}/thumbnail/upload", HandleUploadThumbnailAsync)
             .WithName("UploadMangaThumbnail")
             .RequireAuthorization(User.UserRoles.SuperUser)
+            .RequireRateLimiting(RateLimitPolicies.Default)
             .WithSummary("Upload manga thumbnail file directly")
             .WithTags("Manga")
             .DisableAntiforgery()

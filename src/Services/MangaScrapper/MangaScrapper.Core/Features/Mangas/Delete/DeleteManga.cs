@@ -1,5 +1,6 @@
 using MangaScrapper.Core.Aggregates;
 using MangaScrapper.Core.Common.Abstractions;
+using MangaScrapper.Core.RateLimiting;
 using MangaScrapper.Core.Repositories;
 using MangaScrapper.Core.ValueObjects;
 using MediatR;
@@ -68,6 +69,7 @@ public sealed class DeleteMangaEndpoint : IEndpointDefinition
         app.MapDelete("/api/v1/manga/{mangaId:guid}", HandleDeleteMangaAsync)
             .WithName("DeleteManga")
             .RequireAuthorization(User.UserRoles.SuperUser)
+            .RequireRateLimiting(RateLimitPolicies.Default)
             .WithSummary("Delete a manga")
             .WithTags("Manga")
             .Produces<ApiResponse<object>>();
@@ -75,6 +77,7 @@ public sealed class DeleteMangaEndpoint : IEndpointDefinition
         app.MapDelete("/api/v1/manga/{mangaId:guid}/chapter/{chapterId:guid}", HandleDeleteChapterAsync)
             .WithName("DeleteChapter")
             .RequireAuthorization(User.UserRoles.SuperUser)
+            .RequireRateLimiting(RateLimitPolicies.Default)
             .WithSummary("Delete a manga chapter")
             .WithTags("Manga")
             .Produces<ApiResponse<object>>();

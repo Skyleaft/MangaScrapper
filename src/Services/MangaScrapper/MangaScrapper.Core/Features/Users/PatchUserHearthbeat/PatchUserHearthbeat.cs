@@ -1,4 +1,5 @@
 using MangaScrapper.Core.Common.Abstractions;
+using MangaScrapper.Core.RateLimiting;
 using MangaScrapper.Core.Repositories;
 using MangaScrapper.Core.ValueObjects;
 using MediatR;
@@ -55,6 +56,7 @@ public sealed class GetUserHearthbeatEndpoints : IEndpointDefinition
             return res.IsSuccess ? Results.Ok(ApiResponse.Ok(res.Value)) : res.Error.ToHttpResult();
         })
         .RequireAuthorization()
+        .RequireRateLimiting(RateLimitPolicies.Default)
         .WithName("PatchUserHearthbeat")
         .WithDescription("Patch user heartbeat")
         .WithTags("Users")

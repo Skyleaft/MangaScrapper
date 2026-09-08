@@ -20,6 +20,7 @@ using MangaScrapper.Core.Scrapers.Komiktap;
 using MangaScrapper.Core.Scrapers.Manhwadesu;
 using MangaScrapper.Core.Scrapers.MangaDex;
 using MangaScrapper.Core.Scrapers.Softkomik;
+using MangaScrapper.Core.RateLimiting;
 using MangaScrapper.Core.Security;
 using MangaScrapper.Core.Services;
 using MediatR;
@@ -77,7 +78,8 @@ public static class CoreExtensions
             .AddHangfireWithMongo(configuration, includeHangfireServer)
             .AddRabbitMqMessaging(configuration, includeRabbitMqConsumer)
             .AddSecurityServices()
-            .AddFirebaseApp(configuration);
+            .AddFirebaseApp(configuration)
+            .AddMangaScrapperRateLimiting(configuration);
 
         return services;
     }

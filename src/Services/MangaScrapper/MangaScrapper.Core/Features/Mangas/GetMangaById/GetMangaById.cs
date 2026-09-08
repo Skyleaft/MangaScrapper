@@ -1,4 +1,5 @@
 using MangaScrapper.Core.Common.Abstractions;
+using MangaScrapper.Core.RateLimiting;
 using MangaScrapper.Core.Repositories;
 using MangaScrapper.Core.ValueObjects;
 using Mapster;
@@ -34,6 +35,7 @@ public sealed class GetMangaByIdEndpoint : IEndpointDefinition
             .WithName("GetMangaById")
             .WithSummary("Get manga details by ID")
             .WithTags("Manga")
+            .RequireRateLimiting(RateLimitPolicies.Default)
             .Produces<ApiResponse<MangaSummaryResponse>>();
     }
 

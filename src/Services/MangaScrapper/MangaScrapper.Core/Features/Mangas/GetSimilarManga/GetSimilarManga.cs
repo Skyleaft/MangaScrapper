@@ -1,4 +1,5 @@
 using MangaScrapper.Core.Common.Abstractions;
+using MangaScrapper.Core.RateLimiting;
 using MangaScrapper.Core.Repositories;
 using MangaScrapper.Core.ValueObjects;
 using Mapster;
@@ -40,6 +41,7 @@ public sealed class GetSimilarMangaEndpoint : IEndpointDefinition
             .WithName("GetSimilarManga")
             .WithSummary("Get mangas semantically similar to a given manga using vector search")
             .WithTags("Manga")
+            .RequireRateLimiting(RateLimitPolicies.VectorSearch)
             .Produces<ApiResponse<List<MangaSummaryResponse>>>();
     }
 

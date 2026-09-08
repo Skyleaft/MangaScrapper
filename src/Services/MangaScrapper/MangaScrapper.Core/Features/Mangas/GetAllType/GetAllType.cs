@@ -1,4 +1,5 @@
 using MangaScrapper.Core.Common.Abstractions;
+using MangaScrapper.Core.RateLimiting;
 using MangaScrapper.Core.Repositories;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
@@ -27,6 +28,7 @@ public sealed class GetAllTypeEndpoint : IEndpointDefinition
             .WithName("GetAllType")
             .WithSummary("Get list of available manga types")
             .WithTags("Manga")
+            .RequireRateLimiting(RateLimitPolicies.Default)
             .Produces<ApiResponse<List<string>>>();
     }
 

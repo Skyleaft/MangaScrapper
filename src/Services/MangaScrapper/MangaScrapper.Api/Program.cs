@@ -191,6 +191,7 @@ try
     app.UseAuthentication();
     app.UseAuthorization();
     app.UseAntiforgery();
+    app.UseRateLimiter();
 
     // ── Hangfire Dashboard ───────────────────────────────────────────────────
     app.UseHangfireDashboard("/hangfire", new DashboardOptions

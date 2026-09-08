@@ -1,5 +1,6 @@
 using FluentValidation;
 using MangaScrapper.Core.Common.Abstractions;
+using MangaScrapper.Core.RateLimiting;
 using MangaScrapper.Core.Repositories;
 using Mapster;
 using MediatR;
@@ -45,6 +46,7 @@ public sealed class SemanticSearchMangaEndpoint : IEndpointDefinition
             .WithName("SemanticSearchManga")
             .WithSummary("Multilingual semantic search using vector embeddings (100+ languages including Indonesian)")
             .WithTags("Manga")
+            .RequireRateLimiting(RateLimitPolicies.SemanticSearch)
             .Produces<ApiResponse<List<MangaSummaryResponse>>>();
     }
 

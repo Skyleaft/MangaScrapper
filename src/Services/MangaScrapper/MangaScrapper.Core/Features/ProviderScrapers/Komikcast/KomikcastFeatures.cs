@@ -1,4 +1,5 @@
 using MangaScrapper.Core.Common.Abstractions;
+using MangaScrapper.Core.RateLimiting;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -46,7 +47,9 @@ public sealed class KomikcastEndpoints : IEndpointDefinition
 {
     public void DefineEndpoints(IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/v1/scrapper").WithTags("ProviderScrapers");
+        var group = app.MapGroup("/api/v1/scrapper")
+            .WithTags("ProviderScrapers")
+            .RequireRateLimiting(RateLimitPolicies.Scraping);
 
         group.MapPost("/komikcast", async (ProviderScrapMangaRequest req, ISender sender, CancellationToken ct) =>
         {

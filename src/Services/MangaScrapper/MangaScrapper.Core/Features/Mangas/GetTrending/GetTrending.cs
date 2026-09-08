@@ -1,4 +1,5 @@
 using MangaScrapper.Core.Common.Abstractions;
+using MangaScrapper.Core.RateLimiting;
 using MangaScrapper.Core.Repositories;
 using Mapster;
 using MediatR;
@@ -33,6 +34,7 @@ public sealed class GetTrendingQueryEndpoint : IEndpointDefinition
             .WithName("GetTrending")
             .WithSummary("Get Trending Manga")
             .WithTags("Manga")
+            .RequireRateLimiting(RateLimitPolicies.Default)
             .Produces<ApiResponse<PagedResponse<MangaSummaryResponse>>>();
     }
 

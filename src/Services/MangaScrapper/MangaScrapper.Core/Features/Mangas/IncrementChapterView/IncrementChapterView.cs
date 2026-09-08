@@ -1,5 +1,6 @@
 using FluentValidation;
 using MangaScrapper.Core.Common.Abstractions;
+using MangaScrapper.Core.RateLimiting;
 using MangaScrapper.Core.Repositories;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
@@ -39,7 +40,9 @@ public sealed class IncrementChapterViewEndpoints : IEndpointDefinition
 {
     public void DefineEndpoints(IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/v1/manga").WithTags("Manga");
+        var group = app.MapGroup("/api/v1/manga")
+            .WithTags("Manga")
+            .RequireRateLimiting(RateLimitPolicies.MangaView);
 
         group.MapPost("/{mangaId:guid}/chapters/{chapterId:guid}/view", async (Guid mangaId, Guid chapterId, ISender sender, CancellationToken ct) =>
         {

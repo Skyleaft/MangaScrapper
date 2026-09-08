@@ -35,6 +35,23 @@ services:
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://aspire-dashboard:18889
       - OTEL_SERVICE_NAME=prod-manga-api
       - Cors__AllowedOrigins=http://localhost:3000,http://localhost:5191
+      - RateLimiting__Enabled=true
+      - RateLimiting__Global__PermitLimit=300
+      - RateLimiting__Global__WindowSeconds=60
+      - RateLimiting__Default__PermitLimit=120
+      - RateLimiting__Default__WindowSeconds=60
+      - RateLimiting__MangaView__PermitLimit=30
+      - RateLimiting__MangaView__WindowSeconds=60
+      - RateLimiting__SemanticSearch__PermitLimit=15
+      - RateLimiting__SemanticSearch__WindowSeconds=60
+      - RateLimiting__VectorSearch__PermitLimit=30
+      - RateLimiting__VectorSearch__WindowSeconds=60
+      - RateLimiting__Auth__PermitLimit=10
+      - RateLimiting__Auth__WindowSeconds=60
+      - RateLimiting__Scraping__PermitLimit=20
+      - RateLimiting__Scraping__WindowSeconds=60
+      - RateLimiting__ImageProxy__PermitLimit=100
+      - RateLimiting__ImageProxy__WindowSeconds=60
       - TZ=Asia/Jakarta
     volumes:
       - ./images:/app/images

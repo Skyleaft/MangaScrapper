@@ -2,6 +2,7 @@ using FluentValidation;
 using MangaScrapper.Core.Aggregates;
 using MangaScrapper.Core.Common.Abstractions;
 using MangaScrapper.Core.Configuration;
+using MangaScrapper.Core.RateLimiting;
 using MangaScrapper.Core.Repositories;
 using Mapster;
 using MediatR;
@@ -122,6 +123,7 @@ public sealed class QueryPagedMangaEndpoint : IEndpointDefinition
             .WithName("QueryPagedManga")
             .WithSummary("Query paged list of manga using advanced filters and sorting")
             .WithTags("Manga")
+            .RequireRateLimiting(RateLimitPolicies.Default)
             .Produces<ApiResponse<PagedResponse<MangaSummaryResponse>>>();
     }
 
