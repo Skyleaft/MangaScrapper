@@ -433,6 +433,16 @@ public class Manga : Entity<MangaId>
         TotalView++;
     }
 
+    public bool IncrementChapterView(ChapterId chapterId)
+    {
+        var chapter = Chapters.FirstOrDefault(c => c.Id == chapterId);
+        if (chapter is null) return false;
+
+        chapter.IncrementView();
+        TotalView++;
+        return true;
+    }
+
     public void UpdateLocalImage(string localImageUrl, long size)
     {
         LocalImageUrl = localImageUrl;
