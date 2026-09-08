@@ -140,6 +140,23 @@ public class MongoMangaRepository(MangaMongoDbContext dbContext) : IMangaReposit
         await UpdateAsync(manga, ct);
     }
 
+    public async Task<bool> IncrementChapterViewAsync(Guid chapterId, Guid? mangaId = null, CancellationToken ct = default)
+    {
+        var filterBuilder = Builders<MangaDocument>.Filter;
+        var filter = mangaId.HasValue
+            ? filterBuilder.And(
+                filterBuilder.Eq(m => m.Id, mangaId.Value),
+                filterBuilder.ElemMatch(m => m.Chapters, c => c.Id == chapterId))
+            : filterBuilder.ElemMatch(m => m.Chapters, c => c.Id == chapterId);
+
+        var update = Builders<MangaDocument>.Update
+            .Inc(m => m.TotalView, 1)
+            .Inc("chapters.$.totalView", 1);
+
+        var result = await dbContext.Mangas.UpdateOneAsync(filter, update, cancellationToken: ct);
+        return result.ModifiedCount > 0;
+    }
+
     public async Task<List<string>> GetAllGenresAsync(CancellationToken ct)
     {
         var result = await dbContext.Mangas.Distinct<string>("Genres", Builders<MangaDocument>.Filter.Empty).ToListAsync(ct);

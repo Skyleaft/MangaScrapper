@@ -279,5 +279,43 @@ public class MangaAggregateTests
         manga.Title.Should().Be("One Piece?");
         manga.Synonyms.Should().Contain("One Piece!");
     }
+
+    [Fact]
+    public void IncrementChapterView_WhenChapterExists_ShouldIncrementBothChapterAndMangaView()
+    {
+        // Arrange
+        var manga = Manga.Create("One Piece", "Oda", "Manga", "Komiku");
+        var chapterId = ChapterId.New();
+        var chapter = new Chapter(chapterId, 1.0, "link", "Komiku", "icon", "id", totalView: 5, DateTime.UtcNow);
+        manga.AddChapter(chapter);
+
+        var initialMangaViews = manga.TotalView;
+        var initialUpdatedAt = manga.UpdatedAt;
+
+        // Act
+        var result = manga.IncrementChapterView(chapterId);
+
+        // Assert
+        result.Should().BeTrue();
+        manga.Chapters.First(c => c.Id == chapterId).TotalView.Should().Be(6);
+        manga.TotalView.Should().Be(initialMangaViews + 1);
+        manga.UpdatedAt.Should().Be(initialUpdatedAt);
+    }
+
+    [Fact]
+    public void IncrementChapterView_WhenChapterDoesNotExist_ShouldReturnFalseAndNotChangeViews()
+    {
+        // Arrange
+        var manga = Manga.Create("One Piece", "Oda", "Manga", "Komiku");
+        var nonExistentChapterId = ChapterId.New();
+        var initialMangaViews = manga.TotalView;
+
+        // Act
+        var result = manga.IncrementChapterView(nonExistentChapterId);
+
+        // Assert
+        result.Should().BeFalse();
+        manga.TotalView.Should().Be(initialMangaViews);
+    }
 }
 
