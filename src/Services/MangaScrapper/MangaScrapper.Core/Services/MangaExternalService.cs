@@ -80,6 +80,22 @@ public class MangaExternalService(
         return OrderMangasByScoredList(mangas, ids);
     }
 
+    public async Task<List<Manga>> GetSimilarByCategoryAsync(
+        List<string> categories,
+        string? status = null,
+        string? type = null,
+        List<string>? genres = null,
+        Guid? excludeMangaId = null,
+        int limit = 10,
+        CancellationToken ct = default)
+    {
+        var scoredList = await qdrantService.SimilarByCategoryAsync(categories, status, type, genres, excludeMangaId, limit, ct);
+        if (scoredList.Count == 0) return new List<Manga>();
+        var ids = scoredList.Select(x => x.Id).ToList();
+        var mangas = await mangaRepository.GetByIdsAsync(ids, ct);
+        return OrderMangasByScoredList(mangas, ids);
+    }
+
     public async Task<List<Manga>> GetAdvancedRecommendationAsync(
         List<Guid> likedIds,
         List<Guid> dislikedIds,

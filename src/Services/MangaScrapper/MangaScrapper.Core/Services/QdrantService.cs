@@ -512,6 +512,214 @@ public class QdrantService
             .ToList();
     }
 
+    /// <summary>
+    /// Hybrid category / trope similarity search using dense vector embeddings + BM25 sparse vectors with RRF fusion.
+    /// Supports optional payload filtering (status, type, genres) and source manga exclusion.
+    /// </summary>
+    public async Task<List<ScoredMangaResult>> SimilarByCategoryAsync(
+        IEnumerable<string> categories,
+        string? status = null,
+        string? type = null,
+        List<string>? genres = null,
+        Guid? excludeMangaId = null,
+        int limit = 10,
+        CancellationToken ct = default)
+    {
+        var cleanedCategories = ParseAndCleanCategories(categories);
+        if (cleanedCategories.Count == 0)
+        {
+            _logger.LogWarning("No valid categories provided for SimilarByCategory.");
+            return new List<ScoredMangaResult>();
+        }
+
+        var filter = BuildCategorySearchFilter(status, type, genres, excludeMangaId);
+
+        // 1. Construct dense query text emphasizing tropes & themes
+        var queryText = $"Tropes & Themes: {string.Join(", ", cleanedCategories)}";
+        var embedding = await _embeddingService.GenerateEmbeddingAsync(queryText, mode: "query", ct);
+
+        var prefetchList = new List<PrefetchQuery>();
+
+        // 2. Add Dense prefetch
+        if (embedding != null && embedding.Length == (int)_vectorSize)
+        {
+            var prefetchDense = new PrefetchQuery
+            {
+                Query = new Query { Nearest = new VectorInput(embedding) },
+                Using = DenseVectorName,
+                Limit = (ulong)(limit * 3)
+            };
+            if (filter != null) prefetchDense.Filter = filter;
+            prefetchList.Add(prefetchDense);
+        }
+
+        // 3. Add Sparse BM25 prefetch with bonus phrase terms (2.5f boost per category)
+        var querySparse = ComputeSparseVector(queryText, cleanedCategories);
+        if (querySparse.Indices.Count > 0)
+        {
+            var prefetchSparse = new PrefetchQuery
+            {
+                Query = new Query { Nearest = new VectorInput { Sparse = querySparse } },
+                Using = SparseVectorName,
+                Limit = (ulong)(limit * 3)
+            };
+            if (filter != null) prefetchSparse.Filter = filter;
+            prefetchList.Add(prefetchSparse);
+        }
+
+        if (prefetchList.Count == 0)
+        {
+            _logger.LogWarning("Failed to create any prefetch query for SimilarByCategory.");
+            return new List<ScoredMangaResult>();
+        }
+
+        // If only one prefetch exists (e.g. dense embedding failed), query that vector directly
+        if (prefetchList.Count == 1)
+        {
+            var singlePrefetch = prefetchList[0];
+            var singleResult = await _client.QueryAsync(
+                CollectionName,
+                query: singlePrefetch.Query,
+                usingVector: singlePrefetch.Using,
+                filter: filter,
+                limit: (ulong)limit,
+                cancellationToken: ct);
+
+            return singleResult
+                .Select(r => new ScoredMangaResult(Guid.Parse(r.Id.Uuid), r.Score))
+                .ToList();
+        }
+
+        // Hybrid Dense + Sparse RRF fusion query
+        var searchResult = await _client.QueryAsync(
+            CollectionName,
+            prefetch: prefetchList,
+            query: new Query { Fusion = Fusion.Rrf },
+            limit: (ulong)limit,
+            cancellationToken: ct);
+
+        return searchResult
+            .Select(r => new ScoredMangaResult(Guid.Parse(r.Id.Uuid), r.Score))
+            .ToList();
+    }
+
+    /// <summary>
+    /// Overload accepting a comma-separated string of categories (e.g. from query string or tag list).
+    /// </summary>
+    public Task<List<ScoredMangaResult>> SimilarByCategoryAsync(
+        string categories,
+        string? status = null,
+        string? type = null,
+        List<string>? genres = null,
+        Guid? excludeMangaId = null,
+        int limit = 10,
+        CancellationToken ct = default)
+    {
+        return SimilarByCategoryAsync(new[] { categories }, status, type, genres, excludeMangaId, limit, ct);
+    }
+
+    /// <summary>
+    /// Alias method matching function name 'SimilarByCategory'.
+    /// </summary>
+    public Task<List<ScoredMangaResult>> SimilarByCategory(
+        IEnumerable<string> categories,
+        string? status = null,
+        string? type = null,
+        List<string>? genres = null,
+        Guid? excludeMangaId = null,
+        int limit = 10,
+        CancellationToken ct = default)
+    {
+        return SimilarByCategoryAsync(categories, status, type, genres, excludeMangaId, limit, ct);
+    }
+
+    /// <summary>
+    /// Alias method matching function name 'SimilarByCategory' for a single comma-separated string.
+    /// </summary>
+    public Task<List<ScoredMangaResult>> SimilarByCategory(
+        string categories,
+        string? status = null,
+        string? type = null,
+        List<string>? genres = null,
+        Guid? excludeMangaId = null,
+        int limit = 10,
+        CancellationToken ct = default)
+    {
+        return SimilarByCategoryAsync(new[] { categories }, status, type, genres, excludeMangaId, limit, ct);
+    }
+
+    public static List<string> ParseAndCleanCategories(IEnumerable<string>? categories)
+    {
+        if (categories == null) return new List<string>();
+
+        return categories
+            .Where(c => !string.IsNullOrWhiteSpace(c))
+            .SelectMany(c => c.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            .Select(CleanCategory)
+            .Where(c => !string.IsNullOrWhiteSpace(c))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static Filter? BuildCategorySearchFilter(string? status, string? type, List<string>? genres, Guid? excludeMangaId)
+    {
+        var filter = new Filter();
+        bool hasCondition = false;
+
+        if (excludeMangaId.HasValue && excludeMangaId.Value != Guid.Empty)
+        {
+            filter.MustNot.Add(new Condition
+            {
+                HasId = new HasIdCondition { HasId = { (PointId)excludeMangaId.Value } }
+            });
+            hasCondition = true;
+        }
+
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            filter.Must.Add(new Condition
+            {
+                Field = new FieldCondition
+                {
+                    Key = "status",
+                    Match = new Match { Keyword = status }
+                }
+            });
+            hasCondition = true;
+        }
+
+        if (!string.IsNullOrWhiteSpace(type))
+        {
+            filter.Must.Add(new Condition
+            {
+                Field = new FieldCondition
+                {
+                    Key = "type",
+                    Match = new Match { Keyword = type }
+                }
+            });
+            hasCondition = true;
+        }
+
+        if (genres != null && genres.Any())
+        {
+            foreach (var genre in genres.Where(g => !string.IsNullOrWhiteSpace(g)))
+            {
+                filter.Must.Add(new Condition
+                {
+                    Field = new FieldCondition
+                    {
+                        Key = "genres",
+                        Match = new Match { Keyword = genre }
+                    }
+                });
+                hasCondition = true;
+            }
+        }
+
+        return hasCondition ? filter : null;
+    }
+
     // ── Private helpers ────────────────────────────────────────────────────────
 
     private float[]? ExtractDenseVector(RetrievedPoint point)
