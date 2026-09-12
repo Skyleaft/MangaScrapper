@@ -29,12 +29,9 @@ public sealed class MangaMappingConfig : IRegister
 
         config.NewConfig<Chapter, ChapterResponse>()
             .Map(dest => dest.Id, src => src.Id.Value)
-            .Map(dest => dest.Pages, src => src.Pages.Select(x => new ChapterPageResponse(
-                x.LocalImageUrl,
-                x.Width,
-                x.Height,
-                x.ImageUrl,
-                x.IsFallback)).ToList());
+            .Map(dest => dest.TotalPages, src => src.Pages.Count)
+            .Map(dest => dest.BrokenPageCount, src => src.BrokenPageCount)
+            .Ignore(dest => dest.Pages);
 
         config.NewConfig<Chapter, MeiliChapterDocument>()
             .Map(dest => dest.Id, src => src.Id.Value.ToString())

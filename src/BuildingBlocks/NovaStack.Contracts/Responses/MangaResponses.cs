@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace NovaStack.Contracts.Responses;
 
 public record MangaSummaryResponse(
@@ -38,12 +40,15 @@ public record ChapterResponse(
     Guid Id,
     double Number,
     string? Link,
-    List<ChapterPageResponse> Pages,
     string Language,
     string? ChapterProvider,
     string? ChapterProviderIcon,
     DateTime UploadDate,
-    int TotalView);
+    int TotalView,
+    int TotalPages = 0,
+    int BrokenPageCount = 0,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    List<ChapterPageResponse>? Pages = null);
 
 public record UserLibraryResponse(
     Guid Id,
