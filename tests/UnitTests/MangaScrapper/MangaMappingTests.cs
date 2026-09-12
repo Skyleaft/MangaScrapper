@@ -50,4 +50,37 @@ public class MangaMappingTests
         manga.Id.Value.Should().Be(expectedId);
         manga.Id.Value.Should().NotBe(Guid.Empty);
     }
+
+    [Fact]
+    public void Chapter_To_ChapterResponse_ShouldExcludePages_AndPopulatePageCounts()
+    {
+        // Arrange
+        var chapterId = ChapterId.New();
+        var chapter = new Chapter(
+            chapterId,
+            1.0,
+            "https://example.com",
+            "Provider",
+            "Icon",
+            "en",
+            100,
+            DateTime.UtcNow,
+            new List<Page>
+            {
+                new Page(Guid.NewGuid(), "https://img1.com", "local1.webp", 1000, 800, 1200, false),
+                new Page(Guid.NewGuid(), "https://img2.com", "local2.webp", 1000, 800, 1200, true)
+            }
+        );
+
+        // Act
+        var response = chapter.Adapt<NovaStack.Contracts.Responses.ChapterResponse>();
+
+        // Assert
+        response.Should().NotBeNull();
+        response.Id.Should().Be(chapterId.Value);
+        response.Number.Should().Be(1.0);
+        response.TotalPages.Should().Be(2);
+        response.BrokenPageCount.Should().Be(1);
+        response.Pages.Should().BeNull(); // Pages excluded for efficiency in chapter lists
+    }
 }

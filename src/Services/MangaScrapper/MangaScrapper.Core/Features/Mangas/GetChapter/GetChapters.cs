@@ -28,7 +28,15 @@ internal sealed class GetChaptersQueryHandler(IMangaRepository mangaRepository)
         if (chapter is null)
             return Error.NotFound("Chapter.NotFound", $"Chapter with Id '{query.ChapterId}' was not found.");
 
-        return chapter.Adapt<ChapterResponse>();
+        return chapter.Adapt<ChapterResponse>() with
+        {
+            Pages = chapter.Pages.Select(x => new ChapterPageResponse(
+                x.LocalImageUrl,
+                x.Width,
+                x.Height,
+                x.ImageUrl,
+                x.IsFallback)).ToList()
+        };
     }
 }
 

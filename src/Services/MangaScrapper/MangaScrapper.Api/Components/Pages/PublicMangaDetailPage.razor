@@ -409,11 +409,12 @@
                                 </div>
 
                                 <!-- Pages / Availability status badge -->
-                                @if (chapter.Pages != null && chapter.Pages.Count > 0)
+                                @if (chapter.TotalPages > 0 || (chapter.Pages != null && chapter.Pages.Count > 0))
                                 {
+                                    var pageCount = chapter.TotalPages > 0 ? chapter.TotalPages : chapter.Pages!.Count;
                                     <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[9px] sm:text-[10px] font-bold rounded-full flex-shrink-0">
                                         <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                                        @chapter.Pages.Count pgs
+                                        @pageCount pgs
                                     </span>
                                 }
                                 else
