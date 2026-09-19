@@ -71,7 +71,8 @@ public static class RateLimitingExtensions
                     path.StartsWith("/_content", StringComparison.OrdinalIgnoreCase) ||
                     path.StartsWith("/hangfire", StringComparison.OrdinalIgnoreCase) ||
                     path.StartsWith("/hubs", StringComparison.OrdinalIgnoreCase) ||
-                    path.StartsWith("/manga-hub", StringComparison.OrdinalIgnoreCase))
+                    path.StartsWith("/manga-hub", StringComparison.OrdinalIgnoreCase) ||
+                    path.StartsWith("/api/v1/scrapper/processes", StringComparison.OrdinalIgnoreCase))
                 {
                     return RateLimitPartition.GetNoLimiter("Bypass");
                 }

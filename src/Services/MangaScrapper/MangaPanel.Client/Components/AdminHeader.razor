@@ -209,6 +209,8 @@
     private int _activeProcessesCount = 0;
     private HubConnection? _hubConnection;
 
+    private readonly HashSet<Guid> _activeChapters = [];
+
     protected override void OnInitialized()
     {
         Navigation.LocationChanged += OnLocationChanged;
@@ -231,7 +233,15 @@
             var res = await Http.GetFromJsonAsync<RunningProcessesModal.ProcessesApiResponse>("/api/v1/scrapper/processes");
             if (res?.Data?.Processes != null)
             {
-                _activeProcessesCount = res.Data.Processes.Count(p => p.Status is "InProgress" or "Starting" or "Queued");
+                lock (_activeChapters)
+                {
+                    _activeChapters.Clear();
+                    foreach (var p in res.Data.Processes.Where(p => p.Status is "InProgress" or "Starting" or "Queued"))
+                    {
+                        _activeChapters.Add(p.ChapterId);
+                    }
+                    _activeProcessesCount = _activeChapters.Count;
+                }
                 await InvokeAsync(StateHasChanged);
             }
         }
@@ -248,13 +258,37 @@
             var hubUrl = Navigation.ToAbsoluteUri("/hubs/manga");
             _hubConnection = new HubConnectionBuilder()
                 .WithUrl(hubUrl)
-
                 .WithAutomaticReconnect()
                 .Build();
 
-            _hubConnection.On<System.Text.Json.JsonElement>("ChapterScrapingProgress", async (_) =>
+            _hubConnection.On<System.Text.Json.JsonElement>("ChapterScrapingProgress", async (payload) =>
             {
-                await LoadInitialActiveCountAsync();
+                try
+                {
+                    var chapterId = payload.TryGetProperty("chapterId", out var cId) && Guid.TryParse(cId.GetString(), out var cidVal) ? (Guid?)cidVal : null;
+                    if (!chapterId.HasValue) return;
+
+                    var status = payload.TryGetProperty("status", out var st) ? st.GetString() ?? "InProgress" : "InProgress";
+
+                    lock (_activeChapters)
+                    {
+                        if (status is "InProgress" or "Starting" or "Queued")
+                        {
+                            _activeChapters.Add(chapterId.Value);
+                        }
+                        else
+                        {
+                            _activeChapters.Remove(chapterId.Value);
+                        }
+                        _activeProcessesCount = _activeChapters.Count;
+                    }
+
+                    await InvokeAsync(StateHasChanged);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error processing ChapterScrapingProgress in AdminHeader: {ex.Message}");
+                }
             });
 
             await _hubConnection.StartAsync();
