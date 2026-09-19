@@ -287,6 +287,150 @@ public class KomikuService : ScrapperServiceBase
 
         return results;
     }
+
+    public static string ResolveImageUrl(string src, string? onError = null)
+    {
+        if (string.IsNullOrWhiteSpace(src)) return string.Empty;
+
+        var transformed = src.Trim();
+        if (transformed.StartsWith("//", StringComparison.OrdinalIgnoreCase))
+        {
+            transformed = "https:" + transformed;
+        }
+
+        if (!string.IsNullOrWhiteSpace(onError))
+        {
+            var replaceMatch = Regex.Match(onError, @"replace\(\s*['""]([^'""]+)['""]\s*,\s*['""]([^'""]+)['""]\s*\)");
+            if (replaceMatch.Success)
+            {
+                var oldVal = replaceMatch.Groups[1].Value;
+                var newVal = replaceMatch.Groups[2].Value;
+                transformed = transformed.Replace(oldVal, newVal);
+            }
+        }
+
+        // Komiku images on dead image*.komiku.to subdomains should fallback to img.komiku.org
+        transformed = Regex.Replace(transformed, @"image\d+\.komiku\.to", "img.komiku.org", RegexOptions.IgnoreCase);
+        return transformed;
+    }
+
+    public static bool IsChapterImage(string src)
+    {
+        if (string.IsNullOrWhiteSpace(src)) return false;
+        return !src.Contains("promosi", StringComparison.OrdinalIgnoreCase) &&
+               !src.Contains("banner", StringComparison.OrdinalIgnoreCase) &&
+               !src.Contains("iklan", StringComparison.OrdinalIgnoreCase);
+    }
+
+    public override async Task<Chapter> GetChapterPage(
+        string mangaTitle,
+        Chapter chapter,
+        CancellationToken ct = default,
+        Func<int, int, Task>? onProgress = null)
+    {
+        var url = chapter.Link;
+        if (string.IsNullOrWhiteSpace(url)) return chapter;
+        if (!url.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+            url = Provider.BaseUrl.TrimEnd('/') + "/" + url.TrimStart('/');
+
+        var chapterDoc = await GetHtml(url, ct: ct);
+        var imageNodes = chapterDoc.DocumentNode.SelectNodes(Provider.PageSelectors.Images);
+        if (imageNodes == null) return chapter;
+
+        var chapterImages = new List<(string OriginalUrl, string TransformedUrl)>();
+        foreach (var imgNode in imageNodes)
+        {
+            var src = imgNode.GetAttributeValue("src", string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(src)) continue;
+
+            if (src.StartsWith("//", StringComparison.OrdinalIgnoreCase))
+            {
+                src = "https:" + src;
+            }
+            else if (src.StartsWith("/", StringComparison.OrdinalIgnoreCase))
+            {
+                src = Provider.BaseUrl.TrimEnd('/') + src;
+            }
+
+            if (!IsChapterImage(src)) continue;
+
+            var onError = imgNode.GetAttributeValue("onerror", string.Empty);
+            var transformed = ResolveImageUrl(src, onError);
+
+            chapterImages.Add((src, transformed));
+        }
+
+        if (chapterImages.Count == 0) return chapter;
+
+        var total = chapterImages.Count;
+        var completed = 0;
+        if (onProgress != null && total > 0)
+        {
+            await onProgress(0, total);
+        }
+
+        var downloadTasks = chapterImages.Select(async (imgInfo, index) =>
+        {
+            var primaryUrl = imgInfo.TransformedUrl;
+            var fallbackUrl = imgInfo.OriginalUrl;
+
+            await Semaphore.WaitAsync(ct);
+            try
+            {
+                var result = await DownloadAndConvertToWebP(
+                    mangaTitle,
+                    chapter.Number.ToString(CultureInfo.InvariantCulture),
+                    primaryUrl,
+                    index + 1,
+                    ct);
+
+                // If primary download failed and produced a fallback broken image, try original URL if different
+                if (result.isFallback && !string.Equals(primaryUrl, fallbackUrl, StringComparison.OrdinalIgnoreCase))
+                {
+                    try
+                    {
+                        var retryResult = await DownloadAndConvertToWebP(
+                            mangaTitle,
+                            chapter.Number.ToString(CultureInfo.InvariantCulture),
+                            fallbackUrl,
+                            index + 1,
+                            ct);
+
+                        if (!retryResult.isFallback)
+                        {
+                            result = retryResult;
+                            primaryUrl = fallbackUrl;
+                        }
+                    }
+                    catch
+                    {
+                        // Keep primary result if retry also fails
+                    }
+                }
+
+                var current = Interlocked.Increment(ref completed);
+                if (onProgress != null)
+                {
+                    await onProgress(current, total);
+                }
+
+                return (Index: index, Page: new Page(Guid.CreateVersion7(), primaryUrl, result.path, result.size, result.width, result.height, result.isFallback));
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Failed to download/convert image at index {Index} for {MangaTitle} (Komiku)", index, mangaTitle);
+                throw;
+            }
+            finally
+            {
+                Semaphore.Release();
+            }
+        });
+
+        var results = await Task.WhenAll(downloadTasks);
+        chapter.AddPages(results.OrderBy(r => r.Index).Where(r => r.Page != null).Select(r => r.Page!).ToList());
+        return chapter;
+    }
 }
 
 

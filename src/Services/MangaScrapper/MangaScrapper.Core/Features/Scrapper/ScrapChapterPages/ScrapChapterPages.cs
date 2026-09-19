@@ -47,8 +47,7 @@ public sealed class ScrapChapterPagesEndpoints : IEndpointDefinition
     public void DefineEndpoints(IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/v1/scrapper")
-            .WithTags("Scrapper")
-            .RequireRateLimiting(RateLimitPolicies.Scraping);
+            .WithTags("Scrapper");
 
         group.MapGet("/manga/{mangaId:guid}/chapter-pages", async (Guid mangaId, ISender sender, CancellationToken ct) =>
         {
@@ -56,7 +55,9 @@ public sealed class ScrapChapterPagesEndpoints : IEndpointDefinition
             return res.IsSuccess
                 ? Results.Ok(ApiResponse.Ok(new { Message = $"Scraping {res.Value} jobs queued for missing chapters." }))
                 : res.Error.ToHttpResult();
-        }).WithName("ScrapChapterPages");
+        })
+        .WithName("ScrapChapterPages")
+        .RequireRateLimiting(RateLimitPolicies.Scraping);
 
         group.MapGet("/processes", async (
             IScrapingProcessTracker processTracker,
@@ -70,7 +71,9 @@ public sealed class ScrapChapterPagesEndpoints : IEndpointDefinition
                 Processes = processes,
                 QueueStats = queueStats.Select(q => new { Id = q.Id, JobName = q.JobName, State = q.State })
             }));
-        }).WithName("GetScrapingProcesses");
+        })
+        .WithName("GetScrapingProcesses")
+        .DisableRateLimiting();
 
         group.MapPost("/cancel", async (
             CancelScrapingRequest req,
