@@ -8,7 +8,8 @@ using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 using Qdrant.Client;
 using Qdrant.Client.Grpc;
-using System.Net.Http.Json;
+using System.Text.RegularExpressions;
+using Match = Qdrant.Client.Grpc.Match;
 
 namespace MangaScrapper.Core.Services;
 
@@ -17,7 +18,7 @@ namespace MangaScrapper.Core.Services;
 /// </summary>
 public record ScoredMangaResult(Guid Id, float Score);
 
-public class QdrantService
+public partial class QdrantService
 {
     private const string CollectionName = "mangas";
     public const string DenseVectorName = "dense";
@@ -29,6 +30,11 @@ public class QdrantService
     private readonly IEmbeddingService _embeddingService;
     private readonly ulong _vectorSize;
     public const ulong DefaultVectorSize = 1024;
+
+    private static readonly char[] TokenSeparators =
+    [
+        ' ', '.', ',', ':', ';', '!', '?', '-', '_', '/', '(', ')', '[', ']', '"', '\'', '\n', '\r', '\t'
+    ];
 
     public QdrantService(
         IOptions<QdrantConfig> config,
@@ -98,6 +104,40 @@ public class QdrantService
         {
             _logger.LogInformation("Qdrant collection '{CollectionName}' already exists.", CollectionName);
         }
+
+        await EnsurePayloadIndexesAsync(ct);
+    }
+
+    private async Task EnsurePayloadIndexesAsync(CancellationToken ct)
+    {
+        try
+        {
+            var info = await _client.GetCollectionInfoAsync(CollectionName, cancellationToken: ct);
+            var fieldsToIndex = new[] { "status", "type", "genres" };
+            foreach (var field in fieldsToIndex)
+            {
+                if (!info.PayloadSchema.ContainsKey(field))
+                {
+                    try
+                    {
+                        await _client.CreatePayloadIndexAsync(
+                            CollectionName,
+                            field,
+                            schemaType: PayloadSchemaType.Keyword,
+                            cancellationToken: ct);
+                        _logger.LogInformation("Created payload index for '{Field}' in Qdrant.", field);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to create payload index for '{Field}'.", field);
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to check or create payload indexes for '{CollectionName}'.", CollectionName);
+        }
     }
 
     public async Task SyncAllAsync(CancellationToken ct = default)
@@ -120,22 +160,41 @@ public class QdrantService
             .ToCursorAsync(ct);
 
         int processed = 0;
-        var batch = new List<PointStruct>();
+        const int batchUpsertThreshold = 200;
+        var batch = new List<PointStruct>(batchUpsertThreshold);
+        int maxConcurrency = Math.Max(2, Math.Min(Environment.ProcessorCount, 8));
+        using var semaphore = new SemaphoreSlim(maxConcurrency);
 
         while (await cursor.MoveNextAsync(ct))
         {
-            foreach (var doc in cursor.Current)
-            {
-                var manga = doc.Adapt<Manga>();
-                batch.Add(await MapToPointStructAsync(manga, ct));
+            var docs = cursor.Current.ToList();
+            if (docs.Count == 0) continue;
 
-                if (batch.Count >= 200)
+            var tasks = docs.Select(async doc =>
+            {
+                await semaphore.WaitAsync(ct);
+                try
                 {
-                    await _client.UpsertAsync(CollectionName, batch, cancellationToken: ct);
-                    processed += batch.Count;
-                    _logger.LogInformation("Qdrant synced {Processed} of {Total} documents.", processed, totalCount);
-                    batch.Clear();
+                    var manga = doc.Adapt<Manga>();
+                    return await MapToPointStructAsync(manga, ct);
                 }
+                finally
+                {
+                    semaphore.Release();
+                }
+            });
+
+            var pointStructs = await Task.WhenAll(tasks);
+            batch.AddRange(pointStructs);
+
+            while (batch.Count >= batchUpsertThreshold)
+            {
+                var upsertChunk = batch.Take(batchUpsertThreshold).ToList();
+                batch.RemoveRange(0, batchUpsertThreshold);
+
+                await _client.UpsertAsync(CollectionName, upsertChunk, cancellationToken: ct);
+                processed += upsertChunk.Count;
+                _logger.LogInformation("Qdrant synced {Processed} of {Total} documents.", processed, totalCount);
             }
         }
 
@@ -158,68 +217,33 @@ public class QdrantService
 
     public async Task DeleteMangaAsync(Guid id, CancellationToken ct = default)
     {
-        ulong pointId = (ulong)id.GetHashCode();
-        await _client.DeleteAsync(CollectionName, pointId, cancellationToken: ct);
+        await _client.DeleteAsync(CollectionName, (PointId)id, cancellationToken: ct);
         _logger.LogInformation("Deleted manga (ID: {Id}) from Qdrant.", id);
     }
 
     /// <summary>
-    /// History-based recommendation: computes centroid of reading history dense vectors and
-    /// returns nearest neighbors with scores, excluding already-read manga.
+    /// History-based recommendation: uses Qdrant's native recommendation engine with positive example
+    /// point IDs and returns nearest neighbors with scores, excluding already-read manga.
     /// </summary>
     public async Task<List<ScoredMangaResult>> RecommendAsync(List<Guid> readingHistoryIds, int limit = 10, CancellationToken ct = default)
     {
         if (readingHistoryIds == null || !readingHistoryIds.Any())
             return new List<ScoredMangaResult>();
 
-        var points = await _client.RetrieveAsync(
-            CollectionName,
-            readingHistoryIds.Select(id => (PointId)id).ToList(),
-            withVectors: true,
-            cancellationToken: ct);
-
-        if (points.Count == 0)
-        {
-            _logger.LogWarning("None of the provided reading history IDs were found in Qdrant.");
-            return new List<ScoredMangaResult>();
-        }
-
-        var denseVectors = points
-            .Select(ExtractDenseVector)
-            .Where(v => v != null && v.Length == (int)_vectorSize)
-            .Select(v => v!)
-            .ToList();
-
-        if (!denseVectors.Any())
-        {
-            _logger.LogWarning("No valid dense vectors found for provided IDs.");
-            return new List<ScoredMangaResult>();
-        }
-
-        // Compute centroid (Mean Vector)
-        var centroid = new float[_vectorSize];
-        foreach (var vector in denseVectors)
-        {
-            for (int i = 0; i < (int)_vectorSize; i++)
-            {
-                centroid[i] += vector[i];
-            }
-        }
-
-        for (int i = 0; i < (int)_vectorSize; i++)
-        {
-            centroid[i] /= denseVectors.Count;
-        }
+        var positives = readingHistoryIds.Select(id => (PointId)id).ToList();
 
         var filter = new Filter();
         filter.MustNot.Add(new Condition
         {
-            HasId = new HasIdCondition { HasId = { readingHistoryIds.Select(id => (PointId)id) } }
+            HasId = new HasIdCondition { HasId = { positives } }
         });
+
+        var recommend = new RecommendInput();
+        recommend.Positive.AddRange(positives.Select(p => (VectorInput)p));
 
         var searchResult = await _client.QueryAsync(
             CollectionName,
-            query: new Query { Nearest = new VectorInput(centroid) },
+            query: recommend,
             usingVector: DenseVectorName,
             filter: filter,
             limit: (ulong)limit,
@@ -267,7 +291,7 @@ public class QdrantService
         {
             new()
             {
-                Query = new Query { Nearest = new VectorInput(denseData.ToArray()) },
+                Query = new Query { Nearest = new VectorInput(denseData) },
                 Using = DenseVectorName,
                 Limit = (ulong)(limit * 2),
                 Filter = filter
@@ -435,7 +459,7 @@ public class QdrantService
         {
             new()
             {
-                Query = new Query { Nearest = new VectorInput(denseData.ToArray()) },
+                Query = new Query { Nearest = new VectorInput(denseData) },
                 Using = DenseVectorName,
                 Limit = (ulong)(limit * 2),
                 Filter = filter
@@ -735,9 +759,8 @@ public class QdrantService
             if (dense?.Data != null && dense.Data.Count > 0)
                 return dense.Data.ToArray();
 
-            var data = namedVector.Data;
-            if (data != null && data.Count > 0)
-                return data.ToArray();
+            if (namedVector.Dense?.Data != null && namedVector.Dense.Data.Count > 0)
+                return namedVector.Dense.Data.ToArray();
         }
 
         // 2. Try single default vector (fallback for legacy or un-named collections)
@@ -747,9 +770,8 @@ public class QdrantService
             if (singleDense?.Data != null && singleDense.Data.Count > 0)
                 return singleDense.Data.ToArray();
 
-            var singleData = point.Vectors.Vector.Data;
-            if (singleData != null && singleData.Count > 0)
-                return singleData.ToArray();
+            if (point.Vectors.Vector.Dense?.Data != null && point.Vectors.Vector.Dense.Data.Count > 0)
+                return point.Vectors.Vector.Dense.Data.ToArray();
         }
 
         return null;
@@ -774,14 +796,10 @@ public class QdrantService
         return null;
     }
 
-    // ── Private helpers ────────────────────────────────────────────────────────
-
     public async Task UpsertMangaDirectAsync(Manga manga, CancellationToken ct = default)
     {
         await UpsertMangaAsync(manga, ct);
     }
-
-    // ── Private helpers ────────────────────────────────────────────────────────
 
     private async Task<PointStruct> MapToPointStructAsync(Manga manga, CancellationToken ct = default)
     {
@@ -814,7 +832,7 @@ public class QdrantService
             .Take(25)
             .ToList();
 
-        var textParts = new List<string>();
+        var textParts = new List<string>(8);
 
         if (!string.IsNullOrWhiteSpace(title))
             textParts.Add($"Title: {title}");
@@ -849,15 +867,15 @@ public class QdrantService
         var namedVectors = new NamedVectors();
         if (embedding != null && embedding.Length == (int)_vectorSize)
         {
-            var denseVec = new Vector();
-            denseVec.Data.AddRange(embedding);
+            var denseVec = new Vector { Dense = new DenseVector() };
+            denseVec.Dense.Data.AddRange(embedding);
             namedVectors.Vectors[DenseVectorName] = denseVec;
         }
         else
         {
             _logger.LogWarning("Using zero dense vector for manga {Id} due to embedding failure.", manga.Id.Value);
-            var zeroVec = new Vector();
-            zeroVec.Data.AddRange(new float[_vectorSize]);
+            var zeroVec = new Vector { Dense = new DenseVector() };
+            zeroVec.Dense.Data.AddRange(new float[_vectorSize]);
             namedVectors.Vectors[DenseVectorName] = zeroVec;
         }
 
@@ -892,16 +910,86 @@ public class QdrantService
 
         var termCounts = new Dictionary<uint, float>();
 
-        void AddTerm(string term, float weight = 1.0f)
+        static uint HashTerm(ReadOnlySpan<char> term)
         {
-            if (term.Length <= 1) return;
+            if (term.Length <= 1) return 0;
             uint hash = 2166136261;
-            foreach (byte b in System.Text.Encoding.UTF8.GetBytes(term))
+            bool allAscii = true;
+            for (int i = 0; i < term.Length; i++)
             {
-                hash = (hash ^ b) * 16777619;
+                if (term[i] > 127)
+                {
+                    allAscii = false;
+                    break;
+                }
             }
-            uint index = (hash % 999999) + 1;
 
+            if (allAscii)
+            {
+                for (int i = 0; i < term.Length; i++)
+                {
+                    hash = (hash ^ (byte)term[i]) * 16777619;
+                }
+            }
+            else
+            {
+                Span<byte> utf8Bytes = stackalloc byte[Math.Min(term.Length * 3, 512)];
+                int bytesWritten = System.Text.Encoding.UTF8.GetBytes(term, utf8Bytes);
+                for (int i = 0; i < bytesWritten; i++)
+                {
+                    hash = (hash ^ utf8Bytes[i]) * 16777619;
+                }
+            }
+            return (hash % 999999) + 1;
+        }
+
+        static uint HashBigram(ReadOnlySpan<char> term1, ReadOnlySpan<char> term2)
+        {
+            uint hash = 2166136261;
+            bool allAscii = true;
+            for (int i = 0; i < term1.Length; i++)
+            {
+                if (term1[i] > 127) { allAscii = false; break; }
+            }
+            if (allAscii)
+            {
+                for (int i = 0; i < term2.Length; i++)
+                {
+                    if (term2[i] > 127) { allAscii = false; break; }
+                }
+            }
+
+            if (allAscii)
+            {
+                for (int i = 0; i < term1.Length; i++)
+                {
+                    hash = (hash ^ (byte)term1[i]) * 16777619;
+                }
+                hash = (hash ^ (byte)' ') * 16777619;
+                for (int i = 0; i < term2.Length; i++)
+                {
+                    hash = (hash ^ (byte)term2[i]) * 16777619;
+                }
+            }
+            else
+            {
+                int maxLen = (term1.Length + 1 + term2.Length) * 3;
+                Span<byte> utf8Bytes = stackalloc byte[Math.Min(maxLen, 512)];
+                int w1 = System.Text.Encoding.UTF8.GetBytes(term1, utf8Bytes);
+                utf8Bytes[w1] = (byte)' ';
+                int w2 = System.Text.Encoding.UTF8.GetBytes(term2, utf8Bytes.Slice(w1 + 1));
+                int totalBytes = w1 + 1 + w2;
+                for (int i = 0; i < totalBytes; i++)
+                {
+                    hash = (hash ^ utf8Bytes[i]) * 16777619;
+                }
+            }
+            return (hash % 999999) + 1;
+        }
+
+        void AddTermHash(uint index, float weight)
+        {
+            if (index == 0) return;
             if (termCounts.TryGetValue(index, out float count))
                 termCounts[index] = count + weight;
             else
@@ -916,33 +1004,34 @@ public class QdrantService
                 var clean = CleanCategory(phrase).ToLowerInvariant();
                 if (!string.IsNullOrWhiteSpace(clean) && clean.Length > 2)
                 {
-                    AddTerm(clean, 2.5f);
+                    AddTermHash(HashTerm(clean.AsSpan()), 2.5f);
                 }
             }
         }
 
         // 2. Tokenize text into words
         var words = text.ToLowerInvariant()
-            .Split(new[] { ' ', '.', ',', ':', ';', '!', '?', '-', '_', '/', '(', ')', '[', ']', '"', '\'', '\n', '\r', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+            .Split(TokenSeparators, StringSplitOptions.RemoveEmptyEntries);
 
         // 3. Index unigrams & bigrams
         for (int i = 0; i < words.Length; i++)
         {
             var w = words[i];
-            AddTerm(w, 1.0f);
+            AddTermHash(HashTerm(w.AsSpan()), 1.0f);
 
             if (i < words.Length - 1)
             {
-                var bigram = w + " " + words[i + 1];
-                AddTerm(bigram, 1.5f);
+                AddTermHash(HashBigram(w.AsSpan(), words[i + 1].AsSpan()), 1.5f);
             }
         }
 
         // Apply sublinear term frequency weight: 1.0 + ln(tf)
-        foreach (var kvp in termCounts.OrderBy(k => k.Key))
+        var sortedKeys = new List<uint>(termCounts.Keys);
+        sortedKeys.Sort();
+        foreach (var key in sortedKeys)
         {
-            sparse.Indices.Add(kvp.Key);
-            sparse.Values.Add((float)(1.0 + Math.Log(kvp.Value)));
+            sparse.Indices.Add(key);
+            sparse.Values.Add((float)(1.0 + Math.Log(termCounts[key])));
         }
 
         return sparse;
@@ -958,6 +1047,21 @@ public class QdrantService
                        .Trim();
     }
 
+    [GeneratedRegex(@"<[^>]+>", RegexOptions.None)]
+    private static partial Regex HtmlTagRegex();
+
+    [GeneratedRegex(@"\[/?[a-zA-Z0-9_-]+(?:=[^\]]+)?\]", RegexOptions.None)]
+    private static partial Regex BbCodeRegex();
+
+    [GeneratedRegex(@"^(?:sinopsis|synopsis|deskripsi|summary)\s*:\s*", RegexOptions.IgnoreCase)]
+    private static partial Regex ScraperPrefixRegex();
+
+    [GeneratedRegex(@"baca\s+(?:manga|manhwa|manhua|komik)[^.\n]*?(?:bahasa\s+indonesia|terlengkap|gratis)[^.\n]*[.]?", RegexOptions.IgnoreCase)]
+    private static partial Regex ScraperPromoRegex();
+
+    [GeneratedRegex(@"\s+", RegexOptions.None)]
+    private static partial Regex MultipleWhitespaceRegex();
+
     private static string CleanSynopsis(string? rawDescription)
     {
         if (string.IsNullOrWhiteSpace(rawDescription)) return string.Empty;
@@ -966,28 +1070,27 @@ public class QdrantService
         var text = System.Net.WebUtility.HtmlDecode(rawDescription);
 
         // 2. Remove HTML tags
-        text = System.Text.RegularExpressions.Regex.Replace(text, @"<[^>]+>", " ");
+        text = HtmlTagRegex().Replace(text, " ");
 
         // 3. Remove BBCode tags (e.g. [b], [/b], [url=...])
-        text = System.Text.RegularExpressions.Regex.Replace(text, @"\[/?[a-zA-Z0-9_-]+(?:=[^\]]+)?\]", " ");
+        text = BbCodeRegex().Replace(text, " ");
 
         // 4. Remove scraper prefixes and promo headers
-        text = System.Text.RegularExpressions.Regex.Replace(text, @"^(?:sinopsis|synopsis|deskripsi|summary)\s*:\s*", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        text = ScraperPrefixRegex().Replace(text, string.Empty);
 
         // 5. Remove scraper promotional boilerplate lines (e.g. "Baca komik ... bahasa indonesia di ...")
-        text = System.Text.RegularExpressions.Regex.Replace(text, @"baca\s+(?:manga|manhwa|manhua|komik)[^.\n]*?(?:bahasa\s+indonesia|terlengkap|gratis)[^.\n]*[.]?", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        text = ScraperPromoRegex().Replace(text, string.Empty);
 
         // 6. Normalize multiple whitespaces into a single space
-        text = System.Text.RegularExpressions.Regex.Replace(text, @"\s+", " ").Trim();
+        text = MultipleWhitespaceRegex().Replace(text, " ").Trim();
 
         // 7. Cap synopsis length to ~1000 characters without splitting words
         if (text.Length > 1000)
         {
             int lastSpace = text.LastIndexOf(' ', 1000);
-            text = lastSpace > 200 ? text.Substring(0, lastSpace) + "..." : text.Substring(0, 1000) + "...";
+            text = lastSpace > 200 ? string.Concat(text.AsSpan(0, lastSpace), "...") : string.Concat(text.AsSpan(0, 1000), "...");
         }
 
         return text;
     }
 }
-
