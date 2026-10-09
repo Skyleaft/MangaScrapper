@@ -24,7 +24,7 @@
     <PackageReference Include="HtmlAgilityPack" Version="1.13.0" />
     <PackageReference Include="Microsoft.Playwright" Version="1.62.0" />
     <PackageReference Include="SkiaSharp" Version="4.153.1" />
-    <PackageReference Include="FirebaseAdmin" Version="3.6.0" />
+    <PackageReference Include="FirebaseAdmin" Version="3.7.0" />
     <PackageReference Include="Google.Apis.Auth" Version="1.76.0" />
     <PackageReference Include="Isopoh.Cryptography.Argon2" Version="2.0.0" />
     <PackageReference Include="Mapster" Version="10.0.12" />
