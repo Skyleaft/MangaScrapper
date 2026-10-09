@@ -1,0 +1,29 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/BuildingBlocks/" />
+  <Folder Name="/BuildingBlocks/Contracts/">
+    <Project Path="src/BuildingBlocks/NovaStack.Contracts/NovaStack.Contracts.csproj" />
+  </Folder>
+  <Folder Name="/BuildingBlocks/Infrastructure/">
+    <Project Path="src/BuildingBlocks/NovaStack.Infrastructure/NovaStack.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/BuildingBlocks/SharedKernel/">
+    <Project Path="src/BuildingBlocks/NovaStack.SharedKernel/NovaStack.SharedKernel.csproj" />
+  </Folder>
+  <Folder Name="/Services/" />
+  <Folder Name="/Services/MangaScrapper/">
+    <Project Path="src/Services/MangaScrapper/MangaPanel.Client/MangaPanel.Client.csproj" />
+    <Project Path="src/Services/MangaScrapper/MangaScrapper.Api/MangaScrapper.Api.csproj" />
+    <Project Path="src/Services/MangaScrapper/MangaScrapper.Core/MangaScrapper.Core.csproj" />
+    <Project Path="src/Workers/Scrapper.Worker/Scrapper.Worker.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ArchitectureTests/ArchitectureTests.csproj" />
+    <Project Path="tests/IntegrationTests/IntegrationTests.csproj" />
+    <Project Path="tests/UnitTests/UnitTests.csproj" />
+  </Folder>
+</Solution>
