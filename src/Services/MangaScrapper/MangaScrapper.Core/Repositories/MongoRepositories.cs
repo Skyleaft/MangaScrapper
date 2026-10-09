@@ -149,6 +149,42 @@ public class MongoUserRepository(MangaMongoDbContext dbContext) : IUserRepositor
 
 public class MongoUserLibraryRepository(MangaMongoDbContext dbContext) : IUserLibraryRepository
 {
+    private static bool _indexesEnsured;
+    private static readonly SemaphoreSlim _indexLock = new(1, 1);
+
+    private async Task EnsureIndexesAsync(CancellationToken ct = default)
+    {
+        if (_indexesEnsured) return;
+        await _indexLock.WaitAsync(ct);
+        try
+        {
+            if (_indexesEnsured) return;
+            var keys = Builders<UserLibraryDocument>.IndexKeys;
+            var models = new[]
+            {
+                new CreateIndexModel<UserLibraryDocument>(
+                    keys.Ascending(x => x.UserId).Ascending(x => x.MangaId),
+                    new CreateIndexOptions { Name = "IX_UserLibraries_UserId_MangaId", Background = true }),
+                new CreateIndexModel<UserLibraryDocument>(
+                    keys.Ascending(x => x.UserId).Descending(x => x.UpdatedAt),
+                    new CreateIndexOptions { Name = "IX_UserLibraries_UserId_UpdatedAt", Background = true }),
+                new CreateIndexModel<UserLibraryDocument>(
+                    keys.Ascending(x => x.MangaId),
+                    new CreateIndexOptions { Name = "IX_UserLibraries_MangaId", Background = true })
+            };
+            await dbContext.UserLibraries.Indexes.CreateManyAsync(models, ct);
+            _indexesEnsured = true;
+        }
+        catch
+        {
+            // Ignore if index creation already completed
+        }
+        finally
+        {
+            _indexLock.Release();
+        }
+    }
+
     public async Task<UserLibrary?> GetByIdAsync(Guid id, CancellationToken ct = default)
     {
         var doc = await dbContext.UserLibraries.Find(l => l.Id == id).FirstOrDefaultAsync(ct);
@@ -158,6 +194,7 @@ public class MongoUserLibraryRepository(MangaMongoDbContext dbContext) : IUserLi
     public async Task<UserLibrary?> GetByUserIdAndMangaIdAsync(string userId, MangaId mangaId, CancellationToken ct = default)
     {
         if (!Guid.TryParse(userId, out var userGuid)) return null;
+        await EnsureIndexesAsync(ct);
         var doc = await dbContext.UserLibraries.Find(l => l.UserId == userGuid && l.MangaId == mangaId.Value).FirstOrDefaultAsync(ct);
         return doc is null ? null : MapToDomain(doc);
     }
@@ -314,9 +351,46 @@ public class MongoUserLibraryRepository(MangaMongoDbContext dbContext) : IUserLi
 
 public class MongoUserProgressionRepository(MangaMongoDbContext dbContext) : IUserProgressionRepository
 {
+    private static bool _indexesEnsured;
+    private static readonly SemaphoreSlim _indexLock = new(1, 1);
+
+    private async Task EnsureIndexesAsync(CancellationToken ct = default)
+    {
+        if (_indexesEnsured) return;
+        await _indexLock.WaitAsync(ct);
+        try
+        {
+            if (_indexesEnsured) return;
+            var keys = Builders<UserProgressionDocument>.IndexKeys;
+            var models = new[]
+            {
+                new CreateIndexModel<UserProgressionDocument>(
+                    keys.Ascending(x => x.UserId).Ascending(x => x.MangaId),
+                    new CreateIndexOptions { Name = "IX_UserProgressions_UserId_MangaId", Background = true }),
+                new CreateIndexModel<UserProgressionDocument>(
+                    keys.Ascending(x => x.UserId).Descending(x => x.LastReadAt),
+                    new CreateIndexOptions { Name = "IX_UserProgressions_UserId_LastReadAt", Background = true }),
+                new CreateIndexModel<UserProgressionDocument>(
+                    keys.Ascending(x => x.MangaId),
+                    new CreateIndexOptions { Name = "IX_UserProgressions_MangaId", Background = true })
+            };
+            await dbContext.UserProgressions.Indexes.CreateManyAsync(models, ct);
+            _indexesEnsured = true;
+        }
+        catch
+        {
+            // Ignore if index creation already completed or concurrently running
+        }
+        finally
+        {
+            _indexLock.Release();
+        }
+    }
+
     public async Task<UserProgression?> GetByUserIdAndMangaIdAsync(string userId, MangaId mangaId, CancellationToken ct = default)
     {
         if (!Guid.TryParse(userId, out var userGuid)) return null;
+        await EnsureIndexesAsync(ct);
         var doc = await dbContext.UserProgressions.Find(p => p.UserId == userGuid && p.MangaId == mangaId.Value).FirstOrDefaultAsync(ct);
         return doc is null ? null : MapToDomain(doc);
     }
@@ -324,12 +398,14 @@ public class MongoUserProgressionRepository(MangaMongoDbContext dbContext) : IUs
     public async Task<List<UserProgression>> GetByUserIdAsync(string userId, CancellationToken ct = default)
     {
         if (!Guid.TryParse(userId, out var userGuid)) return [];
+        await EnsureIndexesAsync(ct);
         var docs = await dbContext.UserProgressions.Find(p => p.UserId == userGuid).SortByDescending(s=>s.LastReadAt).ToListAsync(ct);
         return docs.Select(MapToDomain).ToList();
     }
 
     public async Task AddOrUpdateAsync(UserProgression userProgression, CancellationToken ct = default)
     {
+        await EnsureIndexesAsync(ct);
         var doc = MapToDocument(userProgression);
         await dbContext.UserProgressions.ReplaceOneAsync(
             p => p.UserId == doc.UserId && p.MangaId == doc.MangaId,
@@ -340,11 +416,13 @@ public class MongoUserProgressionRepository(MangaMongoDbContext dbContext) : IUs
 
     public async Task DeleteByMangaIdAsync(Guid mangaId, CancellationToken ct = default)
     {
+        await EnsureIndexesAsync(ct);
         await dbContext.UserProgressions.DeleteManyAsync(p => p.MangaId == mangaId, ct);
     }
 
     public async Task RemoveChapterLogAsync(Guid mangaId, Guid chapterId, CancellationToken ct = default)
     {
+        await EnsureIndexesAsync(ct);
         var filter = Builders<UserProgressionDocument>.Filter.Eq(p => p.MangaId, mangaId);
         var update = Builders<UserProgressionDocument>.Update.PullFilter(
             p => p.ChapterLogs,
@@ -382,7 +460,7 @@ public class MongoUserProgressionRepository(MangaMongoDbContext dbContext) : IUs
             UserId = userGuid,
             MangaId = progression.MangaId.Value,
             LastReadAt = progression.LastReadAt,
-            TotalReadingTime = progression.ChapterLogs.Sum(x=>x.ReadingTimeSeconds),
+            TotalReadingTime = progression.TotalReadingTime,
             ChapterLogs = progression.ChapterLogs.Select(cl => new ChapterLogDocument
             {
                 Id = cl.Id,

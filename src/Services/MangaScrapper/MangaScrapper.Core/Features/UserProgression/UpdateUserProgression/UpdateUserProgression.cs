@@ -41,24 +41,33 @@ internal sealed class UpdateUserProgressionCommandHandler(IUserProgressionReposi
             command.ChapterId, command.ChapterNumber, command.LastReadPage, 
             command.TotalPages, command.IsCompleted, command.ReadingTimeSeconds);
 
-        var existing = await progressionRepository.GetByUserIdAndMangaIdAsync(command.UserId, mangaId, ct);
-        if (existing is not null)
+        var progression = await progressionRepository.GetByUserIdAndMangaIdAsync(command.UserId, mangaId, ct);
+        if (progression is not null)
         {
-            existing.UpdateProgression(chapterLog);
-            await progressionRepository.AddOrUpdateAsync(existing, ct);
-            return new UserProgressionResponse(
-                existing.Id, existing.UserId, existing.MangaId.Value, existing.LastReadAt, existing.TotalReadingTime, 
-                existing.ChapterLogs.Select(cl => new ChapterLogsResponse(cl.Id, cl.ChapterId, cl.ChapterNumber, cl.LastReadPage, cl.TotalPages, cl.IsCompleted, cl.ReadingTimeSeconds, cl.LastReadAt)).ToList()
-            );
+            progression.UpdateProgression(chapterLog);
+        }
+        else
+        {
+            progression = Aggregates.UserProgression.Create(
+                command.UserId, mangaId, chapterLog.ReadingTimeSeconds, [chapterLog]);
         }
 
-        var progression = Aggregates.UserProgression.Create(command.UserId, mangaId, chapterLog.ReadingTimeSeconds, new List<Aggregates.UserProgression.ChapterLog> { chapterLog });
         await progressionRepository.AddOrUpdateAsync(progression, ct);
+        return ToResponse(progression);
+    }
+
+    private static UserProgressionResponse ToResponse(Aggregates.UserProgression p)
+    {
+        var logs = new List<ChapterLogsResponse>(p.ChapterLogs.Count);
+        foreach (var cl in p.ChapterLogs)
+        {
+            logs.Add(new ChapterLogsResponse(
+                cl.Id, cl.ChapterId, cl.ChapterNumber, cl.LastReadPage,
+                cl.TotalPages, cl.IsCompleted, cl.ReadingTimeSeconds, cl.LastReadAt));
+        }
 
         return new UserProgressionResponse(
-            progression.Id, progression.UserId, progression.MangaId.Value, progression.LastReadAt, progression.TotalReadingTime, 
-            progression.ChapterLogs.Select(cl => new ChapterLogsResponse(cl.Id, cl.ChapterId, cl.ChapterNumber, cl.LastReadPage, cl.TotalPages, cl.IsCompleted, cl.ReadingTimeSeconds, cl.LastReadAt)).ToList()
-        );
+            p.Id, p.UserId, p.MangaId.Value, p.LastReadAt, p.TotalReadingTime, logs);
     }
 }
 
