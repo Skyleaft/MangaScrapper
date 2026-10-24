@@ -1,11 +1,14 @@
 using FluentValidation;
 using MangaScrapper.Core.Common.Abstractions;
+using MangaScrapper.Core.Hubs;
 using MangaScrapper.Core.Repositories;
 using MangaScrapper.Core.ValueObjects;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Logging;
 using NovaStack.Contracts.Responses;
 using NovaStack.SharedKernel.Results;
 
@@ -19,7 +22,9 @@ public record UpdateUserProgressionCommand(
     int LastReadPage,
     int TotalPages,
     bool IsCompleted,
-    int ReadingTimeSeconds) : ICommand<UserProgressionResponse>;
+    int ReadingTimeSeconds,
+    DateTime? LastReadAt = null,
+    string? SenderDeviceId = null) : ICommand<UserProgressionResponse>;
 
 public class UpdateUserProgressionCommandValidator : AbstractValidator<UpdateUserProgressionCommand>
 {
@@ -31,15 +36,20 @@ public class UpdateUserProgressionCommandValidator : AbstractValidator<UpdateUse
     }
 }
 
-internal sealed class UpdateUserProgressionCommandHandler(IUserProgressionRepository progressionRepository)
+internal sealed class UpdateUserProgressionCommandHandler(
+    IUserProgressionRepository progressionRepository,
+    IHubContext<MangaHub> mangaHubContext,
+    ILogger<UpdateUserProgressionCommandHandler> logger)
     : ICommandHandler<UpdateUserProgressionCommand, UserProgressionResponse>
 {
     public async Task<Result<UserProgressionResponse>> Handle(UpdateUserProgressionCommand command, CancellationToken ct)
     {
         var mangaId = MangaId.From(command.MangaId);
+        var lastReadAt = command.LastReadAt ?? DateTime.UtcNow;
         var chapterLog = Aggregates.UserProgression.ChapterLog.Create(
             command.ChapterId, command.ChapterNumber, command.LastReadPage, 
-            command.TotalPages, command.IsCompleted, command.ReadingTimeSeconds);
+            command.TotalPages, command.IsCompleted, command.ReadingTimeSeconds,
+            lastReadAt);
 
         var progression = await progressionRepository.GetByUserIdAndMangaIdAsync(command.UserId, mangaId, ct);
         if (progression is not null)
@@ -49,10 +59,34 @@ internal sealed class UpdateUserProgressionCommandHandler(IUserProgressionReposi
         else
         {
             progression = Aggregates.UserProgression.Create(
-                command.UserId, mangaId, chapterLog.ReadingTimeSeconds, [chapterLog]);
+                command.UserId, mangaId, chapterLog.ReadingTimeSeconds, [chapterLog], lastReadAt);
         }
 
         await progressionRepository.AddOrUpdateAsync(progression, ct);
+
+        try
+        {
+            var userGroup = MangaHub.GetUserGroupName(command.UserId);
+            var payload = new UserProgressionUpdatedPayload(
+                command.UserId,
+                command.MangaId,
+                command.ChapterId,
+                command.ChapterNumber,
+                command.LastReadPage,
+                command.TotalPages,
+                command.IsCompleted,
+                progression.LastReadAt,
+                chapterLog.ReadingTimeSeconds,
+                command.SenderDeviceId
+            );
+
+            await mangaHubContext.Clients.Group(userGroup).SendAsync("UserProgressionUpdated", payload, ct);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to broadcast UserProgressionUpdated for User={UserId}, Manga={MangaId}", command.UserId, command.MangaId);
+        }
+
         return ToResponse(progression);
     }
 
