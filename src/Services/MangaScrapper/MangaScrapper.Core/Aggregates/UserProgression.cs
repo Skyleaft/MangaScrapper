@@ -27,10 +27,11 @@ public class UserProgression : Entity<Guid>
         ChapterLogs = chapterLogs;
     }
 
-    public static UserProgression Create(string userId, MangaId mangaId, int totalReadingTime, List<ChapterLog> chapterLogs)
+    public static UserProgression Create(string userId, MangaId mangaId, int totalReadingTime, List<ChapterLog> chapterLogs, DateTime? lastReadAt = null)
     {
         var id = Guid.CreateVersion7();
-        return new UserProgression(id, userId, mangaId, DateTime.UtcNow, totalReadingTime, chapterLogs);
+        var maxReadAt = chapterLogs.Count > 0 ? chapterLogs.Max(l => l.LastReadAt) : (lastReadAt ?? DateTime.UtcNow);
+        return new UserProgression(id, userId, mangaId, maxReadAt, totalReadingTime, chapterLogs);
     }
 
     public static UserProgression Reconstitute(
@@ -64,7 +65,10 @@ public class UserProgression : Entity<Guid>
     public void UpdateProgression(ChapterLog chapterLog)
     {
         AddOrUpdateChapterLog(chapterLog);
-        LastReadAt = chapterLog.LastReadAt;
+        if (chapterLog.LastReadAt >= LastReadAt)
+        {
+            LastReadAt = chapterLog.LastReadAt;
+        }
         TotalReadingTime = ChapterLogs.Sum(log => log.ReadingTimeSeconds);
     }
 
@@ -96,9 +100,9 @@ public class UserProgression : Entity<Guid>
             return new ChapterLog(id, chapterId, chapterNumber, lastReadPage, totalPages, isCompleted, readingTimeSeconds, lastReadAt);
         }
 
-        public static ChapterLog Create(Guid chapterId, double chapterNumber, int lastReadPage, int totalPages, bool isCompleted, int readingTimeSeconds)
+        public static ChapterLog Create(Guid chapterId, double chapterNumber, int lastReadPage, int totalPages, bool isCompleted, int readingTimeSeconds, DateTime? lastReadAt = null)
         {
-            return new ChapterLog(Guid.CreateVersion7(), chapterId, chapterNumber, lastReadPage, totalPages, isCompleted, readingTimeSeconds, DateTime.UtcNow);
+            return new ChapterLog(Guid.CreateVersion7(), chapterId, chapterNumber, lastReadPage, totalPages, isCompleted, readingTimeSeconds, lastReadAt ?? DateTime.UtcNow);
         }
     }
 }

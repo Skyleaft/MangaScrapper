@@ -86,6 +86,30 @@ public sealed class MangaHub(
     public static string GetMangaGroupName(string mangaId) => $"manga-{mangaId.ToLowerInvariant()}";
     public static string GetMangaGroupName(Guid mangaId) => $"manga-{mangaId.ToString().ToLowerInvariant()}";
 
+    /// <summary>
+    /// Joins the group for a specific user to receive real-time multi-device progression sync notifications.
+    /// </summary>
+    public async Task JoinUserGroup(string userId)
+    {
+        if (string.IsNullOrWhiteSpace(userId)) return;
+        var groupName = GetUserGroupName(userId);
+        await Groups.AddToGroupAsync(Context.ConnectionId, groupName);
+        logger.LogDebug("Connection {ConnectionId} joined user group {GroupName}", Context.ConnectionId, groupName);
+    }
+
+    /// <summary>
+    /// Leaves the group for a specific user.
+    /// </summary>
+    public async Task LeaveUserGroup(string userId)
+    {
+        if (string.IsNullOrWhiteSpace(userId)) return;
+        var groupName = GetUserGroupName(userId);
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, groupName);
+        logger.LogDebug("Connection {ConnectionId} left user group {GroupName}", Context.ConnectionId, groupName);
+    }
+
+    public static string GetUserGroupName(string userId) => $"user-{userId.ToLowerInvariant()}";
+
     public override Task OnConnectedAsync()
     {
         logger.LogDebug("SignalR client connected: {ConnectionId}", Context.ConnectionId);
@@ -98,3 +122,16 @@ public sealed class MangaHub(
         return base.OnDisconnectedAsync(exception);
     }
 }
+
+public record UserProgressionUpdatedPayload(
+    string UserId,
+    Guid MangaId,
+    Guid ChapterId,
+    double ChapterNumber,
+    int LastReadPage,
+    int TotalPages,
+    bool IsCompleted,
+    DateTime LastReadAt,
+    int ReadingTimeSeconds,
+    string? SenderDeviceId
+);
