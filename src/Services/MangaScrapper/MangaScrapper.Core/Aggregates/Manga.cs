@@ -1,4 +1,5 @@
 using MangaScrapper.Core.DomainEvents;
+using MangaScrapper.Core.Utils;
 using MangaScrapper.Core.ValueObjects;
 using NovaStack.Contracts.Responses;
 using NovaStack.SharedKernel.Common;
@@ -224,9 +225,10 @@ public class Manga : Entity<MangaId>
         bool? nsfw=null)
     {
         var id = MangaId.New();
+        var sanitizedDescription = TextSanitizer.SanitizeDescription(description);
         var manga = new Manga(
             id, title, author, type, source,
-            malId: malId, anilistId: anilistId, mangaUpdateId: mangaUpdateId, synonyms: synonyms, genres: genres, categories: categories, description: description, imageUrl: imageUrl, url: url,
+            malId: malId, anilistId: anilistId, mangaUpdateId: mangaUpdateId, synonyms: synonyms, genres: genres, categories: categories, description: sanitizedDescription, imageUrl: imageUrl, url: url,
             rating: rating, status: status, releaseDate: releaseDate, nsfw:nsfw);
 
         manga.RaiseDomainEvent(new MangaCreatedDomainEvent(id, title, source));
@@ -327,7 +329,7 @@ public class Manga : Entity<MangaId>
     {
         AnilistId = anilistInfo.Id;
         MalId = anilistInfo.IdMal ?? MalId;
-        Description = string.IsNullOrEmpty(Description) ? anilistInfo.Description : Description;
+        Description = string.IsNullOrEmpty(Description) ? TextSanitizer.SanitizeDescription(anilistInfo.Description) : Description;
         Rating = Rating ?? (anilistInfo.AverageScore.HasValue ? anilistInfo.AverageScore.Value / 10.0 : null);
         Popularity = anilistInfo.Popularity ?? Popularity;
         Members = anilistInfo.Favorites?? Members;
@@ -367,7 +369,7 @@ public class Manga : Entity<MangaId>
     {
         if (other.AnilistId.HasValue) AnilistId = other.AnilistId;
         if (other.MalId != 0 && MalId == 0) MalId = other.MalId;
-        if (string.IsNullOrWhiteSpace(Description) && !string.IsNullOrWhiteSpace(other.Description)) Description = other.Description;
+        if (string.IsNullOrWhiteSpace(Description) && !string.IsNullOrWhiteSpace(other.Description)) Description = TextSanitizer.SanitizeDescription(other.Description);
         if (other.Rating.HasValue && !Rating.HasValue) Rating = other.Rating;
         if (other.Popularity > 0 && Popularity == 0) Popularity = other.Popularity;
         if (!string.IsNullOrWhiteSpace(other.Status)) Status = other.Status;
@@ -414,6 +416,12 @@ public class Manga : Entity<MangaId>
     public void SetType(string type)
     {
         Type = type;
+    }
+
+    public void SetDescription(string? description)
+    {
+        Description = TextSanitizer.SanitizeDescription(description);
+        UpdatedAt = DateTime.UtcNow;
     }
 
     public void SetDates(DateTime createdAt, DateTime updatedAt)

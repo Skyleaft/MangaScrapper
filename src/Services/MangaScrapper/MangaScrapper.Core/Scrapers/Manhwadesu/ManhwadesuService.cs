@@ -39,19 +39,17 @@ public class ManhwadesuService : ScrapperServiceBase
     {
         doc = GetHtml(url).GetAwaiter().GetResult();
 
-        var title = HttpUtility.HtmlDecode(
-            doc.DocumentNode.SelectSingleNode(Provider.MangaSelectors.Title)?.InnerText.Trim()
-            ?? doc.DocumentNode.SelectSingleNode("//h1[@itemprop='name']")?.InnerText.Trim()
-            ?? string.Empty);
+        var title = TextSanitizer.SanitizeSingleLine(
+            doc.DocumentNode.SelectSingleNode(Provider.MangaSelectors.Title)?.InnerText
+            ?? doc.DocumentNode.SelectSingleNode("//h1[@itemprop='name']")?.InnerText);
 
-        var author = doc.DocumentNode
-            .SelectSingleNode(Provider.MangaSelectors.Author)?.InnerText.Trim()
-            ?? doc.DocumentNode.SelectSingleNode("//div[contains(@class,'imptdt') and contains(.,'Author')]//i")?.InnerText.Trim()
-            ?? string.Empty;
+        var author = TextSanitizer.SanitizeSingleLine(
+            doc.DocumentNode.SelectSingleNode(Provider.MangaSelectors.Author)?.InnerText
+            ?? doc.DocumentNode.SelectSingleNode("//div[contains(@class,'imptdt') and contains(.,'Author')]//i")?.InnerText);
 
-        var description = doc.DocumentNode
-            .SelectSingleNode(Provider.MangaSelectors.Description)?.InnerText.Trim()
-            ?? doc.DocumentNode.SelectSingleNode("//div[@itemprop='description']")?.InnerText.Trim();
+        var descNode = doc.DocumentNode.SelectSingleNode(Provider.MangaSelectors.Description)
+            ?? doc.DocumentNode.SelectSingleNode("//div[@itemprop='description']");
+        var description = TextSanitizer.SanitizeDescription(descNode);
 
         var type = doc.DocumentNode
             .SelectSingleNode(Provider.MangaSelectors.Type)?.InnerText.Trim()

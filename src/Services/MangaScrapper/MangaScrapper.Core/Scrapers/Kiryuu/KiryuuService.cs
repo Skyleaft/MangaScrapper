@@ -39,9 +39,11 @@ public class KiryuuService : ScrapperServiceBase
     {
         doc = GetHtml(url).GetAwaiter().GetResult();
 
-        var title = HttpUtility.HtmlDecode(doc.DocumentNode.SelectSingleNode("//h1[@itemprop='name']")?.InnerText.Trim() ?? string.Empty);
+        var title = TextSanitizer.SanitizeSingleLine(doc.DocumentNode.SelectSingleNode("//h1[@itemprop='name']")?.InnerText);
         var imageUrl = doc.DocumentNode.SelectSingleNode("//div[@itemprop='image']//img")?.GetAttributeValue("src", "")?.Trim();
-        var description = doc.DocumentNode.SelectSingleNode("//div[@itemprop='description']")?.InnerText.Trim();
+        var descNode = doc.DocumentNode.SelectSingleNode("//div[@itemprop='description']")
+                       ?? doc.DocumentNode.SelectSingleNode(Provider.MangaSelectors.Description);
+        var description = TextSanitizer.SanitizeDescription(descNode);
 
         double? rating = null;
         var rate = doc.DocumentNode.SelectSingleNode("//small[normalize-space()='Ratings']/preceding-sibling::span[1]/text()")?.InnerText.Trim();
