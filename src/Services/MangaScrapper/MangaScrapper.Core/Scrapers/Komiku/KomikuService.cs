@@ -38,19 +38,20 @@ public class KomikuService : ScrapperServiceBase
     {
         doc = GetHtml(url).GetAwaiter().GetResult();
 
-        var title = HttpUtility.HtmlDecode(doc.DocumentNode.SelectSingleNode(Provider.MangaSelectors.Title)?.InnerText.Trim() ?? string.Empty);
-        var author = doc.DocumentNode.SelectSingleNode(Provider.MangaSelectors.Author)?.InnerText.Trim() ?? string.Empty;
-        var description = doc.DocumentNode.SelectSingleNode(Provider.MangaSelectors.Description)?.InnerText.Trim();
+        var title = TextSanitizer.SanitizeSingleLine(doc.DocumentNode.SelectSingleNode(Provider.MangaSelectors.Title)?.InnerText);
+        var author = TextSanitizer.SanitizeSingleLine(doc.DocumentNode.SelectSingleNode(Provider.MangaSelectors.Author)?.InnerText);
+        var descNode = doc.DocumentNode.SelectSingleNode(Provider.MangaSelectors.Description);
+        var description = TextSanitizer.SanitizeDescription(descNode);
         var type = doc.DocumentNode.SelectSingleNode(Provider.MangaSelectors.Type)?.InnerText.Trim() ?? string.Empty;
         var imageUrl = doc.DocumentNode.SelectSingleNode(Provider.MangaSelectors.Thumbnail)?.GetAttributeValue("src", string.Empty);
-        var genres = doc.DocumentNode.SelectNodes(Provider.MangaSelectors.Genres)?.Select(n => n.InnerText.Trim()).ToList();
+        var genres = doc.DocumentNode.SelectNodes(Provider.MangaSelectors.Genres)?.Select(n => TextSanitizer.SanitizeSingleLine(n.InnerText)).ToList();
 
         imageUrl = ThumbnailHelper.RemoveQueryString(imageUrl);
 
         if (string.IsNullOrEmpty(title))
         {
-            title = HttpUtility.HtmlDecode(doc.DocumentNode.SelectSingleNode("//td[text()='Judul:']/following-sibling::td")?.InnerText.Trim() ?? string.Empty);
-            author = doc.DocumentNode.SelectSingleNode("//td[text()='Author:']/following-sibling::td")?.InnerText.Trim() ?? string.Empty;
+            title = TextSanitizer.SanitizeSingleLine(doc.DocumentNode.SelectSingleNode("//td[text()='Judul:']/following-sibling::td")?.InnerText);
+            author = TextSanitizer.SanitizeSingleLine(doc.DocumentNode.SelectSingleNode("//td[text()='Author:']/following-sibling::td")?.InnerText);
             type = doc.DocumentNode.SelectSingleNode("//td[text()='Tipe:']/following-sibling::td")?.InnerText.Trim() ?? string.Empty;
         }
 

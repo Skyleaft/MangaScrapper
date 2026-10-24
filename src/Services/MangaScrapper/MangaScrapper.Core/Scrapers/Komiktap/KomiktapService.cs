@@ -39,14 +39,14 @@ public class KomiktapService : ScrapperServiceBase
     {
         doc = GetHtml(url).GetAwaiter().GetResult();
 
-        var title = HttpUtility.HtmlDecode(
-            doc.DocumentNode.SelectSingleNode(Provider.MangaSelectors.Title)?.InnerText.Trim() ?? string.Empty);
+        var title = TextSanitizer.SanitizeSingleLine(
+            doc.DocumentNode.SelectSingleNode(Provider.MangaSelectors.Title)?.InnerText);
 
-        var author = doc.DocumentNode
-            .SelectSingleNode(Provider.MangaSelectors.Author)?.InnerText.Trim() ?? string.Empty;
+        var author = TextSanitizer.SanitizeSingleLine(
+            doc.DocumentNode.SelectSingleNode(Provider.MangaSelectors.Author)?.InnerText);
 
-        var description = doc.DocumentNode
-            .SelectSingleNode(Provider.MangaSelectors.Description)?.InnerText.Trim();
+        var descNode = doc.DocumentNode.SelectSingleNode(Provider.MangaSelectors.Description);
+        var description = TextSanitizer.SanitizeDescription(descNode);
 
         var type = doc.DocumentNode
             .SelectSingleNode(Provider.MangaSelectors.Type)?.InnerText.Trim() ?? string.Empty;

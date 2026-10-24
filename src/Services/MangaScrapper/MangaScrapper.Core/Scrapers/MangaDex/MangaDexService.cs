@@ -236,13 +236,18 @@ public class MangaDexService : ScrapperServiceBase
         if (descriptionMap == null || descriptionMap.Count == 0)
             return string.Empty;
 
+        string? raw = null;
         foreach (var lang in new[] { "en", "id", "ja-ro", "ja" })
         {
             if (descriptionMap.TryGetValue(lang, out var description) && !string.IsNullOrWhiteSpace(description))
-                return description;
+            {
+                raw = description;
+                break;
+            }
         }
 
-        return descriptionMap.Values.FirstOrDefault(d => !string.IsNullOrWhiteSpace(d)) ?? string.Empty;
+        raw ??= descriptionMap.Values.FirstOrDefault(d => !string.IsNullOrWhiteSpace(d));
+        return TextSanitizer.SanitizeDescription(raw);
     }
 
     private static string MapMangaStatus(string status) => status.ToLowerInvariant() switch

@@ -283,7 +283,7 @@ public class SoftkomikService : ScrapperServiceBase
             type: type,
             source: ProviderKey,
             genres: detail.Genre ?? [],
-            description: detail.Sinopsis ?? string.Empty,
+            description: TextSanitizer.SanitizeDescription(detail.Sinopsis),
             imageUrl: imageUrl,
             url: mangaPageUrl,
             rating: detail.Rating?.Value,

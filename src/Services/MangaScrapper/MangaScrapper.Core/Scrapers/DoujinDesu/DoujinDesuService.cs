@@ -161,7 +161,7 @@ public class DoujinDesuService : ScrapperServiceBase
             type: type,
             source: ProviderKey,
             genres: genres.Distinct().ToList(),
-            description: dto.Description ?? string.Empty,
+            description: TextSanitizer.SanitizeDescription(dto.Description),
             imageUrl: dto.CoverUrl,
             url: pageUrl,
             rating: dto.Rating,

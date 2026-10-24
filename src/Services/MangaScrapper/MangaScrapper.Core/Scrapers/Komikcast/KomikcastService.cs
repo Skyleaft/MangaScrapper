@@ -46,7 +46,7 @@ public class KomikcastService : ScrapperServiceBase
             type: CultureInfo.CurrentCulture.TextInfo.ToTitleCase(seriesData.Data.Data.Format),
             source: ProviderKey,
             genres: seriesData.Data.Data.Genres.Select(x => x.Data.Name).ToList(),
-            description: seriesData.Data.Data.Synopsis,
+            description: TextSanitizer.SanitizeDescription(seriesData.Data.Data.Synopsis),
             imageUrl: seriesData.Data.Data.CoverImage,
             rating: seriesData.Data.Data.Rating,
             status: CultureInfo.CurrentCulture.TextInfo.ToTitleCase(seriesData.Data.Data.Status));
