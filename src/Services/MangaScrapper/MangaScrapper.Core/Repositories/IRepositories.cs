@@ -121,6 +121,7 @@ public interface IUserProgressionRepository
     Task<UserProgression?> GetByUserIdAndMangaIdAsync(string userId, MangaId mangaId, CancellationToken ct = default);
     Task<List<UserProgression>> GetByUserIdAsync(string userId, CancellationToken ct = default);
     Task AddOrUpdateAsync(UserProgression userProgression, CancellationToken ct = default);
+    Task<UserProgression> UpsertChapterLogAsync(string userId, MangaId mangaId, UserProgression.ChapterLog chapterLog, CancellationToken ct = default);
     Task DeleteByMangaIdAsync(Guid mangaId, CancellationToken ct = default);
     Task RemoveChapterLogAsync(Guid mangaId, Guid chapterId, CancellationToken ct = default);
 }
