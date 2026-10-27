@@ -174,7 +174,7 @@ public class MongoMangaRepository(MangaMongoDbContext dbContext) : IMangaReposit
         var today = DateTime.UtcNow.Date;
         var lastMonth = DateTime.UtcNow.Date.AddDays(-30);
 
-        // Define all aggregation and count tasks for concurrent execution
+        // Define essential aggregation and count tasks for concurrent execution
         var totalMangaTask = dbContext.Mangas.CountDocumentsAsync(_ => true, cancellationToken: ct);
 
         var totalChaptersTask = dbContext.Mangas.Aggregate()
@@ -182,21 +182,7 @@ public class MongoMangaRepository(MangaMongoDbContext dbContext) : IMangaReposit
             .Group(new BsonDocument { { "_id", BsonNull.Value }, { "total", new BsonDocument("$sum", "$count") } })
             .FirstOrDefaultAsync(ct);
 
-        var providersTask = dbContext.Mangas.Distinct<string>("Chapters.ChapterProvider", FilterDefinition<MangaDocument>.Empty).ToListAsync(ct);
-
-        var scrappedTodayTask = dbContext.Mangas.Aggregate()
-            .Unwind<MangaDocument, ChapterDocumentUnwound>(m => m.Chapters)
-            .Match(c => c.Chapters.UploadDate >= today)
-            .Count()
-            .FirstOrDefaultAsync(ct);
-
-        var scrappedThisMonthTask = dbContext.Mangas.Aggregate()
-            .Unwind<MangaDocument, ChapterDocumentUnwound>(m => m.Chapters)
-            .Match(c => c.Chapters.UploadDate >= lastMonth)
-            .Count()
-            .FirstOrDefaultAsync(ct);
-
-        var totalUnlinkedMetadataTask = dbContext.Mangas.CountDocumentsAsync(m => m.AnilistId == 0 || m.AnilistId==null, cancellationToken: ct);
+        var totalUnlinkedMetadataTask = dbContext.Mangas.CountDocumentsAsync(m => m.AnilistId == 0 || m.AnilistId == null, cancellationToken: ct);
 
         var totalUnavailableMangaChapterTask = dbContext.Mangas
             .Find(m => m.Chapters.Any(c => c.Pages == null || c.Pages.Count == 0))
@@ -245,9 +231,6 @@ public class MongoMangaRepository(MangaMongoDbContext dbContext) : IMangaReposit
         await Task.WhenAll(
             totalMangaTask,
             totalChaptersTask,
-            providersTask,
-            scrappedTodayTask,
-            scrappedThisMonthTask,
             totalUnlinkedMetadataTask,
             totalUnavailableMangaChapterTask,
             thumbnailTask,
@@ -265,15 +248,6 @@ public class MongoMangaRepository(MangaMongoDbContext dbContext) : IMangaReposit
         var chaptersResult = await totalChaptersTask;
         var totalChapters = chaptersResult != null && chaptersResult.Contains("total") ? chaptersResult["total"].ToInt64() : 0;
 
-        var providers = await providersTask;
-        var totalSourceProvider = providers.Count;
-
-        var scrappedTodayResult = await scrappedTodayTask;
-        var scrappedToday = scrappedTodayResult?.Count ?? 0;
-
-        var scrappedThisMonthResult = await scrappedThisMonthTask;
-        var scrappedThisMonth = scrappedThisMonthResult?.Count ?? 0;
-
         var totalUnlinkedMetadata = await totalUnlinkedMetadataTask;
         var totalUnavailableMangaChapter = await totalUnavailableMangaChapterTask;
 
@@ -285,7 +259,7 @@ public class MongoMangaRepository(MangaMongoDbContext dbContext) : IMangaReposit
         var totalStorageUsed = totalThumbnailSize + totalPagesSize;
 
         var monthlyScrapRaw = await monthlyScrapTask;
-        var monthlyScrap = new List<ScrapStats>();
+        var monthlyScrap = new List<ScrapStats>(31);
         for (int i = 0; i <= 30; i++)
         {
             var date = lastMonth.AddDays(i);
@@ -296,6 +270,10 @@ public class MongoMangaRepository(MangaMongoDbContext dbContext) : IMangaReposit
                 TotalScrap = stats?.Count ?? 0
             });
         }
+
+        // Derived directly from monthlyScrap without running redundant full-collection $unwind queries
+        var scrappedToday = monthlyScrapRaw.FirstOrDefault(x => x.Date.Date == today)?.Count ?? 0;
+        var scrappedThisMonth = monthlyScrapRaw.Sum(x => x.Count);
 
         var totalUsers = await totalUsersTask;
         var activeUsersToday = await activeUsersTodayTask;
@@ -315,6 +293,9 @@ public class MongoMangaRepository(MangaMongoDbContext dbContext) : IMangaReposit
         var providerChapterBreakdown = rawProviderBreakdown
             .Where(x => !string.IsNullOrWhiteSpace(x.Provider))
             .ToDictionary(x => x.Provider!, x => (long)x.Count);
+
+        // Derived directly from provider breakdown without extra Distinct query
+        var totalSourceProvider = providerChapterBreakdown.Count;
 
         return new DashboardStatistic
         {
