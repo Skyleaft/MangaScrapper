@@ -30,9 +30,14 @@ public class UpdateUserProgressionCommandValidator : AbstractValidator<UpdateUse
 {
     public UpdateUserProgressionCommandValidator()
     {
-        RuleFor(x => x.UserId).NotEmpty().WithMessage("UserId is required.");
+        RuleFor(x => x.UserId)
+            .NotEmpty().WithMessage("UserId is required.")
+            .Must(id => Guid.TryParse(id, out _)).WithMessage("UserId must be a valid GUID.");
         RuleFor(x => x.MangaId).NotEmpty().WithMessage("MangaId is required.");
         RuleFor(x => x.ChapterId).NotEmpty().WithMessage("ChapterId is required.");
+        RuleFor(x => x.LastReadPage).GreaterThanOrEqualTo(0).WithMessage("LastReadPage must be >= 0.");
+        RuleFor(x => x.TotalPages).GreaterThanOrEqualTo(0).WithMessage("TotalPages must be >= 0.");
+        RuleFor(x => x.ReadingTimeSeconds).GreaterThanOrEqualTo(0).WithMessage("ReadingTimeSeconds must be >= 0.");
     }
 }
 
@@ -51,19 +56,19 @@ internal sealed class UpdateUserProgressionCommandHandler(
             command.TotalPages, command.IsCompleted, command.ReadingTimeSeconds,
             lastReadAt);
 
-        var progression = await progressionRepository.GetByUserIdAndMangaIdAsync(command.UserId, mangaId, ct);
-        if (progression is not null)
-        {
-            progression.UpdateProgression(chapterLog);
-        }
-        else
-        {
-            progression = Aggregates.UserProgression.Create(
-                command.UserId, mangaId, chapterLog.ReadingTimeSeconds, [chapterLog], lastReadAt);
-        }
+        var progression = await progressionRepository.UpsertChapterLogAsync(command.UserId, mangaId, chapterLog, ct);
 
-        await progressionRepository.AddOrUpdateAsync(progression, ct);
+        // Non-blocking SignalR broadcast with CancellationToken.None so client HTTP cancellations don't abort notification
+        _ = BroadcastProgressionUpdatedAsync(command, progression, chapterLog);
 
+        return ToResponse(progression, command.ChapterId);
+    }
+
+    private async Task BroadcastProgressionUpdatedAsync(
+        UpdateUserProgressionCommand command,
+        Aggregates.UserProgression progression,
+        Aggregates.UserProgression.ChapterLog chapterLog)
+    {
         try
         {
             var userGroup = MangaHub.GetUserGroupName(command.UserId);
@@ -80,25 +85,24 @@ internal sealed class UpdateUserProgressionCommandHandler(
                 command.SenderDeviceId
             );
 
-            await mangaHubContext.Clients.Group(userGroup).SendAsync("UserProgressionUpdated", payload, ct);
+            await mangaHubContext.Clients.Group(userGroup).SendAsync("UserProgressionUpdated", payload, CancellationToken.None);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to broadcast UserProgressionUpdated for User={UserId}, Manga={MangaId}", command.UserId, command.MangaId);
         }
-
-        return ToResponse(progression);
     }
 
-    private static UserProgressionResponse ToResponse(Aggregates.UserProgression p)
+    private static UserProgressionResponse ToResponse(Aggregates.UserProgression p, Guid targetChapterId)
     {
-        var logs = new List<ChapterLogsResponse>(p.ChapterLogs.Count);
-        foreach (var cl in p.ChapterLogs)
-        {
-            logs.Add(new ChapterLogsResponse(
-                cl.Id, cl.ChapterId, cl.ChapterNumber, cl.LastReadPage,
-                cl.TotalPages, cl.IsCompleted, cl.ReadingTimeSeconds, cl.LastReadAt));
-        }
+        var targetLog = p.ChapterLogs.FirstOrDefault(cl => cl.ChapterId == targetChapterId);
+        var logs = targetLog != null
+            ? new List<ChapterLogsResponse>(1)
+            {
+                new(targetLog.Id, targetLog.ChapterId, targetLog.ChapterNumber, targetLog.LastReadPage,
+                    targetLog.TotalPages, targetLog.IsCompleted, targetLog.ReadingTimeSeconds, targetLog.LastReadAt)
+            }
+            : new List<ChapterLogsResponse>(0);
 
         return new UserProgressionResponse(
             p.Id, p.UserId, p.MangaId.Value, p.LastReadAt, p.TotalReadingTime, logs);

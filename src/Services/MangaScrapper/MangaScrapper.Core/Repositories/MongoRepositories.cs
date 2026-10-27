@@ -403,6 +403,95 @@ public class MongoUserProgressionRepository(MangaMongoDbContext dbContext) : IUs
         return docs.Select(MapToDomain).ToList();
     }
 
+    public async Task<UserProgression> UpsertChapterLogAsync(string userId, MangaId mangaId, UserProgression.ChapterLog chapterLog, CancellationToken ct = default)
+    {
+        if (!Guid.TryParse(userId, out var userGuid))
+        {
+            throw new ArgumentException("Invalid user GUID format.", nameof(userId));
+        }
+
+        await EnsureIndexesAsync(ct);
+
+        var filterWithChapter = Builders<UserProgressionDocument>.Filter.And(
+            Builders<UserProgressionDocument>.Filter.Eq(x => x.UserId, userGuid),
+            Builders<UserProgressionDocument>.Filter.Eq(x => x.MangaId, mangaId.Value),
+            Builders<UserProgressionDocument>.Filter.ElemMatch(x => x.ChapterLogs, c => c.ChapterId == chapterLog.ChapterId)
+        );
+
+        var updateExisting = Builders<UserProgressionDocument>.Update
+            .Set(x => x.LastReadAt, chapterLog.LastReadAt)
+            .Set("ChapterLogs.$.LastReadPage", chapterLog.LastReadPage)
+            .Set("ChapterLogs.$.TotalPages", chapterLog.TotalPages)
+            .Set("ChapterLogs.$.IsCompleted", chapterLog.IsCompleted)
+            .Set("ChapterLogs.$.ReadingTimeSeconds", chapterLog.ReadingTimeSeconds)
+            .Set("ChapterLogs.$.LastReadAt", chapterLog.LastReadAt);
+
+        var options = new FindOneAndUpdateOptions<UserProgressionDocument>
+        {
+            ReturnDocument = ReturnDocument.After
+        };
+
+        var doc = await dbContext.UserProgressions.FindOneAndUpdateAsync(
+            filterWithChapter,
+            updateExisting,
+            options,
+            ct);
+
+        if (doc is null)
+        {
+            var filterDoc = Builders<UserProgressionDocument>.Filter.And(
+                Builders<UserProgressionDocument>.Filter.Eq(x => x.UserId, userGuid),
+                Builders<UserProgressionDocument>.Filter.Eq(x => x.MangaId, mangaId.Value)
+            );
+
+            var chapterDoc = new ChapterLogDocument
+            {
+                Id = chapterLog.Id,
+                ChapterId = chapterLog.ChapterId,
+                ChapterNumber = chapterLog.ChapterNumber,
+                LastReadPage = chapterLog.LastReadPage,
+                TotalPages = chapterLog.TotalPages,
+                IsCompleted = chapterLog.IsCompleted,
+                ReadingTimeSeconds = chapterLog.ReadingTimeSeconds,
+                LastReadAt = chapterLog.LastReadAt
+            };
+
+            var updatePush = Builders<UserProgressionDocument>.Update
+                .SetOnInsert(x => x.Id, Guid.CreateVersion7())
+                .SetOnInsert(x => x.UserId, userGuid)
+                .SetOnInsert(x => x.MangaId, mangaId.Value)
+                .Set(x => x.LastReadAt, chapterLog.LastReadAt)
+                .Push(x => x.ChapterLogs, chapterDoc);
+
+            doc = await dbContext.UserProgressions.FindOneAndUpdateAsync(
+                filterDoc,
+                updatePush,
+                new FindOneAndUpdateOptions<UserProgressionDocument>
+                {
+                    IsUpsert = true,
+                    ReturnDocument = ReturnDocument.After
+                },
+                ct);
+        }
+
+        if (doc is not null && doc.ChapterLogs.Count > 0)
+        {
+            var totalTime = doc.ChapterLogs.Sum(c => c.ReadingTimeSeconds);
+            if (totalTime != doc.TotalReadingTime)
+            {
+                doc.TotalReadingTime = totalTime;
+                await dbContext.UserProgressions.UpdateOneAsync(
+                    x => x.Id == doc.Id,
+                    Builders<UserProgressionDocument>.Update.Set(x => x.TotalReadingTime, totalTime),
+                    cancellationToken: ct);
+            }
+        }
+
+        return doc is null
+            ? UserProgression.Create(userId, mangaId, chapterLog.ReadingTimeSeconds, [chapterLog], chapterLog.LastReadAt)
+            : MapToDomain(doc);
+    }
+
     public async Task AddOrUpdateAsync(UserProgression userProgression, CancellationToken ct = default)
     {
         await EnsureIndexesAsync(ct);
