@@ -376,7 +376,7 @@ public static class CoreExtensions
         services.AddHttpContextAccessor();
         services.AddScoped<IClaimService, ClaimService>();
 
-        services.AddScoped<IAuthTokenService, JwtAuthTokenService>();
+        services.AddSingleton<IAuthTokenService, JwtAuthTokenService>();
 
         var keysPath = Environment.GetEnvironmentVariable("DATAPROTECTION_KEYS_PATH") ?? "/app/keys";
         services.AddDataProtection()

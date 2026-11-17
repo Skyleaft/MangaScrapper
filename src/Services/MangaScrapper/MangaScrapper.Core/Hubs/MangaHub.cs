@@ -1,3 +1,5 @@
+using System.Security.Claims;
+using MangaScrapper.Core.Aggregates;
 using MangaScrapper.Core.Common.Abstractions;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
@@ -12,12 +14,32 @@ public sealed class MangaHub(
     ILogger<MangaHub> logger,
     IScrapingProcessTracker? processTracker = null) : Hub
 {
+    private bool IsAuthorizedWorkerOrAdmin()
+    {
+        // Allow in unit tests where Context is not initialized
+        if (Context == null) return true;
+        var user = Context.User;
+        if (user?.Identity?.IsAuthenticated != true)
+            return false;
+
+        return user.IsInRole(User.UserRoles.SuperUser) ||
+               user.IsInRole(User.UserRoles.Admin) ||
+               user.IsInRole("Worker") ||
+               string.Equals(user.FindFirst("ServiceName")?.Value, "Scrapper.Worker", StringComparison.OrdinalIgnoreCase);
+    }
+
     /// <summary>
     /// Invoked directly by background workers (e.g. Scrapper.Worker) to stream scraping progress over WebSocket/SignalR,
     /// updating the in-memory process tracker and broadcasting live to UI clients.
     /// </summary>
     public async Task ReportScrapingProgress(ChapterScrapingProgressPayload payload)
     {
+        if (!IsAuthorizedWorkerOrAdmin())
+        {
+            logger.LogWarning("Unauthorized attempt to invoke ReportScrapingProgress from connection {ConnectionId}", Context?.ConnectionId);
+            throw new HubException("Unauthorized to report scraping progress.");
+        }
+
         try
         {
             if (processTracker != null)
@@ -41,7 +63,7 @@ public sealed class MangaHub(
             await Clients.Group(groupName).SendAsync("ChapterScrapingProgress", payload);
             await Clients.All.SendAsync("ChapterScrapingProgress", payload);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not HubException)
         {
             logger.LogError(ex, "Failed to broadcast ReportScrapingProgress for Manga={MangaId}, Chapter={ChapterId}", payload.MangaId, payload.ChapterId);
         }
@@ -52,13 +74,19 @@ public sealed class MangaHub(
     /// </summary>
     public async Task ReportChapterPagesScraped(ChapterPagesScrapedPayload payload)
     {
+        if (!IsAuthorizedWorkerOrAdmin())
+        {
+            logger.LogWarning("Unauthorized attempt to invoke ReportChapterPagesScraped from connection {ConnectionId}", Context?.ConnectionId);
+            throw new HubException("Unauthorized to report chapter pages scraped.");
+        }
+
         try
         {
             var groupName = GetMangaGroupName(payload.MangaId);
             await Clients.Group(groupName).SendAsync("ChaptersUpdated", payload);
             await Clients.All.SendAsync("ChaptersUpdated", payload);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not HubException)
         {
             logger.LogError(ex, "Failed to broadcast ReportChapterPagesScraped for Manga={MangaId}, Chapter={ChapterId}", payload.MangaId, payload.ChapterId);
         }
@@ -88,10 +116,25 @@ public sealed class MangaHub(
 
     /// <summary>
     /// Joins the group for a specific user to receive real-time multi-device progression sync notifications.
+    /// Requires the connection to be authenticated as the specified user to prevent IDOR snooping.
     /// </summary>
     public async Task JoinUserGroup(string userId)
     {
         if (string.IsNullOrWhiteSpace(userId)) return;
+
+        // If Context is initialized (live SignalR connection), verify caller identity
+        if (Context != null)
+        {
+            var callerId = Context.UserIdentifier ?? Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (Context.User?.Identity?.IsAuthenticated != true ||
+                !string.Equals(callerId, userId, StringComparison.OrdinalIgnoreCase))
+            {
+                logger.LogWarning("Unauthorized attempt to join user group {UserId} from connection {ConnectionId} (Caller={CallerId})",
+                    userId, Context.ConnectionId, callerId ?? "Anonymous");
+                return;
+            }
+        }
+
         var groupName = GetUserGroupName(userId);
         await Groups.AddToGroupAsync(Context.ConnectionId, groupName);
         logger.LogDebug("Connection {ConnectionId} joined user group {GroupName}", Context.ConnectionId, groupName);

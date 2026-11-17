@@ -9,4 +9,5 @@ namespace MangaScrapper.Core.Common.Abstractions;
 public interface IAuthTokenService
 {
     (string Token, DateTime Expiry) GenerateToken(User user, int expiryDays = 7);
+    (string Token, DateTime Expiry) GenerateServiceToken(string serviceName, string[] roles, int expiryDays = 30);
 }
