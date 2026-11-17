@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <PackageReference Include="Dapper" Version="2.1.86" />
+    <PackageReference Include="Grpc.Net.Client" Version="2.84.0" />
     <PackageReference Include="MongoDB.Driver" Version="3.12.0" />
     <PackageReference Include="Google.Protobuf" Version="3.36.2" />
     <PackageReference Include="MongoDB.Driver" Version="3.11.0" />
