@@ -46,4 +46,36 @@ public class JwtAuthTokenService(IConfiguration configuration) : IAuthTokenServi
         var token = tokenHandler.CreateToken(tokenDescriptor);
         return (tokenHandler.WriteToken(token), expiry);
     }
+
+    public (string Token, DateTime Expiry) GenerateServiceToken(string serviceName, string[] roles, int expiryDays = 30)
+    {
+        var key = Encoding.ASCII.GetBytes(
+            configuration["JwtSigningKey"] ?? "a_very_secret_key_that_is_at_least_32_chars_long!!");
+        var expiry = DateTime.UtcNow.AddDays(expiryDays);
+
+        var claims = new List<Claim>
+        {
+            new Claim(ClaimTypes.NameIdentifier, serviceName),
+            new Claim(ClaimTypes.Name, serviceName),
+            new Claim("ServiceName", serviceName)
+        };
+
+        foreach (var role in roles)
+        {
+            claims.Add(new Claim(ClaimTypes.Role, role));
+        }
+
+        var tokenDescriptor = new SecurityTokenDescriptor
+        {
+            Subject = new ClaimsIdentity(claims),
+            Expires = expiry,
+            SigningCredentials = new SigningCredentials(
+                new SymmetricSecurityKey(key),
+                SecurityAlgorithms.HmacSha256Signature)
+        };
+
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var token = tokenHandler.CreateToken(tokenDescriptor);
+        return (tokenHandler.WriteToken(token), expiry);
+    }
 }

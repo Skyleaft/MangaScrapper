@@ -100,4 +100,94 @@ public class MangaHubTests
         mockGroupProxy.Verify(p => p.SendCoreAsync("ChaptersUpdated", It.Is<object[]>(args => args.Length == 1 && args[0] == payload), It.IsAny<CancellationToken>()), Times.Once);
         mockClientProxy.Verify(p => p.SendCoreAsync("ChaptersUpdated", It.Is<object[]>(args => args.Length == 1 && args[0] == payload), It.IsAny<CancellationToken>()), Times.Once);
     }
+
+    [Fact]
+    public async Task ReportScrapingProgress_WhenCallerIsUnauthorized_ShouldThrowHubException()
+    {
+        // Arrange
+        var mockLogger = new Mock<ILogger<MangaHub>>();
+        var mockCallerContext = new Mock<HubCallerContext>();
+        var anonymousUser = new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity());
+        mockCallerContext.Setup(c => c.User).Returns(anonymousUser);
+
+        var hub = new MangaHub(mockLogger.Object)
+        {
+            Context = mockCallerContext.Object
+        };
+
+        var payload = new ChapterScrapingProgressPayload
+        {
+            MangaId = Guid.NewGuid(),
+            MangaTitle = "One Piece",
+            ChapterId = Guid.NewGuid(),
+            ChapterNumber = 1050
+        };
+
+        // Act & Assert
+        var act = () => hub.ReportScrapingProgress(payload);
+        await act.Should().ThrowAsync<HubException>().WithMessage("*Unauthorized*");
+    }
+
+    [Fact]
+    public async Task JoinUserGroup_WhenCallerDoesNotMatchUserId_ShouldNotJoinGroup()
+    {
+        // Arrange
+        var mockLogger = new Mock<ILogger<MangaHub>>();
+        var mockCallerContext = new Mock<HubCallerContext>();
+        var mockGroups = new Mock<IGroupManager>();
+
+        var identity = new System.Security.Claims.ClaimsIdentity(new[]
+        {
+            new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.NameIdentifier, "user-123")
+        }, "TestAuth");
+        var principal = new System.Security.Claims.ClaimsPrincipal(identity);
+
+        mockCallerContext.Setup(c => c.User).Returns(principal);
+        mockCallerContext.Setup(c => c.UserIdentifier).Returns("user-123");
+        mockCallerContext.Setup(c => c.ConnectionId).Returns("conn-1");
+
+        var hub = new MangaHub(mockLogger.Object)
+        {
+            Context = mockCallerContext.Object,
+            Groups = mockGroups.Object
+        };
+
+        // Act - try to join another user's group
+        await hub.JoinUserGroup("victim-user-456");
+
+        // Assert - should not add to group
+        mockGroups.Verify(g => g.AddToGroupAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task JoinUserGroup_WhenCallerMatchesUserId_ShouldJoinGroup()
+    {
+        // Arrange
+        var mockLogger = new Mock<ILogger<MangaHub>>();
+        var mockCallerContext = new Mock<HubCallerContext>();
+        var mockGroups = new Mock<IGroupManager>();
+
+        var identity = new System.Security.Claims.ClaimsIdentity(new[]
+        {
+            new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.NameIdentifier, "user-123")
+        }, "TestAuth");
+        var principal = new System.Security.Claims.ClaimsPrincipal(identity);
+
+        mockCallerContext.Setup(c => c.User).Returns(principal);
+        mockCallerContext.Setup(c => c.UserIdentifier).Returns("user-123");
+        mockCallerContext.Setup(c => c.ConnectionId).Returns("conn-1");
+
+        var hub = new MangaHub(mockLogger.Object)
+        {
+            Context = mockCallerContext.Object,
+            Groups = mockGroups.Object
+        };
+
+        // Act - join own user group
+        await hub.JoinUserGroup("user-123");
+
+        // Assert - should add to group
+        var expectedGroup = MangaHub.GetUserGroupName("user-123");
+        mockGroups.Verify(g => g.AddToGroupAsync("conn-1", expectedGroup, It.IsAny<CancellationToken>()), Times.Once);
+    }
 }

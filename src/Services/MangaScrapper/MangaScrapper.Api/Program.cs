@@ -41,12 +41,14 @@ try
     // ── Serilog ──────────────────────────────────────────────────────────────
     builder.Host.UseNovaStackSerilog();
 
-    // ── Forwarded Headers (Reverse Proxy support) ─────────────────────────────
+    // ── Forwarded Headers (Reverse Proxy / NGINX / Docker support) ─────────────
     builder.Services.Configure<ForwardedHeadersOptions>(options =>
     {
-        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost;
         options.KnownIPNetworks.Clear();
         options.KnownProxies.Clear();
+        // Behind NGINX in Docker, limit to 1 hop to prevent client-injected X-Forwarded-For header spoofing
+        options.ForwardLimit = 1;
     });
 
     // ── OpenAPI / Swagger ────────────────────────────────────────────────────
@@ -114,6 +116,22 @@ try
 
     // ── Middleware ────────────────────────────────────────────────────────────
     app.UseForwardedHeaders();
+
+    if (!app.Environment.IsDevelopment())
+    {
+        app.UseHsts();
+    }
+
+    // ── Security Headers ──────────────────────────────────────────────────────
+    app.Use(async (context, next) =>
+    {
+        context.Response.Headers.Append("X-Content-Type-Options", "nosniff");
+        context.Response.Headers.Append("X-Frame-Options", "SAMEORIGIN");
+        context.Response.Headers.Append("Referrer-Policy", "strict-origin-when-cross-origin");
+        context.Response.Headers.Append("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+        await next();
+    });
+
     app.UseExceptionHandler();
     app.UseSerilogRequestLogging(options =>
     {
@@ -185,7 +203,11 @@ try
     app.UseStaticFiles(new StaticFileOptions
     {
         FileProvider = new PhysicalFileProvider(absoluteImagePath),
-        RequestPath = "/images"
+        RequestPath = "/images",
+        OnPrepareResponse = ctx =>
+        {
+            ctx.Context.Response.Headers.Append("X-Content-Type-Options", "nosniff");
+        }
     });
 
     app.UseAuthentication();

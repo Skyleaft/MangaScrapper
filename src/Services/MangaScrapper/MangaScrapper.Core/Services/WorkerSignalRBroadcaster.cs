@@ -1,3 +1,4 @@
+using MangaScrapper.Core.Aggregates;
 using MangaScrapper.Core.Common.Abstractions;
 using MangaScrapper.Core.Configuration;
 using MangaScrapper.Core.Hubs;
@@ -15,6 +16,7 @@ public sealed class WorkerSignalRBroadcaster : IScrapingProgressBroadcaster, IAs
 {
     private readonly ScrapperSettings _settings;
     private readonly ILogger<WorkerSignalRBroadcaster> _logger;
+    private readonly IAuthTokenService? _authTokenService;
     private readonly string? _hubUrl;
     private readonly SemaphoreSlim _connectLock = new(1, 1);
     private HubConnection? _hubConnection;
@@ -22,10 +24,12 @@ public sealed class WorkerSignalRBroadcaster : IScrapingProgressBroadcaster, IAs
 
     public WorkerSignalRBroadcaster(
         IOptions<ScrapperSettings> settings,
-        ILogger<WorkerSignalRBroadcaster> logger)
+        ILogger<WorkerSignalRBroadcaster> logger,
+        IAuthTokenService? authTokenService = null)
     {
         _settings = settings.Value;
         _logger = logger;
+        _authTokenService = authTokenService;
 
         var baseUrl = !string.IsNullOrWhiteSpace(_settings.ApiBaseUrl)
             ? _settings.ApiBaseUrl.TrimEnd('/')
@@ -50,16 +54,30 @@ public sealed class WorkerSignalRBroadcaster : IScrapingProgressBroadcaster, IAs
 
             if (_hubConnection == null)
             {
-                _hubConnection = new HubConnectionBuilder()
-                    .WithUrl(_hubUrl)
+                var builder = new HubConnectionBuilder()
+                    .WithUrl(_hubUrl, options =>
+                    {
+                        if (_authTokenService != null)
+                        {
+                            options.AccessTokenProvider = () =>
+                            {
+                                var (token, _) = _authTokenService.GenerateServiceToken(
+                                    "Scrapper.Worker",
+                                    new[] { User.UserRoles.SuperUser, "Worker" },
+                                    expiryDays: 30);
+                                return Task.FromResult<string?>(token);
+                            };
+                        }
+                    })
                     .WithAutomaticReconnect(new[]
                     {
                         TimeSpan.Zero,
                         TimeSpan.FromSeconds(2),
                         TimeSpan.FromSeconds(5),
                         TimeSpan.FromSeconds(10)
-                    })
-                    .Build();
+                    });
+
+                _hubConnection = builder.Build();
 
                 _hubConnection.Closed += error =>
                 {

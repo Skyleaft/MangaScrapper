@@ -27,7 +27,7 @@ public class CustomAuthValidation : AuthenticationHandler<CustomAuthSchemeOption
 
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {
-        // 1. Try JWT Bearer
+        // 1. Try JWT Bearer header
         string? authHeader = Request.Headers["Authorization"];
         if (!string.IsNullOrEmpty(authHeader) && authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
         {
@@ -36,7 +36,17 @@ public class CustomAuthValidation : AuthenticationHandler<CustomAuthSchemeOption
             if (jwtResult.Succeeded) return jwtResult;
         }
 
-        // 2. Try Cookie
+        // 2. Try Query String access_token (for SignalR WebSockets: /hubs/manga, /manga-hub)
+        var accessToken = Request.Query["access_token"].ToString();
+        var path = Request.Path;
+        if (!string.IsNullOrEmpty(accessToken) &&
+            (path.StartsWithSegments("/hubs/manga") || path.StartsWithSegments("/manga-hub")))
+        {
+            var jwtResult = ValidateJwt(accessToken);
+            if (jwtResult.Succeeded) return jwtResult;
+        }
+
+        // 3. Try Cookie
         var cookieResult = await Context.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
         if (cookieResult.Succeeded) return cookieResult;
 
