@@ -323,6 +323,25 @@ public class KomikuService : ScrapperServiceBase
                !src.Contains("iklan", StringComparison.OrdinalIgnoreCase);
     }
 
+    public static string ExtractImageSrc(HtmlNode imgNode)
+    {
+        var src = imgNode.GetAttributeValue("data-src", string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(src) || src.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+        {
+            src = imgNode.GetAttributeValue("data-lazy-src", string.Empty).Trim();
+        }
+        if (string.IsNullOrWhiteSpace(src) || src.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+        {
+            src = imgNode.GetAttributeValue("data-original", string.Empty).Trim();
+        }
+        if (string.IsNullOrWhiteSpace(src) || src.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+        {
+            src = imgNode.GetAttributeValue("src", string.Empty).Trim();
+        }
+
+        return src.StartsWith("data:", StringComparison.OrdinalIgnoreCase) ? string.Empty : src;
+    }
+
     public override async Task<Chapter> GetChapterPage(
         string mangaTitle,
         Chapter chapter,
@@ -335,13 +354,21 @@ public class KomikuService : ScrapperServiceBase
             url = Provider.BaseUrl.TrimEnd('/') + "/" + url.TrimStart('/');
 
         var chapterDoc = await GetHtml(url, ct: ct);
-        var imageNodes = chapterDoc.DocumentNode.SelectNodes(Provider.PageSelectors.Images);
+        var selector = !string.IsNullOrWhiteSpace(Provider.PageSelectors.Images)
+            ? Provider.PageSelectors.Images
+            : "//div[@id='Baca_Komik']//img";
+
+        var imageNodes = chapterDoc.DocumentNode.SelectNodes(selector);
+        if ((imageNodes == null || imageNodes.Count == 0) && selector.Contains("@src"))
+        {
+            imageNodes = chapterDoc.DocumentNode.SelectNodes("//div[@id='Baca_Komik']//img");
+        }
         if (imageNodes == null) return chapter;
 
         var chapterImages = new List<(string OriginalUrl, string TransformedUrl)>();
         foreach (var imgNode in imageNodes)
         {
-            var src = imgNode.GetAttributeValue("src", string.Empty).Trim();
+            var src = ExtractImageSrc(imgNode);
             if (string.IsNullOrWhiteSpace(src)) continue;
 
             if (src.StartsWith("//", StringComparison.OrdinalIgnoreCase))

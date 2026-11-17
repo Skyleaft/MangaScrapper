@@ -3,10 +3,10 @@
   "BaseUrl": "https://komiku.org",
   "ProviderIcon": "https://www.nesabamedia.com/apps/wp-content/uploads/2024/01/komiku.png",
   "MangaSelectors": {
-    "Title": "//td[text()='Judul Komik']/following-sibling::td",
-    "Author": "//td[text()='Pengarang']/following-sibling::td",
+    "Title": "//td[text()='Judul Komik' or text()='Judul:']/following-sibling::td",
+    "Author": "//td[text()='Pengarang' or text()='Author:']/following-sibling::td",
     "Description": "//p[@class='desc']",
-    "Type": "//td[text()='Jenis Komik']/following-sibling::td",
+    "Type": "//td[text()='Jenis Komik' or text()='Tipe:']/following-sibling::td",
     "Status": "//td[text()='Status']/following-sibling::td",
     "Genres": "//ul[@class='genre']/li/a/span",
     "Thumbnail": "//div[@class='ims']/img"
@@ -19,6 +19,6 @@
     "UploadDate": ".//td[@class='tanggalseries']"
   },
   "PageSelectors": {
-    "Images": "//div[@id='Baca_Komik']//img[@src]"
+    "Images": "//div[@id='Baca_Komik']//img"
   }
 }
