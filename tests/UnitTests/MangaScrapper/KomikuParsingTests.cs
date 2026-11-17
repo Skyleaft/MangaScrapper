@@ -86,4 +86,64 @@ public class KomikuParsingTests
         Assert.Equal("https://img.komiku.org/upload5/the-extra-s-academy-survival-guide/124/2026-09-18/7.webp", chapterImages[1]);
         Assert.Equal("https://img.komiku.org/upload5/the-extra-s-academy-survival-guide/124/2026-09-18/67.webp", chapterImages[2]);
     }
+
+    [Theory]
+    [InlineData("<img data-src=\"https://img.komiku.org/upload5/overgeared-new/348/1.webp\" class=\"klazy ww\">", "https://img.komiku.org/upload5/overgeared-new/348/1.webp")]
+    [InlineData("<img src=\"https://img.komiku.org/upload5/overgeared-new/348/2.webp\" class=\"ww\">", "https://img.komiku.org/upload5/overgeared-new/348/2.webp")]
+    [InlineData("<img src=\"data:image/svg+xml;base64,...\" data-src=\"https://img.komiku.org/upload5/overgeared-new/348/3.webp\">", "https://img.komiku.org/upload5/overgeared-new/348/3.webp")]
+    [InlineData("<img data-lazy-src=\"https://img.komiku.org/upload5/overgeared-new/348/4.webp\">", "https://img.komiku.org/upload5/overgeared-new/348/4.webp")]
+    [InlineData("<img src=\"data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7\">", "")]
+    public void ExtractImageSrc_ShouldExtractFromDataSrcOrFallback(string imgHtml, string expected)
+    {
+        var doc = new HtmlDocument();
+        doc.LoadHtml(imgHtml);
+        var imgNode = doc.DocumentNode.SelectSingleNode("//img");
+        Assert.NotNull(imgNode);
+
+        var extracted = KomikuService.ExtractImageSrc(imgNode);
+        Assert.Equal(expected, extracted);
+    }
+
+    [Fact]
+    public void ReaderHtml_ShouldExtractPagesWithDataSrcAttributes()
+    {
+        var html = """
+        <div id="Baca_Komik" onclick="klik('body')">
+        <h2 class="judulbaca" style="text-align:center">Baca Online</h2>
+        <div class="srv-pilih" role="group" aria-label="Pilih server gambar">
+        <p>Loading Gambar Lambat? Ganti Server Gambar:</p><br>
+        <div>
+        <button type="button" data-srv="origin">Utama</button>
+        </div>
+        </div>
+        <div class="iklan mobile"></div>
+        <img data-src="https://img.komiku.org/upload5/overgeared-new/348/2026-11-13/1.webp" alt="Komik Overgeared New Chapter 348 gambar 1" class="klazy ww" id="1" loading="lazy" decoding="async">
+        <img data-src="https://img.komiku.org/upload5/overgeared-new/348/2026-11-13/2_part1.webp" alt="Manhwa Overgeared New Chapter 348 gambar 2" class="klazy ww" id="2" loading="lazy" decoding="async">
+        <img data-src="https://img.komiku.org/upload5/overgeared-new/348/2026-11-13/2_part2.webp" alt="Overgeared New Chapter 348 Gambar 3" class="klazy ww" id="3" loading="lazy" decoding="async">
+        <div class="iklan mobile"></div>
+        </div>
+        """;
+
+        var doc = new HtmlDocument();
+        doc.LoadHtml(html);
+
+        var imageNodes = doc.DocumentNode.SelectNodes("//div[@id='Baca_Komik']//img");
+        Assert.NotNull(imageNodes);
+
+        var chapterImages = new List<string>();
+        foreach (var imgNode in imageNodes)
+        {
+            var src = KomikuService.ExtractImageSrc(imgNode);
+            if (!KomikuService.IsChapterImage(src)) continue;
+
+            var onError = imgNode.GetAttributeValue("onerror", string.Empty);
+            var resolved = KomikuService.ResolveImageUrl(src, onError);
+            chapterImages.Add(resolved);
+        }
+
+        Assert.Equal(3, chapterImages.Count);
+        Assert.Equal("https://img.komiku.org/upload5/overgeared-new/348/2026-11-13/1.webp", chapterImages[0]);
+        Assert.Equal("https://img.komiku.org/upload5/overgeared-new/348/2026-11-13/2_part1.webp", chapterImages[1]);
+        Assert.Equal("https://img.komiku.org/upload5/overgeared-new/348/2026-11-13/2_part2.webp", chapterImages[2]);
+    }
 }
