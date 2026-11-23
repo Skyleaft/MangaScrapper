@@ -19,7 +19,7 @@ public class UpdateThumbnailTests : IDisposable
 
     public UpdateThumbnailTests()
     {
-        TypeAdapterConfig.GlobalSettings.Scan(typeof(MangaMappingConfig).Assembly);
+        TestMappingInitializer.Initialize();
         _tempDir = Path.Combine(Path.GetTempPath(), "manga_thumb_tests_" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(_tempDir);
     }

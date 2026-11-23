@@ -19,7 +19,7 @@ public class GetSimilarByCategoryTests
 
     public GetSimilarByCategoryTests()
     {
-        TypeAdapterConfig.GlobalSettings.Scan(typeof(MangaMappingConfig).Assembly);
+        TestMappingInitializer.Initialize();
         _externalRepositoryMock = new Mock<IMangaExternalRepository>();
         _mangaRepositoryMock = new Mock<IMangaRepository>();
         _handler = new GetSimilarByCategoryQueryHandler(_externalRepositoryMock.Object, _mangaRepositoryMock.Object);

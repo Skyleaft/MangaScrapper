@@ -19,7 +19,7 @@ public class UpdateMangaTests : IDisposable
 
     public UpdateMangaTests()
     {
-        TypeAdapterConfig.GlobalSettings.Scan(typeof(MangaMappingConfig).Assembly);
+        TestMappingInitializer.Initialize();
         _tempStorageDir = Path.Combine(Path.GetTempPath(), "manga_update_tests_" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(_tempStorageDir);
     }

@@ -136,4 +136,4 @@ embedding-service/models
 embedding-service/target
 secrets/mykomikid-firebase-adminsdk-fbsvc-74f8b57641.json
 embedding-service/compose.override.yml
-keys/key-f3f014d7-72c1-40f2-8ef4-78e240ea46c2.xml
+keys/

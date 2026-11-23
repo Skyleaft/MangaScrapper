@@ -1,6 +1,6 @@
 # MangaScrapper
 
-MangaScrapper is a comprehensive, production-grade full-stack solution for scraping, managing, and reading manga. Built using **Vertical Slice Architecture (VSA)** and **Domain-Driven Design (DDD)** in .NET 10, it features a robust backend where provider scrapers instantiate and return domain aggregates (`Manga`, `Chapter`, `Page`), store BSON documents in MongoDB, index full-text search in Meilisearch, vectorize recommendations in Qdrant, and orchestrate background jobs via Hangfire and RabbitMQ. The project includes a modern, high-performance Blazor WebAssembly admin panel for seamless management, user library tracking, and reading progression.
+MangaScrapper is a comprehensive, production-grade full-stack solution for scraping, managing, and reading manga. Built using **Vertical Slice Architecture (VSA)** and **Domain-Driven Design (DDD)** in .NET 11, it features a robust backend where provider scrapers instantiate and return domain aggregates (`Manga`, `Chapter`, `Page`), store BSON documents in MongoDB, index full-text search in Meilisearch, vectorize recommendations in Qdrant, and orchestrate background jobs via Hangfire and RabbitMQ. The project includes a modern, high-performance Blazor WebAssembly admin panel for seamless management, user library tracking, and reading progression.
 
 For the mobile-first reading experience, check out the [Open Manga Reader](https://github.com/Skyleaft/Open-Manga-Reader) client.
 
@@ -46,7 +46,7 @@ For the mobile-first reading experience, check out the [Open Manga Reader](https
 
 ### Backend Architecture
 
-- **Runtime & Language**: .NET 10.0, C# 13.0
+- **Runtime & Language**: .NET 11.0, C# 14.0
 - **Architectural Style**: **Vertical Slice Architecture (VSA)** & **Domain-Driven Design (DDD)** — Unified Two-Tier Structure (`MangaScrapper.Core` + Thin Host Executables)
 - **CQRS & Mediator**: MediatR 14 (with logging and validation pipeline behaviors)
 - **APIs & Real-Time**: ASP.NET Core Minimal APIs with reflection-based endpoint discovery (`IEndpointDefinition`) & **SignalR** Hubs (`MangaHub`)
@@ -63,7 +63,7 @@ For the mobile-first reading experience, check out the [Open Manga Reader](https
 
 ### Frontend & Mobile Clients
 
-- **Blazor WebAssembly** (.NET 10) — Admin Web Client
+- **Blazor WebAssembly** (.NET 11) — Admin Web Client
 - **Flutter Mobile Client** (`Open-Manga-Reader`) — Multiplatform Reader App consuming FCM new chapter push notifications
 - **Microsoft.AspNetCore.SignalR.Client** for live scraping progress bars and real-time updates
 - **Blazored.LocalStorage** for client-side state persistence
@@ -187,7 +187,7 @@ Main configuration is defined in `appsettings.json` within `MangaScrapper.Api` a
 
 ### Prerequisites
 
-- **.NET 10 SDK**
+- **.NET 11 SDK**
 - **MongoDB Server**
 - (Optional) Meilisearch, Qdrant, FlareSolverr, RabbitMQ
 
