@@ -178,11 +178,6 @@ try
     });
     app.MapNovaStackPrometheus();
 
-    if (app.Environment.IsDevelopment())
-    {
-        app.UseWebAssemblyDebugging();
-    }
-
     app.UseCors("DefaultCors");
     app.UseResponseCompression();
 

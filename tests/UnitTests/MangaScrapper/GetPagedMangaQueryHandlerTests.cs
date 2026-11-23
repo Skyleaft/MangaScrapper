@@ -18,7 +18,7 @@ public class GetPagedMangaQueryHandlerTests
 
     public GetPagedMangaQueryHandlerTests()
     {
-        TypeAdapterConfig.GlobalSettings.Scan(typeof(MangaMappingConfig).Assembly);
+        TestMappingInitializer.Initialize();
         _mangaRepositoryMock = new Mock<IMangaRepository>();
         _searchRepositoryMock = new Mock<IMangaExternalRepository>();
         _handler = new GetPagedMangaQueryHandler(_mangaRepositoryMock.Object,_searchRepositoryMock.Object);

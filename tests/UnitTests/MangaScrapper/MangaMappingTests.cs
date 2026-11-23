@@ -12,7 +12,7 @@ public class MangaMappingTests
 {
     public MangaMappingTests()
     {
-        TypeAdapterConfig.GlobalSettings.Scan(typeof(MangaMappingConfig).Assembly);
+        TestMappingInitializer.Initialize();
     }
 
     [Fact]

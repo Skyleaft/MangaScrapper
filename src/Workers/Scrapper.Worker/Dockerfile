@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine AS build
+FROM mcr.microsoft.com/dotnet/sdk:11.0-alpine AS build
 WORKDIR /src
 
 RUN apk add --no-cache gcompat libc6-compat
@@ -18,7 +18,7 @@ COPY . .
 WORKDIR "/src/src/Workers/Scrapper.Worker"
 RUN dotnet publish "Scrapper.Worker.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS final
+FROM mcr.microsoft.com/dotnet/aspnet:11.0-alpine AS final
 WORKDIR /app
 
 # Install tzdata and icu-libs for timezone and full globalization support in Alpine

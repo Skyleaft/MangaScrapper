@@ -32,11 +32,36 @@ public static class DoujinDesuDecryptor
         return sb.ToString();
     }
 
-    public static string Decrypt(string encHex, string? customSalt = null)
+    public static string Encrypt(string jsonString, string? customSalt = null, long? slot = null)
+    {
+        var effectiveSlot = slot ?? (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / TimeWindowMs);
+        var key = GenerateKey(effectiveSlot, customSalt);
+        var uriEncoded = Uri.EscapeDataString(jsonString);
+        var resultBytes = Encoding.Latin1.GetBytes(uriEncoded);
+        var byteCount = resultBytes.Length;
+        var bytes = new byte[byteCount];
+        var n = 42;
+        var keyLen = key.Length;
+
+        for (var i = 0; i < byteCount; i++)
+        {
+            var p = (int)key[i % keyLen];
+            var s = resultBytes[i];
+            var b = (byte)(s ^ p ^ (i * 13) ^ n);
+            bytes[i] = b;
+            n = (n + b) % 256;
+        }
+
+        return Convert.ToHexString(bytes).ToLowerInvariant();
+    }
+
+    public static string Decrypt(string encHex, string? customSalt = null, long? specificSlot = null)
     {
         var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         var currentSlot = now / TimeWindowMs;
-        long[] slots = [currentSlot, currentSlot - 1, currentSlot + 1, currentSlot - 2, currentSlot + 2];
+        long[] slots = specificSlot.HasValue
+            ? [specificSlot.Value]
+            : [currentSlot, currentSlot - 1, currentSlot + 1, currentSlot - 2, currentSlot + 2];
 
         foreach (var slot in slots)
         {

@@ -20,7 +20,7 @@ public class QueryPagedMangaTests
 
     public QueryPagedMangaTests()
     {
-        TypeAdapterConfig.GlobalSettings.Scan(typeof(MangaMappingConfig).Assembly);
+        TestMappingInitializer.Initialize();
         _externalRepoMock = new Mock<IMangaExternalRepository>();
         _handler = new QueryPagedMangaQueryHandler(_externalRepoMock.Object);
         _validator = new QueryPagedMangaValidator();
