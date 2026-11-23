@@ -13,7 +13,7 @@
     <PackageReference Include="Dapper" Version="2.1.86" />
     <PackageReference Include="Grpc.Net.Client" Version="2.84.0" />
     <PackageReference Include="Google.Protobuf" Version="3.36.2" />
-    <PackageReference Include="MongoDB.Driver" Version="3.12.0" />
+    <PackageReference Include="MongoDB.Driver" Version="3.14.1" />
     <PackageReference Include="Mapster" Version="10.0.12" />
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.19.0" />
     <PackageReference Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" Version="1.17.0-beta.1" />
