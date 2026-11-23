@@ -18,26 +18,26 @@
 
   <ItemGroup>
     <PackageReference Include="Hangfire.AspNetCore" Version="1.8.25" />
-    <PackageReference Include="Hangfire.Mongo" Version="1.17.0" />
+    <PackageReference Include="Hangfire.Mongo" Version="1.17.1" />
     <PackageReference Include="MeiliSearch" Version="0.20.0" />
-    <PackageReference Include="Qdrant.Client" Version="1.19.0" />
-    <PackageReference Include="HtmlAgilityPack" Version="1.13.0" />
-    <PackageReference Include="Microsoft.Playwright" Version="1.62.0" />
-    <PackageReference Include="SkiaSharp" Version="4.153.1" />
-    <PackageReference Include="FirebaseAdmin" Version="3.6.0" />
-    <PackageReference Include="Google.Apis.Auth" Version="1.76.0" />
+    <PackageReference Include="Qdrant.Client" Version="1.20.0" />
+    <PackageReference Include="HtmlAgilityPack" Version="1.13.1" />
+    <PackageReference Include="Microsoft.Playwright" Version="1.65.1" />
+    <PackageReference Include="SkiaSharp" Version="4.157.0" />
+    <PackageReference Include="FirebaseAdmin" Version="3.7.1" />
+    <PackageReference Include="Google.Apis.Auth" Version="1.78.0" />
     <PackageReference Include="Isopoh.Cryptography.Argon2" Version="2.0.0" />
-    <PackageReference Include="Mapster" Version="10.0.13" />
-    <PackageReference Include="MediatR" Version="14.2.0" />
-    <PackageReference Include="FluentValidation" Version="12.1.1" />
-    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
-    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="4.153.1" />
-    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.30.0" />
-    <PackageReference Include="Microsoft.ML.Tokenizers" Version="2.0.0" />
+    <PackageReference Include="Mapster" Version="10.0.14" />
+    <PackageReference Include="MediatR" Version="15.0.0" />
+    <PackageReference Include="FluentValidation" Version="12.2.0" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.2.0" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="4.157.0" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.32.0" />
+    <PackageReference Include="Microsoft.ML.Tokenizers" Version="3.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="11.0.0" />
-    <PackageReference Include="Grpc.Net.Client" Version="2.84.0" />
+    <PackageReference Include="Grpc.Net.Client" Version="2.85.0" />
     <PackageReference Include="Google.Protobuf" Version="3.36.2" />
-    <PackageReference Include="Grpc.Tools" Version="2.84.0">
+    <PackageReference Include="Grpc.Tools" Version="2.85.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
